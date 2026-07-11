@@ -1,0 +1,21 @@
+{
+  "name": "chaverola",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Chaverola — a fun, game-like multiplayer classroom chat activity.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter client dev",
+    "build": "pnpm --filter client build",
+    "preview": "pnpm --filter client preview",
+    "typecheck": "pnpm --filter client typecheck",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2"
+  }
+}

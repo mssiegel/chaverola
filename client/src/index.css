@@ -1,0 +1,196 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+  Chaverola design tokens — "Grape & Citrus".
+  A vivid grape/violet primary (fun + trustworthy, reads as game-like for
+  middle/high schoolers) paired with warm citrus accents (coral + sun) and a
+  fresh mint for "online / success". Everything is driven by these CSS variables
+  so the palette can be retuned in one place.
+*/
+:root {
+  --radius: 0.9rem;
+
+  /* Surfaces & text */
+  --background: #f6f5fc;
+  --foreground: #221f3b;
+  --card: #ffffff;
+  --card-foreground: #221f3b;
+  --popover: #ffffff;
+  --popover-foreground: #221f3b;
+
+  /* Brand primary — grape/violet */
+  --primary: #6c4be0;
+  --primary-foreground: #ffffff;
+
+  /* Soft violet used for secondary surfaces / chips */
+  --secondary: #ece7fb;
+  --secondary-foreground: #4a37a3;
+
+  /* Muted neutrals */
+  --muted: #f0eef8;
+  --muted-foreground: #6c6885;
+
+  /* Subtle hover/selected accent (shadcn semantic) */
+  --accent: #ece7fb;
+  --accent-foreground: #4a37a3;
+
+  /* Danger — used for "End chat" */
+  --destructive: #e5484d;
+  --destructive-foreground: #ffffff;
+
+  /* Lines & controls */
+  --border: #e6e2f2;
+  --input: #e0dbf0;
+  --ring: #6c4be0;
+
+  /* Brand extras (beyond shadcn semantics) */
+  --brand-grape: #6c4be0;
+  --brand-grape-strong: #5a37d1;
+  --brand-grape-soft: #ece7fb;
+  --brand-coral: #ff7a59;
+  --brand-sun: #ffc53d;
+  --brand-mint: #16c79a;
+  --brand-sky: #3da5ff;
+
+  /* Character-name palette — assigned by speaking order within a room.
+     The student's own character is always #1 (green); the 2nd speaker is
+     golden, 3rd bluish, 4th purplish. Orange was dropped (too close to the
+     golden). See DECISIONS.md → "Character-name colors". */
+  --char-1: #1f9d55; /* green  — you */
+  --char-2: #b7791f; /* golden — 2nd character */
+  --char-3: #2563eb; /* bluish — 3rd character */
+  --char-4: #7c3aed; /* purplish — 4th character */
+  --char-5: #0d9488; /* teal */
+  --char-6: #be2d8a; /* magenta */
+  --char-7: #4f46e5; /* indigo */
+  --char-8: #e11d48; /* rose */
+}
+
+.dark {
+  --background: #171528;
+  --foreground: #f2f0fb;
+  --card: #201d33;
+  --card-foreground: #f2f0fb;
+  --popover: #201d33;
+  --popover-foreground: #f2f0fb;
+
+  --primary: #8a6bff;
+  --primary-foreground: #14112a;
+
+  --secondary: #2c2743;
+  --secondary-foreground: #d9d2f7;
+
+  --muted: #262238;
+  --muted-foreground: #a49fbf;
+
+  --accent: #2c2743;
+  --accent-foreground: #d9d2f7;
+
+  --destructive: #ff6b6f;
+  --destructive-foreground: #14112a;
+
+  --border: #322c4a;
+  --input: #322c4a;
+  --ring: #8a6bff;
+
+  --brand-grape: #8a6bff;
+  --brand-grape-strong: #a48bff;
+  --brand-grape-soft: #2c2743;
+
+  /* Character-name palette — brighter on the dark card. Same order as light:
+     green (you), golden, bluish, purplish, then extras (no orange). */
+  --char-1: #4ade80; /* green  — you */
+  --char-2: #f2c94c; /* golden — 2nd character */
+  --char-3: #60a5fa; /* bluish — 3rd character */
+  --char-4: #b794f6; /* purplish — 4th character */
+  --char-5: #2dd4bf; /* teal */
+  --char-6: #f472b6; /* magenta */
+  --char-7: #a5b4fc; /* indigo */
+  --char-8: #fb7185; /* rose */
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-brand-grape: var(--brand-grape);
+  --color-brand-grape-strong: var(--brand-grape-strong);
+  --color-brand-grape-soft: var(--brand-grape-soft);
+  --color-brand-coral: var(--brand-coral);
+  --color-brand-sun: var(--brand-sun);
+  --color-brand-mint: var(--brand-mint);
+  --color-brand-sky: var(--brand-sky);
+
+  --font-sans: "Fredoka", "Nunito", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    /* Lock the page; the app manages its own scroll regions (mobile-first). */
+    margin: 0;
+    min-height: 100dvh;
+  }
+
+  /* Playful, energetic default headings. */
+  h1,
+  h2,
+  h3 {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* A soft, friendly custom scrollbar for the chat regions. */
+@layer utilities {
+  .scroll-soft {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .scroll-soft::-webkit-scrollbar {
+    width: 8px;
+  }
+  .scroll-soft::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 999px;
+  }
+  .scroll-soft::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}

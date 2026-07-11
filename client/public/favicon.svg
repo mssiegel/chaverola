@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Chaverola">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8A6BFF" />
+      <stop offset="1" stop-color="#6C4BE0" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#tile)" />
+  <path
+    d="M22 39 L14.5 51 L33 40 Z"
+    fill="#ffffff"
+  />
+  <rect x="12" y="12.5" width="40" height="28" rx="11" fill="#ffffff" />
+  <circle cx="26" cy="25.5" r="2.6" fill="#6C4BE0" />
+  <circle cx="38" cy="25.5" r="2.6" fill="#6C4BE0" />
+  <path
+    d="M26 31.5 Q32 37 38 31.5"
+    fill="none"
+    stroke="#6C4BE0"
+    stroke-width="2.8"
+    stroke-linecap="round"
+  />
+</svg>
