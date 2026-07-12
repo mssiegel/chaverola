@@ -93,6 +93,14 @@ runner configured yet.
   components there over hand-rolling equivalents.
 - **Routes are canonical** — do not invent new ones beyond those in the project brief (the
   temporary `/demo/*` routes are the exception and are clearly marked).
+- **Shared vs. role-specific chat components:** anything the student and teacher views
+  render identically lives in [client/src/components/chat/](client/src/components/chat/)
+  (shared chat types in [client/src/types/chat.ts](client/src/types/chat.ts), shared
+  helpers like `assignCharacterColors` in [client/src/lib/](client/src/lib/)); each
+  role's own chrome stays under `components/Student/` or `components/Teacher/`. This
+  layout is a current convention, not a commitment — if you see a clearly better
+  structure, reorganize at any time, then update this bullet (and any stale paths
+  elsewhere in this file) to match.
 - **Mobile-first:** design and verify every screen at phone width.
 
 ## Working Rules for AI Agents
