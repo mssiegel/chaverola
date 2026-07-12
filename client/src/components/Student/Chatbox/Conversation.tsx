@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 
+import { ConversationLines } from "@/components/chat/ConversationLines";
 import type {
   ChatMessage,
   Participant,
@@ -21,10 +22,9 @@ interface ConversationProps {
 }
 
 /**
- * The scrolling conversation feed. Follows the shared chatbox conventions:
- * `characterName: message` on one line, 0px between consecutive lines from the
- * same speaker and +4px when the speaker changes — a smooth, game-like flow.
- * Auto-scrolls to the newest message.
+ * The scrolling conversation feed for the student view: the shared message
+ * lines (see ConversationLines) plus the reconnect banner and the typing
+ * indicator. Auto-scrolls to the newest message.
  */
 export function Conversation({
   participants,
@@ -54,46 +54,19 @@ export function Conversation({
     : null;
 
   return (
-    <div className="scroll-soft relative flex-1 overflow-y-auto px-3 py-3 sm:px-4">
+    <div className="scroll-soft relative flex-1 overflow-y-auto px-3 py-3 text-[15px] leading-6 sm:px-4">
       {peerState !== "connected" && (
         <div className="sticky top-0 z-10 -mx-3 mb-2 flex justify-center px-3 sm:-mx-4 sm:px-4">
           <PeerReconnectBanner peerState={peerState} peerName={offlineName} />
         </div>
       )}
 
-      <div className="flex flex-col">
-        {messages.map((message, index) => {
-          const sender = byId.get(message.senderId);
-          if (!sender) return null;
-
-          const prev = messages[index - 1];
-          const speakerChanged = !prev || prev.senderId !== message.senderId;
-          const marginTop = index === 0 ? 0 : speakerChanged ? 4 : 0;
-          const isSelf = message.senderId === selfId;
-
-          return (
-            <div
-              key={message.id}
-              style={{ marginTop }}
-              className="text-[15px] leading-6 [overflow-wrap:anywhere]"
-            >
-              <span
-                className="font-semibold"
-                style={{ color: characterColors.get(sender.character.id) }}
-              >
-                {sender.character.name} {sender.character.emoji}
-                {isSelf && (
-                  <span className="ml-1 align-middle text-[11px] font-medium text-muted-foreground">
-                    (you)
-                  </span>
-                )}
-                <span className="text-foreground">: </span>
-              </span>
-              <span className="text-foreground/90">{message.text}</span>
-            </div>
-          );
-        })}
-      </div>
+      <ConversationLines
+        participants={participants}
+        messages={messages}
+        characterColors={characterColors}
+        selfId={selfId}
+      />
 
       <PeerIsTyping characterName={typingName} isGroup={isGroup} />
 

@@ -13,7 +13,7 @@ const COUNTER_VISIBLE_AT = 60;
 /** Count by code points so multi-unit emoji count as one character. */
 const charCount = (text: string) => Array.from(text).length;
 
-interface SendMessageSectionProps {
+interface MessageComposerProps {
   onSend: (text: string) => void;
   /** Used to build a playful placeholder, e.g. "Talk as Cleopatra 👑…". */
   selfCharacterLabel?: string;
@@ -25,10 +25,10 @@ interface SendMessageSectionProps {
  * settle to the bottom (same button size). Hard-blocks at 75 characters and
  * shows a counter only past 60. Emoji-only picker — no stickers/GIFs.
  */
-export function SendMessageSection({
+export function MessageComposer({
   onSend,
   selfCharacterLabel,
-}: SendMessageSectionProps) {
+}: MessageComposerProps) {
   const [value, setValue] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);

@@ -37,11 +37,36 @@ export interface ChatMessage {
 export type PeerConnectionState =
   "connected" | "disconnected" | "reconnecting" | "reconnected";
 
+/**
+ * One chat as the teacher sees it while monitoring an activity: who's in it,
+ * everything said so far, and whether it's still going.
+ */
+export interface MonitoredChat {
+  id: string;
+  participants: Participant[];
+  messages: ChatMessage[];
+  status: "active" | "ended";
+}
+
 export interface ScriptedLine {
   senderId: string;
   text: string;
   /** Delay (ms) after the previous scripted line before this one plays. */
   delayMs: number;
+}
+
+/**
+ * A backend-free scenario for the teacher demo: one monitored chat plus the
+ * lines the demo engine drips into it while it stays active.
+ */
+export interface TeacherChatScenario {
+  id: string;
+  participants: Participant[];
+  status: "active" | "ended";
+  /** Messages already present when the page opens. */
+  seedMessages: Array<{ senderId: string; text: string }>;
+  /** Lines dripped into the chat over time, in order (looping). */
+  upcomingLines: Array<{ senderId: string; text: string }>;
 }
 
 /**

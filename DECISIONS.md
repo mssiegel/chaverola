@@ -11,6 +11,62 @@ here.
 
 ---
 
+## Ending a chat ends it for everyone in the room
+
+**Decision:** When a student ends a chat, it ends for **every participant in that chat**,
+not just the student who tapped End chat — same as when the teacher ends it. The
+confirmation copy on both seats says so explicitly.
+
+**Why:** The roleplay needs its partners: once one student leaves, the others would be
+sitting in a dead chat with no one to answer. Ending it room-wide moves everyone to the
+wrap-up screen at the same moment, so each student can head back to the lobby (and later,
+the rematch queue) instead of waiting on a conversation that's already over. This is also
+why ending goes through a confirmation step on both seats — the tap affects other people.
+
+_Copy lives in the `description` props passed to
+[EndChatConfirmationModal](client/src/components/chat/EndChatConfirmationModal.tsx) by
+[the student chatbox](client/src/components/Student/Chatbox/index.tsx) and
+[the teacher chat card](client/src/components/Teacher/ChatCard/index.tsx)._
+
+---
+
+## Teacher chat cards: collapsed to the last 5 lines, End chat asks first
+
+**Decision:** On the teacher's monitoring view, each chat renders as a card that is
+**collapsed by default**, showing only the last 5 lines. One button toggles between
+expanding to the full chat and minimizing back. **End chat** goes through the same
+confirmation step the student side uses (with teacher-appropriate copy), even though the
+brief only asked for a button — the product owner has since confirmed the confirmation
+step should stay. Completed chats reuse the exact same card in a muted,
+slightly desaturated look, keep expand/minimize, and lose the End chat button.
+
+**Why:** A teacher watches many chats at once — the newest lines are what matter while
+monitoring, and short cards keep the grid scannable. Ending a chat kicks real students
+out of their conversation and can't be undone, so one stray tap on a busy grid shouldn't
+do it. Completed chats stay on the grid (muted rather than removed) so the teacher can
+still review what was said.
+
+_Implemented in [ChatCard](client/src/components/Teacher/ChatCard/index.tsx)._
+
+---
+
+## Teacher view: character colors follow participant order
+
+**Decision:** Teacher chat cards color character names from the same `--char-*` palette
+as the student chatbox, assigned by **participant order within each chat** (first student
+listed is green, the 2nd golden, and so on). There is no "green = you" rule here because
+the teacher isn't a participant.
+
+**Why:** Reuses the learnable palette without inventing a second system. Colors are
+per-card: the same character can get a different color on two cards, which is fine — the
+teacher reads one card at a time, and per-card distinctness beats global consistency
+(the same trade-off as the viewer-relative student rule below).
+
+_Assignment happens in [ChatCard](client/src/components/Teacher/ChatCard/index.tsx) via
+[characterColor.ts](client/src/lib/characterColor.ts)._
+
+---
+
 ## End of chat requires a tap to return to the lobby
 
 **Decision:** When a student ends a chat, the app shows a "chat ended" screen and waits.

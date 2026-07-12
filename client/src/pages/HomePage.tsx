@@ -1,4 +1,10 @@
-import { ArrowRight, GraduationCap, Sparkles, Users } from "lucide-react";
+import {
+  ArrowRight,
+  GraduationCap,
+  LayoutGrid,
+  Sparkles,
+  Users,
+} from "lucide-react";
 
 import { LogoMark } from "@/components/brand/Logo";
 import { LocaleLink } from "@/components/layout/LocaleLink";
@@ -38,15 +44,42 @@ export function HomePage() {
         />
       </div>
 
-      <LocaleLink
-        to="/demo/student-chat"
-        className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground shadow-sm transition-colors hover:text-foreground"
-      >
-        <Sparkles className="size-4 text-brand-grape" />
-        Peek at the student chatbox demo
-        <ArrowRight className="size-4" />
-      </LocaleLink>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <DemoLink
+          to="/demo/student-chat"
+          icon={<Sparkles className="size-4 text-brand-grape" />}
+        >
+          Peek at the student chatbox demo
+        </DemoLink>
+        <DemoLink
+          to="/demo/teacher-chat"
+          icon={<LayoutGrid className="size-4 text-brand-grape" />}
+        >
+          Peek at the teacher chat cards demo
+        </DemoLink>
+      </div>
     </div>
+  );
+}
+
+function DemoLink({
+  to,
+  icon,
+  children,
+}: {
+  to: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <LocaleLink
+      to={to}
+      className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground shadow-sm transition-colors hover:text-foreground"
+    >
+      {icon}
+      {children}
+      <ArrowRight className="size-4" />
+    </LocaleLink>
   );
 }
 

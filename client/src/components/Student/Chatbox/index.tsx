@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { LogOut } from "lucide-react";
 
+import { EndChatConfirmationModal } from "@/components/chat/EndChatConfirmationModal";
 import { assignCharacterColors } from "@/lib/characterColor";
 import type {
   ChatMessage,
@@ -10,8 +11,7 @@ import type {
 
 import { ChatEndedSection } from "./ChatEndedSection";
 import { Conversation } from "./Conversation";
-import { EndChatConfirmationModal } from "./EndChatConfirmationModal";
-import { SendMessageSection } from "./SendMessageSection";
+import { MessageComposer } from "./MessageComposer";
 
 export interface ChatboxProps {
   self: Participant;
@@ -115,7 +115,7 @@ export function Chatbox({
           onBackToLobby={onBackToLobby}
         />
       ) : (
-        <SendMessageSection
+        <MessageComposer
           onSend={onSend}
           selfCharacterLabel={`${self.character.name} ${self.character.emoji}`}
         />
@@ -125,6 +125,8 @@ export function Chatbox({
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
         onConfirm={handleConfirmEnd}
+        description="This ends the chat for everyone in it, and there's no reopening it. You can head back to the lobby whenever you're ready."
+        cancelLabel="Keep chatting"
       />
     </div>
   );

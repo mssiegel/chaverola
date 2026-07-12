@@ -7,7 +7,9 @@ This file is the canonical source of guidance for all AI agents (Claude Code, Cu
 Scaffolding is in place: a pnpm-workspaces monorepo with a working `client/` app
 (React 19 + TypeScript + Vite + Tailwind v4 + ShadCN) and an empty `server/`. The
 first feature — the **student chatbox** — is built as a working, mock-driven demo at
-`/demo/student-chat`; it is wired into the real student flow in a later prompt.
+`/demo/student-chat`; it is wired into the real student flow in a later prompt. The
+**teacher chat cards** follow the same pattern at `/demo/teacher-chat` and get wired
+into `/activity/host/:joinCode` later.
 
 ## Project Brief
 
@@ -74,7 +76,11 @@ runner configured yet.
 - **Chatbox** ([client/src/components/Student/Chatbox/](client/src/components/Student/Chatbox/)):
   the shell (`index.tsx`) is **presentational** — driven entirely by props. The mock
   "engine" (`useChatDemo.ts`) simulates a live peer on timers and is swapped for a real
-  data source later. The same chatbox conventions will back the Teacher view.
+  data source later. The same chatbox conventions back the Teacher view.
+- **Shared chat pieces** ([client/src/components/chat/](client/src/components/chat/)):
+  the message-line renderer (`ConversationLines`) and the end-chat confirmation modal
+  are shared by the student chatbox and the teacher chat cards
+  ([client/src/components/Teacher/ChatCard/](client/src/components/Teacher/ChatCard/)).
 - **Mock data** lives only in [client/src/mockData/](client/src/mockData/). The demo join
   code `1234` always works.
 
