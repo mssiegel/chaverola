@@ -11,6 +11,124 @@ here.
 
 ---
 
+## Mobile navbar swaps the wordmark for "Join Activity" on scroll
+
+**Decision:** On phones, the homepage navbar shows no Join button while the
+hero's own "Join an Activity" CTA is on screen — just the logo, wordmark, and
+language switcher. Once the visitor scrolls the hero CTA up under the navbar,
+the wordmark slides away and a "Join Activity" button slides in on the right
+(and the swap reverses when they scroll back up). Animated with width +
+opacity + slide transitions, disabled under reduced motion. Pages without a
+hero keep a static short "Join" button, and from `sm` up the bar is static
+with the full "Join an Activity" label.
+
+**Why:** Product-owner call. At the top of the homepage the hero's big Join
+button is right there — a second one in the navbar is duplicate chrome on a
+tight bar. Once it scrolls away, the navbar takes over as the always-visible
+way in, and hiding the wordmark buys the space (the logo mark still brands
+the bar). The trigger is the CTA passing under the sticky navbar, not the
+viewport top, because that's when it visually disappears.
+
+_Implemented in [AppLayout](client/src/components/layout/AppLayout.tsx) via
+[useHeroCtaPassed](client/src/lib/useHeroCtaPassed.ts), watching the id on
+the hero CTA in [HomePage](client/src/pages/HomePage.tsx)._
+
+---
+
+## Hero CTAs sit above the fold on phones
+
+**Decision:** On mobile, the hero's CTA row (Join an Activity / Host an
+Activity) renders **above** the "Setup takes about a minute" list, and the
+hero's top padding is tighter, so both buttons are visible without scrolling
+even on short phones. On `lg` and up the list keeps its natural spot between
+the pitch and the CTAs. The swap is a flex `order` utility, which is safe
+here because the list contains nothing focusable — tab order still matches
+what you see.
+
+**Why:** Product-owner call: the buttons are the point of the page, and on
+phones they were landing below the fold. A student told to "tap Join" should
+never have to scroll to find it. Desktop has the room, and there the
+pitch → how-it-works → act reading order is worth keeping.
+
+_Implemented in [HomePage](client/src/pages/HomePage.tsx)._
+
+---
+
+## The hero looks hand-made and never mentions AI
+
+**Decision:** The hero's pitch column uses deliberately plain, school-flavored
+styling: a solid-color headline with a highlighter mark under "In character",
+a plain numbered how-it-works list, and no gradient text, glow blobs, badge
+pills, or sparkle icons. The copy states the human fact **positively** —
+"behind every character is a real classmate", the chatbox header adds "played
+by a classmate", the kicker names it "A classroom activity for teachers" —
+and the word "AI" appears nowhere. An earlier draft said "not an AI"
+explicitly; the product owner cut it.
+
+**Why:** Product-owner feedback, twice. First: a version with gradient-clip
+headline, blur blobs, emoji badge, and arrow chips "looked like it was
+generated with AI" — the standard template kit undercuts a product whose
+whole point is classmates talking to each other, so the design reads
+hand-made instead. Second: don't mention AI at all, even to deny it — naming
+it plants the comparison and reads defensive; "a real classmate" carries the
+fact on its own. Don't reintroduce template styling or AI mentions here.
+
+_Implemented in [HomePage](client/src/pages/HomePage.tsx) and
+[HeroChatbox](client/src/components/home/HeroChatbox.tsx)._
+
+---
+
+## The navbar has one CTA: Join an Activity
+
+**Decision:** Only the student "Join an Activity" button lives in the navbar.
+"Host an Activity" was removed from it — teachers start from the hero's
+secondary CTA instead. The freed space lets the wordmark show at all widths.
+
+**Why:** Students arrive being told "go to the site and tap Join", so that
+action must be the single unmissable button on every page. Two navbar CTAs
+competed for that tap and crowded the bar at phone widths.
+
+_Implemented in [AppLayout](client/src/components/layout/AppLayout.tsx)._
+
+---
+
+## The hero chatbox is the product running live, not a mockup
+
+**Decision:** The homepage hero's sample chat is the real student chatbox
+(conversation feed + composer) driven by the same demo engine as
+`/demo/student-chat`, playing a scripted scene (you're the Moon 🌕, chatting
+with Neil Armstrong 🚀). Visitors can type and get in-character replies. It
+deliberately omits the End chat controls — they'd be noise on a landing page.
+
+**Why:** A teacher deciding in seconds needs proof, not promises: a chat that
+moves (typing indicator, replies) sells "students will love this" better than
+a screenshot. Reusing the real components also means the sample can never
+drift out of sync with the actual product.
+
+_Implemented in [HeroChatbox](client/src/components/home/HeroChatbox.tsx) with
+its scenario in [heroChatDemo.ts](client/src/mockData/heroChatDemo.ts)._
+
+---
+
+## Navbar: CTA label shortens on phones; language switcher swaps in place
+
+**Decision:** Below the `sm` breakpoint the navbar CTA renders as "Join"
+(full "Join an Activity" from `sm` up). The language dropdown's trigger shows
+the **active** locale's initials (EN or עב), and picking a language rewrites
+the current URL in place (same page, query/hash kept) rather than jumping
+home. (Superseded in part by "The navbar has one CTA" above — Host is gone
+from the bar and the wordmark now shows at all widths.)
+
+**Why:** The full label plus wordmark and language switcher is a squeeze on a
+375px-wide bar; shortening keeps the button roomy and tappable. Switching
+language mid-flow shouldn't lose your place, and showing the active locale
+tells you at a glance which mode you're in.
+
+_Implemented in [AppLayout](client/src/components/layout/AppLayout.tsx) and
+[LanguageSwitcher](client/src/components/layout/LanguageSwitcher.tsx)._
+
+---
+
 ## Ending a chat ends it for everyone in the room
 
 **Decision:** When a student ends a chat, it ends for **every participant in that chat**,

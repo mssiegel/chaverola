@@ -39,11 +39,14 @@ export function Conversation({
   for (const p of participants) byId.set(p.id, p);
 
   const isGroup = participants.length > 2;
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const feedRef = useRef<HTMLDivElement>(null);
 
-  // Stick to the newest message / typing indicator.
+  // Stick to the newest message / typing indicator. Scroll only the feed
+  // itself — scrollIntoView would also scroll the page, which yanks the
+  // viewport around when the chatbox is embedded mid-page (homepage hero).
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
+    const el = feedRef.current;
+    el?.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [messages, typingPeerId]);
 
   const typingName = typingPeerId
@@ -54,7 +57,10 @@ export function Conversation({
     : null;
 
   return (
-    <div className="scroll-soft relative flex-1 overflow-y-auto px-3 py-3 text-[15px] leading-6 sm:px-4">
+    <div
+      ref={feedRef}
+      className="scroll-soft relative flex-1 overflow-y-auto px-3 py-3 text-[15px] leading-6 sm:px-4"
+    >
       {peerState !== "connected" && (
         <div className="sticky top-0 z-10 -mx-3 mb-2 flex justify-center px-3 sm:-mx-4 sm:px-4">
           <PeerReconnectBanner peerState={peerState} peerName={offlineName} />
@@ -69,8 +75,6 @@ export function Conversation({
       />
 
       <PeerIsTyping characterName={typingName} isGroup={isGroup} />
-
-      <div ref={bottomRef} className="h-0" />
     </div>
   );
 }

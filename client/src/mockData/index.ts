@@ -5,5 +5,6 @@
 
 export const DEMO_JOIN_CODE = "1234";
 
+export * from "./heroChatDemo";
 export * from "./studentChatDemo";
 export * from "./teacherChatDemo";

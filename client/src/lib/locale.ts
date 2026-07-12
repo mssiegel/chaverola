@@ -18,6 +18,20 @@ export function useLocale(): Locale {
 }
 
 /**
+ * Rewrites a pathname to the given locale, keeping the rest of the path
+ * intact — e.g. ("/activity/join", "he") → "/he/activity/join" and
+ * ("/he/activity/join", "en") → "/activity/join". Used by the navbar's
+ * language switcher to swap locales in place.
+ */
+export function switchLocalePath(pathname: string, locale: Locale): string {
+  const bare =
+    localePrefix(pathname) === "/he" ? pathname.slice("/he".length) : pathname;
+  const normalized = bare === "" ? "/" : bare;
+  if (locale === "en") return normalized;
+  return normalized === "/" ? "/he" : `/he${normalized}`;
+}
+
+/**
  * Returns a function that prefixes an app-absolute path (e.g. `/activity/join`)
  * with the active locale prefix.
  */
@@ -26,6 +40,8 @@ export function useLocalePath(): (path: string) => string {
   const prefix = localePrefix(pathname);
   return (path: string) => {
     const normalized = path.startsWith("/") ? path : `/${path}`;
-    return `${prefix}${normalized}` || "/";
+    // Home is the prefix itself ("/he", not "/he/").
+    if (normalized === "/") return prefix || "/";
+    return `${prefix}${normalized}`;
   };
 }

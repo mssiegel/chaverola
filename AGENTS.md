@@ -9,7 +9,9 @@ Scaffolding is in place: a pnpm-workspaces monorepo with a working `client/` app
 first feature — the **student chatbox** — is built as a working, mock-driven demo at
 `/demo/student-chat`; it is wired into the real student flow in a later prompt. The
 **teacher chat cards** follow the same pattern at `/demo/teacher-chat` and get wired
-into `/activity/host/:joinCode` later.
+into `/activity/host/:joinCode` later. The **navbar** (logo, language switcher,
+Join CTA) and the **homepage hero** at `/` — with a live sample chatbox reusing
+the student chat pieces — are in place.
 
 ## Project Brief
 

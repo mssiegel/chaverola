@@ -6,6 +6,8 @@ interface LogoProps {
   /** Show the "Chaverola" wordmark next to the mark. */
   withWordmark?: boolean;
   className?: string;
+  /** Extra classes for the wordmark, e.g. to hide it at narrow widths. */
+  wordmarkClassName?: string;
 }
 
 /**
@@ -46,12 +48,22 @@ export function LogoMark({ size = 36 }: { size?: number }) {
   );
 }
 
-export function Logo({ size = 36, withWordmark = true, className }: LogoProps) {
+export function Logo({
+  size = 36,
+  withWordmark = true,
+  className,
+  wordmarkClassName,
+}: LogoProps) {
   return (
     <span className={cn("inline-flex items-center gap-2", className)}>
       <LogoMark size={size} />
       {withWordmark && (
-        <span className="text-xl font-semibold tracking-tight text-foreground">
+        <span
+          className={cn(
+            "text-xl font-semibold tracking-tight text-foreground",
+            wordmarkClassName
+          )}
+        >
           Chaverola
         </span>
       )}
