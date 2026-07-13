@@ -93,17 +93,24 @@ There is no test runner configured yet.
 - **Design tokens** ([client/src/index.css](client/src/index.css)): a single set of CSS
   variables ("Grape & Citrus") drives the theme via Tailwind v4 `@theme`. Character-name
   colors come from `--char-*` tokens, assigned **by speaking order** per room by
-  [`assignCharacterColors`](client/src/lib/characterColor.ts): the student's own character
-  is always green, the 2nd speaker golden, 3rd bluish, 4th purplish. See
-  [DECISIONS.md](DECISIONS.md) for the rule and rationale.
+  [`assignCharacterColors`](client/src/lib/characterColor.ts) (or its
+  `selfFirstCharacterColors` wrapper, which seeds the viewer's own character first): the
+  student's own character is always green, the 2nd speaker golden, 3rd bluish, 4th
+  purplish. See [DECISIONS.md](DECISIONS.md) for the rule and rationale. The brand-mark
+  gradient (logo tile, ChaverolaPill, join button) is the `--brand-gradient-*` token
+  pair; the SVG stops in `Logo.tsx`/`favicon.svg` are pinned mirrors of it.
 - **Chatbox** ([client/src/components/Student/Chatbox/](client/src/components/Student/Chatbox/)):
   the shell (`index.tsx`) is **presentational** — driven entirely by props. The mock
   "engine" (`useChatDemo.ts`) simulates a live peer on timers and is swapped for a real
   data source later. The same chatbox conventions back the Teacher view.
 - **Shared chat pieces** ([client/src/components/chat/](client/src/components/chat/)):
-  the message-line renderer (`ConversationLines`) and the end-chat confirmation modal
-  are shared by the student chatbox and the teacher chat cards
+  the card chrome (`ChatFrame` / `CHAT_FRAME_CLASS`), the gradient "You're X … with Y"
+  header (`ChatHeader`), the message-line renderer (`ConversationLines`), and the
+  end-chat confirmation modal are shared by the student chatbox, the homepage hero
+  chatbox, and the teacher chat cards
   ([client/src/components/Teacher/ChatCard/](client/src/components/Teacher/ChatCard/)).
+  Character display labels come from
+  [`characterLabel` / `peerListLabel`](client/src/lib/characterLabel.ts).
 - **Mock data** lives only in [client/src/mockData/](client/src/mockData/). The demo join
   code `1234` always works.
 

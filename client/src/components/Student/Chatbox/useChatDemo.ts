@@ -3,12 +3,11 @@ import { useEffect, useRef, useState } from "react";
 import type {
   ChatMessage,
   ChatScenario,
+  ChatStatus,
   Participant,
   PeerConnectionState,
   ScriptedLine,
 } from "@/types/chat";
-
-export type ChatStatus = "active" | "ended";
 
 /**
  * Everything `useChatDemo` hands back — state plus actions. Exported so a

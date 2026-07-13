@@ -13,8 +13,10 @@ interface LogoProps {
 /**
  * The Chaverola mark: a rounded speech bubble with a friendly face (two dot
  * eyes + a small smile), tail at the bottom-left, on a rounded app-icon tile.
- * This is the single source of truth for the mark — it matches
- * `public/favicon.svg` and is reused for the navbar logo.
+ * It matches `public/favicon.svg` and is reused for the navbar logo. The tile
+ * gradient's canonical stops are the `--brand-gradient-*` tokens in index.css;
+ * SVGs can't read CSS vars across files, so the literals here and in the
+ * favicon are pinned mirrors — update all three together.
  */
 export function LogoMark({ size = 36 }: { size?: number }) {
   return (

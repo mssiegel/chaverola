@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronsDownUp, ChevronsUpDown, LogOut } from "lucide-react";
 
+import { CHAT_FRAME_CLASS } from "@/components/chat/ChatFrame";
 import { ConversationLines } from "@/components/chat/ConversationLines";
 import { EndChatConfirmationModal } from "@/components/chat/EndChatConfirmationModal";
 import { Button } from "@/components/ui/button";
@@ -77,7 +78,8 @@ export function ChatCard({
   return (
     <section
       className={cn(
-        "flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-md",
+        CHAT_FRAME_CLASS,
+        "shadow-md",
         isEnded && "opacity-95 saturate-[.6]"
       )}
     >
@@ -156,5 +158,3 @@ export function ChatCard({
     </section>
   );
 }
-
-export default ChatCard;

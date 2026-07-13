@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { LogOut } from "lucide-react";
 
+import { ChatFrame } from "@/components/chat/ChatFrame";
+import { ChatHeader } from "@/components/chat/ChatHeader";
 import { EndChatConfirmationModal } from "@/components/chat/EndChatConfirmationModal";
-import { assignCharacterColors } from "@/lib/characterColor";
+import { characterLabel } from "@/lib/characterLabel";
+import { selfFirstCharacterColors } from "@/lib/characterColor";
 import type {
   ChatMessage,
   Participant,
@@ -51,17 +54,9 @@ export function Chatbox({
 }: ChatboxProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  // Color per speaker, assigned by order. Seed the student's own character
-  // first so "you" are always green; peers then follow (golden, bluish,
-  // purplish, …). Shared by the feed + the end-of-chat reveal.
-  const characterColors = assignCharacterColors([
-    self.character.id,
-    ...participants.map((p) => p.character.id),
-  ]);
-
-  const peerLabel = peers
-    .map((peer) => `${peer.character.name} ${peer.character.emoji}`)
-    .join(", ");
+  // Color per speaker, assigned by order — "you" are always green. Shared by
+  // the feed + the end-of-chat reveal.
+  const characterColors = selfFirstCharacterColors(self, participants);
 
   const handleConfirmEnd = () => {
     setConfirmOpen(false);
@@ -69,31 +64,23 @@ export function Chatbox({
   };
 
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
-      {/* Header */}
-      <header className="flex items-center justify-between gap-3 bg-gradient-to-r from-brand-grape to-brand-grape-strong px-4 py-3 text-white">
-        <div className="min-w-0 leading-tight">
-          <div className="truncate text-[15px] font-semibold">
-            <span className="font-normal text-white/70">You're </span>
-            {self.character.name} {self.character.emoji}
-          </div>
-          <div className="truncate text-sm text-white/85">
-            <span className="text-white/60">with </span>
-            {peerLabel}
-          </div>
-        </div>
-
-        {!isEnded && (
-          <button
-            type="button"
-            onClick={() => setConfirmOpen(true)}
-            className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/25 active:scale-[0.98]"
-          >
-            <LogOut className="size-4" />
-            <span>End chat</span>
-          </button>
-        )}
-      </header>
+    <ChatFrame className="h-full">
+      <ChatHeader
+        self={self}
+        peers={peers}
+        actions={
+          !isEnded && (
+            <button
+              type="button"
+              onClick={() => setConfirmOpen(true)}
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/25 active:scale-[0.98]"
+            >
+              <LogOut className="size-4" />
+              <span>End chat</span>
+            </button>
+          )
+        }
+      />
 
       {/* Conversation */}
       <Conversation
@@ -117,7 +104,7 @@ export function Chatbox({
       ) : (
         <MessageComposer
           onSend={onSend}
-          selfCharacterLabel={`${self.character.name} ${self.character.emoji}`}
+          selfCharacterLabel={characterLabel(self)}
         />
       )}
 
@@ -128,8 +115,6 @@ export function Chatbox({
         description="This ends the chat for everyone in it, and there's no reopening it. You can head back to the lobby whenever you're ready."
         cancelLabel="Keep chatting"
       />
-    </div>
+    </ChatFrame>
   );
 }
-
-export default Chatbox;

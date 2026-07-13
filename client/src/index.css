@@ -55,6 +55,13 @@
   --brand-mint: #16c79a;
   --brand-sky: #3da5ff;
 
+  /* Brand-mark gradient (logo tile, ChaverolaPill, join button). These are
+     canonical; the SVG stops in Logo.tsx and public/favicon.svg are pinned
+     mirrors — update all three together. Theme-invariant on purpose: the
+     mark keeps the same ink in dark mode, so no `.dark` override. */
+  --brand-gradient-from: #8a6bff;
+  --brand-gradient-to: #6c4be0;
+
   /* Character-name palette — assigned by speaking order within a room.
      The student's own character is always #1 (green); the 2nd speaker is
      golden, 3rd bluish, 4th purplish. Orange was dropped (too close to the
@@ -145,6 +152,8 @@
   --color-brand-sun: var(--brand-sun);
   --color-brand-mint: var(--brand-mint);
   --color-brand-sky: var(--brand-sky);
+  --color-brand-gradient-from: var(--brand-gradient-from);
+  --color-brand-gradient-to: var(--brand-gradient-to);
 
   --font-sans: "Fredoka", "Nunito", ui-sans-serif, system-ui, sans-serif;
 }

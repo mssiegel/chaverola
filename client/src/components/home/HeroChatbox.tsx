@@ -1,7 +1,10 @@
+import { ChatFrame } from "@/components/chat/ChatFrame";
+import { ChatHeader } from "@/components/chat/ChatHeader";
 import { Conversation } from "@/components/Student/Chatbox/Conversation";
 import { MessageComposer } from "@/components/Student/Chatbox/MessageComposer";
 import type { ChatDemo } from "@/components/Student/Chatbox/useChatDemo";
-import { assignCharacterColors } from "@/lib/characterColor";
+import { characterLabel } from "@/lib/characterLabel";
+import { selfFirstCharacterColors } from "@/lib/characterColor";
 
 interface HeroChatboxProps {
   /**
@@ -14,36 +17,26 @@ interface HeroChatboxProps {
 
 /**
  * The live sample chat on the homepage hero. It reuses the real student
- * chatbox pieces (conversation feed + composer) and the demo engine, so what
- * a visitor sees — and types into — is the actual product, minus the End
- * chat controls that don't belong on a landing page. See DECISIONS.md →
- * "Hero chatbox is a live demo".
+ * chatbox pieces (frame + header + conversation feed + composer) and the demo
+ * engine, so what a visitor sees — and types into — is the actual product,
+ * minus the End chat controls that don't belong on a landing page. See
+ * DECISIONS.md → "Hero chatbox is a live demo".
  */
 export function HeroChatbox({ chat }: HeroChatboxProps) {
-  // Own character first so "you" (the Moon) are green — same rule as the app.
-  const characterColors = assignCharacterColors([
-    chat.self.character.id,
-    ...chat.participants.map((p) => p.character.id),
-  ]);
-
-  const selfLabel = `${chat.self.character.name} ${chat.self.character.emoji}`;
-  const peerLabel = chat.peers
-    .map((peer) => `${peer.character.name} ${peer.character.emoji}`)
-    .join(", ");
+  const characterColors = selfFirstCharacterColors(
+    chat.self,
+    chat.participants
+  );
 
   return (
-    <div className="flex h-[380px] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xl sm:h-[420px]">
-      <header className="bg-gradient-to-r from-brand-grape to-brand-grape-strong px-4 py-3 leading-tight text-white">
-        <div className="truncate text-[15px] font-semibold">
-          <span className="font-normal text-white/70">You're </span>
-          {selfLabel}
-        </div>
-        <div className="truncate text-sm text-white/85">
-          <span className="text-white/60">with </span>
-          {peerLabel}
+    <ChatFrame className="h-[380px] sm:h-[420px]">
+      <ChatHeader
+        self={chat.self}
+        peers={chat.peers}
+        peerSuffix={
           <span className="text-white/60"> · played by a classmate</span>
-        </div>
-      </header>
+        }
+      />
 
       <Conversation
         participants={chat.participants}
@@ -55,7 +48,10 @@ export function HeroChatbox({ chat }: HeroChatboxProps) {
         characterColors={characterColors}
       />
 
-      <MessageComposer onSend={chat.send} selfCharacterLabel={selfLabel} />
-    </div>
+      <MessageComposer
+        onSend={chat.send}
+        selfCharacterLabel={characterLabel(chat.self)}
+      />
+    </ChatFrame>
   );
 }

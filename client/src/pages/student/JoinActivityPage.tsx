@@ -179,11 +179,13 @@ export function JoinActivityPage() {
                   )}
                 </>
               )}
+              {/* Hover stops are hand-tuned darker shades of the
+                  `--brand-gradient-*` tokens the base stops come from. */}
               <Button
                 type="submit"
                 size="lg"
                 disabled={!canSubmit}
-                className="w-full bg-linear-to-r from-[#8a6bff] to-[#6c4be0] hover:from-[#7d5cf5] hover:to-[#5f3fd6]"
+                className="w-full bg-linear-to-r from-brand-gradient-from to-brand-gradient-to hover:from-[#7d5cf5] hover:to-[#5f3fd6]"
               >
                 {stage === "name" ? "Join Activity" : "Continue"}
                 <ArrowRight className="size-4" />

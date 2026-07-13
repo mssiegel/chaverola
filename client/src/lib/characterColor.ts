@@ -11,6 +11,8 @@
   the reasoning behind it.
 */
 
+import type { Participant } from "@/types/chat";
+
 const CHAR_COLOR_VARS = [
   "--char-1",
   "--char-2",
@@ -40,4 +42,19 @@ export function assignCharacterColors(keys: string[]): Map<string, string> {
   }
 
   return result;
+}
+
+/**
+ * Room colors from the viewer's seat: seeds the viewer's own character first
+ * so "you" are always green; peers then follow in participant order (golden,
+ * bluish, purplish, …).
+ */
+export function selfFirstCharacterColors(
+  self: Participant,
+  participants: Participant[]
+): Map<string, string> {
+  return assignCharacterColors([
+    self.character.id,
+    ...participants.map((p) => p.character.id),
+  ]);
 }

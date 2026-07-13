@@ -1,5 +1,6 @@
 import { CheckCircle2 } from "lucide-react";
 
+import { characterLabel } from "@/lib/characterLabel";
 import type { Participant } from "@/types/chat";
 
 interface ChatCardHeaderProps {
@@ -33,7 +34,7 @@ export function ChatCardHeader({
                 color: characterColors.get(participant.character.id),
               }}
             >
-              {participant.character.name} {participant.character.emoji}
+              {characterLabel(participant)}
             </span>
           </li>
         ))}

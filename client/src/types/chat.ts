@@ -30,6 +30,12 @@ export interface ChatMessage {
   text: string;
 }
 
+/** Whether a chat is still going or has been ended. */
+export type ChatStatus = "active" | "ended";
+
+/** A chat message before a demo engine stamps an id on it. */
+export type SeedMessage = Omit<ChatMessage, "id">;
+
 /**
  * Peer link state, driven by mock events in the demo.
  * `reconnected` is a brief success flash before returning to `connected`.
@@ -45,12 +51,10 @@ export interface MonitoredChat {
   id: string;
   participants: Participant[];
   messages: ChatMessage[];
-  status: "active" | "ended";
+  status: ChatStatus;
 }
 
-export interface ScriptedLine {
-  senderId: string;
-  text: string;
+export interface ScriptedLine extends SeedMessage {
   /** Delay (ms) after the previous scripted line before this one plays. */
   delayMs: number;
 }
@@ -62,11 +66,11 @@ export interface ScriptedLine {
 export interface TeacherChatScenario {
   id: string;
   participants: Participant[];
-  status: "active" | "ended";
+  status: ChatStatus;
   /** Messages already present when the page opens. */
-  seedMessages: Array<{ senderId: string; text: string }>;
+  seedMessages: SeedMessage[];
   /** Lines dripped into the chat over time, in order (looping). */
-  upcomingLines: Array<{ senderId: string; text: string }>;
+  upcomingLines: SeedMessage[];
 }
 
 /**
@@ -79,7 +83,7 @@ export interface ChatScenario {
   self: Participant;
   peers: Participant[];
   /** Messages already present when the chat opens. */
-  seedMessages: Array<{ senderId: string; text: string }>;
+  seedMessages: SeedMessage[];
   /** Timed lines the peer(s) send after opening. */
   script: ScriptedLine[];
   /** Random peer chatter after the script runs out. */
