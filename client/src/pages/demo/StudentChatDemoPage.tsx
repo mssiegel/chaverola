@@ -1,16 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  MessageCirclePlus,
-  Wifi,
-  WifiOff,
-  Wrench,
-  XCircle,
-} from "lucide-react";
+import { MessageCirclePlus, Wifi, WifiOff, XCircle } from "lucide-react";
 
+import {
+  DemoControlsPanel,
+  DemoToggle,
+  EventButton,
+  SegmentButton,
+} from "@/components/demo/DemoControls";
+import { DemoPageHeader } from "@/components/demo/DemoPageHeader";
 import { Chatbox } from "@/components/Student/Chatbox";
 import { useChatDemo } from "@/components/chat/useChatDemo";
-import { cn } from "@/lib/utils";
 import { useLocalePath } from "@/lib/locale";
 import {
   DEMO_JOIN_CODE,
@@ -37,18 +37,10 @@ export function StudentChatDemoPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-6">
-      <header className="text-center">
-        <span className="inline-block rounded-full bg-secondary px-3 py-1 text-xs font-semibold tracking-wide text-secondary-foreground uppercase">
-          Temporary demo route
-        </span>
-        <h1 className="mt-2 text-2xl font-semibold text-foreground">
-          Student chatbox
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          A live preview with no backend. The peer replies on a timer, so try
-          sending messages and emojis.
-        </p>
-      </header>
+      <DemoPageHeader title="Student chatbox">
+        A live preview with no backend. The peer replies on a timer, so try
+        sending messages and emojis.
+      </DemoPageHeader>
 
       <div className="h-[min(72vh,660px)]">
         <Chatbox
@@ -109,15 +101,7 @@ function DemoControls({
   onEndChat,
 }: DemoControlsProps) {
   return (
-    <section className="rounded-2xl border border-dashed border-border bg-muted/40 p-4">
-      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-        <Wrench className="size-4" />
-        Demo controls
-        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold tracking-wide uppercase">
-          dev only
-        </span>
-      </div>
-
+    <DemoControlsPanel>
       <div className="space-y-4">
         <div>
           <p className="mb-1.5 text-xs font-medium text-muted-foreground">
@@ -143,7 +127,7 @@ function DemoControls({
           <span className="text-sm font-medium text-foreground">
             Reveal names when chat ends
           </span>
-          <Toggle checked={revealNames} onChange={onRevealNamesChange} />
+          <DemoToggle checked={revealNames} onChange={onRevealNamesChange} />
         </label>
 
         <div>
@@ -182,83 +166,6 @@ function DemoControls({
           </div>
         </div>
       </div>
-    </section>
-  );
-}
-
-function SegmentButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors",
-        active
-          ? "bg-card text-foreground shadow-sm"
-          : "text-muted-foreground hover:text-foreground"
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
-function EventButton({
-  onClick,
-  disabled,
-  icon,
-  children,
-}: {
-  onClick: () => void;
-  disabled?: boolean;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="flex items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-card"
-    >
-      {icon}
-      {children}
-    </button>
-  );
-}
-
-function Toggle({
-  checked,
-  onChange,
-}: {
-  checked: boolean;
-  onChange: (value: boolean) => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className={cn(
-        "relative h-6 w-11 shrink-0 rounded-full transition-colors",
-        checked ? "bg-primary" : "bg-input"
-      )}
-    >
-      <span
-        className={cn(
-          "absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow-sm transition-transform",
-          checked && "translate-x-5"
-        )}
-      />
-    </button>
+    </DemoControlsPanel>
   );
 }

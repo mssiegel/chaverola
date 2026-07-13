@@ -1,3 +1,8 @@
+import {
+  HighlightMark,
+  SectionEyebrow,
+  SectionHeading,
+} from "@/components/home/SectionHeading";
 import { ChatCard } from "@/components/Teacher/ChatCard";
 import type { ChatMessage, Participant } from "@/types/chat";
 
@@ -30,20 +35,12 @@ export function TeacherViewSection({
       <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-10 px-4 py-14 sm:py-20 lg:grid-cols-2 lg:gap-14">
         {/* Pitch */}
         <div className="flex flex-col items-start gap-5">
-          <p className="text-sm font-bold tracking-[0.14em] text-brand-grape uppercase">
-            The teacher's view
-          </p>
+          <SectionEyebrow>The teacher's view</SectionEyebrow>
 
-          <h2 className="text-3xl leading-[1.15] font-bold tracking-tight text-balance text-foreground sm:text-4xl">
+          <SectionHeading>
             Students see characters. You see{" "}
-            <span className="relative inline-block whitespace-nowrap">
-              <span
-                aria-hidden
-                className="absolute inset-x-[-0.12em] bottom-[0.02em] h-[0.48em] -rotate-1 rounded-[0.15em] bg-brand-sun/60"
-              />
-              <span className="relative">who's who.</span>
-            </span>
-          </h2>
+            <HighlightMark>who's who.</HighlightMark>
+          </SectionHeading>
 
           {/* No "this card" here: on phones the card renders well below this
               text, so spatial pointing breaks. The caption right above the

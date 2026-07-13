@@ -4,6 +4,10 @@ import { GraduationCap, MessageCircle } from "lucide-react";
 import { FounderNote } from "@/components/home/FounderNote";
 import { HeroChatbox } from "@/components/home/HeroChatbox";
 import { HowItWorksSection } from "@/components/home/HowItWorksSection";
+import {
+  HighlightMark,
+  SectionEyebrow,
+} from "@/components/home/SectionHeading";
 import { TeacherViewSection } from "@/components/home/TeacherViewSection";
 import { LocaleLink } from "@/components/layout/LocaleLink";
 import { Button } from "@/components/ui/button";
@@ -35,19 +39,11 @@ export function HomePage() {
       <section className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-10 px-4 pt-6 pb-6 sm:pt-14 lg:grid-cols-2 lg:gap-14 lg:pt-16 lg:pb-12">
         {/* Pitch */}
         <div className="flex animate-in flex-col items-start gap-5 duration-700 fade-in slide-in-from-bottom-4 motion-reduce:animate-none sm:gap-6">
-          <p className="text-sm font-bold tracking-[0.14em] text-brand-grape uppercase">
-            A classroom activity for teachers
-          </p>
+          <SectionEyebrow>A classroom activity for teachers</SectionEyebrow>
 
           <h1 className="text-4xl leading-[1.12] font-bold tracking-tight text-balance text-foreground sm:text-5xl xl:text-6xl">
             Get your whole class talking.{" "}
-            <span className="relative inline-block whitespace-nowrap">
-              <span
-                aria-hidden
-                className="absolute inset-x-[-0.12em] bottom-[0.02em] h-[0.48em] -rotate-1 rounded-[0.15em] bg-brand-sun/60"
-              />
-              <span className="relative">In character.</span>
-            </span>
+            <HighlightMark>In character.</HighlightMark>
           </h1>
 
           <p className="max-w-lg text-lg text-pretty text-muted-foreground">

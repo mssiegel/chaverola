@@ -1,15 +1,21 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowRight, UserX, Wrench } from "lucide-react";
+import { ArrowRight, UserX } from "lucide-react";
 
+import { DemoControlsPanel, EventButton } from "@/components/demo/DemoControls";
 import { WaitingLobby } from "@/components/Student/WaitingLobby";
 import { Button } from "@/components/ui/button";
 import { useLocalePath } from "@/lib/locale";
 import { useStudentSession } from "@/lib/studentSession";
 import { usePageTitle } from "@/lib/usePageTitle";
+import { cn } from "@/lib/utils";
 import { DEMO_JOIN_CODE, findActivityByCode } from "@/mockData";
 
 type StudentStage = "code" | "name" | "lobby";
+
+/** The floating white card the student world's stages render on. */
+const STUDENT_CARD_CLASS =
+  "rounded-3xl bg-card shadow-2xl shadow-brand-grape-strong/30";
 
 /**
  * The student flow. Serves both `/activity/join` (code entry) and
@@ -100,7 +106,7 @@ export function JoinActivityPage() {
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center gap-6">
       {stage === "lobby" && activity && session ? (
         <>
-          <div className="w-full rounded-3xl bg-card p-5 shadow-2xl shadow-brand-grape-strong/30 sm:p-6">
+          <div className={cn(STUDENT_CARD_CLASS, "w-full p-5 sm:p-6")}>
             <WaitingLobby activity={activity} studentName={session.name} />
           </div>
           <LobbyDemoControls onTeacherRemove={teacherRemovesStudent} />
@@ -109,7 +115,12 @@ export function JoinActivityPage() {
         // Phones anchor the card high so the form is visible without
         // scrolling or hunting; from `sm` up it centers in the viewport.
         <div className="flex w-full max-w-sm flex-1 flex-col items-center justify-start gap-4 pt-2 sm:justify-center sm:pt-0">
-          <div className="flex w-full animate-in flex-col gap-6 rounded-3xl bg-card px-6 py-8 text-center shadow-2xl shadow-brand-grape-strong/30 duration-500 fade-in slide-in-from-bottom-4 motion-reduce:animate-none sm:px-8">
+          <div
+            className={cn(
+              STUDENT_CARD_CLASS,
+              "flex w-full animate-in flex-col gap-6 px-6 py-8 text-center duration-500 fade-in slide-in-from-bottom-4 motion-reduce:animate-none sm:px-8"
+            )}
+          >
             <div className="space-y-2">
               <h1 className="text-3xl font-semibold text-foreground">
                 Join an Activity
@@ -216,8 +227,8 @@ export function JoinActivityPage() {
 }
 
 /**
- * Dev-only trigger for the "teacher removed you" mock event, styled like the
- * demo pages' control panels. Goes away once a real backend drives removal.
+ * Dev-only trigger for the "teacher removed you" mock event. Goes away once a
+ * real backend drives removal.
  */
 function LobbyDemoControls({
   onTeacherRemove,
@@ -225,22 +236,14 @@ function LobbyDemoControls({
   onTeacherRemove: () => void;
 }) {
   return (
-    <section className="w-full rounded-2xl border border-dashed border-white/30 bg-white/10 p-4">
-      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/80">
-        <Wrench className="size-4" />
-        Demo controls
-        <span className="rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-white uppercase">
-          dev only
-        </span>
-      </div>
-      <button
-        type="button"
+    <DemoControlsPanel onWorld>
+      <EventButton
+        onWorld
         onClick={onTeacherRemove}
-        className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-white/25 bg-white/15 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-white/25"
+        icon={<UserX className="size-4" />}
       >
-        <UserX className="size-4" />
         Teacher removes you
-      </button>
-    </section>
+      </EventButton>
+    </DemoControlsPanel>
   );
 }

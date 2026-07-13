@@ -1,3 +1,4 @@
+import { TypingDots } from "@/components/chat/TypingDots";
 import type { Activity } from "@/types/activity";
 
 interface WaitingLobbyProps {
@@ -29,11 +30,7 @@ export function WaitingLobby({ activity, studentName }: WaitingLobbyProps) {
         aria-live="polite"
       >
         Waiting for your match
-        <span className="flex items-center gap-1" aria-hidden>
-          <WaitingDot delay="0ms" />
-          <WaitingDot delay="150ms" />
-          <WaitingDot delay="300ms" />
-        </span>
+        <TypingDots dotClassName="bg-brand-mint" aria-hidden />
       </div>
 
       <div className="w-full space-y-4 rounded-2xl border border-border bg-card p-5 text-left shadow-sm">
@@ -75,14 +72,5 @@ export function WaitingLobby({ activity, studentName }: WaitingLobbyProps) {
         </div>
       </div>
     </section>
-  );
-}
-
-function WaitingDot({ delay }: { delay: string }) {
-  return (
-    <span
-      className="size-1.5 animate-bounce rounded-full bg-brand-mint"
-      style={{ animationDelay: delay }}
-    />
   );
 }

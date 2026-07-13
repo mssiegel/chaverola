@@ -129,7 +129,21 @@ There is no test runner configured yet.
   comment stating why the access can't miss.
 - **Path alias:** import app code via `@/…` (maps to `client/src/`).
 - **ShadCN** primitives live in `client/src/components/ui/` (new-york style). Prefer adding
-  components there over hand-rolling equivalents.
+  components there over hand-rolling equivalents. They're owned code and may be
+  customized: our `ui/badge.tsx` IS the rounded "eyebrow pill", not the stock ShadCN
+  badge styling.
+- **Dev-only demo chrome** lives in `client/src/components/demo/`
+  (`DemoControlsPanel`, `SegmentButton`, `EventButton`, `DemoToggle`,
+  `DemoPageHeader`) — used by the `/demo/*` pages and the join-flow lobby panel, and
+  by the teacher host page when it gets wired. The `onWorld` prop switches to the
+  white/glass theme for the purple student world.
+- **Accepted duplication** (deliberate — don't extract): the sticky-note captions on
+  the homepage, the two numbered-step renderers (HomePage vs HowItWorksSection emit
+  different markup), the page-section wrapper strings, the page-H1 strings, the
+  ping/pulse "live" dots (different animations on different surfaces), and the
+  seed-message id-stamping idiom in the two demo engines. Two or three short
+  repetitions read cheaper than a component boundary; revisit any of these at a
+  fourth occurrence.
 - **Routes are canonical** — do not invent new ones beyond those in the project brief (the
   temporary `/demo/*` routes are the exception and are clearly marked).
 - **Shared vs. role-specific chat components:** anything the student and teacher views

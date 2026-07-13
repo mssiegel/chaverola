@@ -1,3 +1,4 @@
+import { DemoPageHeader } from "@/components/demo/DemoPageHeader";
 import { ChatCard } from "@/components/Teacher/ChatCard";
 import { teacherChatScenarios } from "@/mockData";
 
@@ -14,19 +15,10 @@ export function TeacherChatDemoPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-6">
-      <header className="text-center">
-        <span className="inline-block rounded-full bg-secondary px-3 py-1 text-xs font-semibold tracking-wide text-secondary-foreground uppercase">
-          Temporary demo route
-        </span>
-        <h1 className="mt-2 text-2xl font-semibold text-foreground">
-          Teacher chat cards
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          A live preview of what the teacher sees mid-round. The chats keep
-          moving on their own, so expand a card to read everything or end one
-          early.
-        </p>
-      </header>
+      <DemoPageHeader title="Teacher chat cards">
+        A live preview of what the teacher sees mid-round. The chats keep moving
+        on their own, so expand a card to read everything or end one early.
+      </DemoPageHeader>
 
       <div className="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {chats.map((chat) => (

@@ -1,6 +1,10 @@
 import type { ReactNode } from "react";
 import { GraduationCap } from "lucide-react";
 
+import {
+  SectionEyebrow,
+  SectionHeading,
+} from "@/components/home/SectionHeading";
 import { LocaleLink } from "@/components/layout/LocaleLink";
 import { Button } from "@/components/ui/button";
 import { DEMO_JOIN_CODE } from "@/mockData";
@@ -15,12 +19,10 @@ export function HowItWorksSection() {
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-14 sm:py-20">
       <div className="flex flex-col items-start gap-5 sm:gap-6">
-        <p className="text-sm font-bold tracking-[0.14em] text-brand-grape uppercase">
-          How it works
-        </p>
-        <h2 className="text-3xl leading-[1.15] font-bold tracking-tight text-balance text-foreground sm:text-4xl">
+        <SectionEyebrow>How it works</SectionEyebrow>
+        <SectionHeading>
           Live before you've finished taking attendance.
-        </h2>
+        </SectionHeading>
       </div>
 
       <ol className="mt-8 grid gap-x-12 gap-y-8 sm:mt-10 sm:grid-cols-2">

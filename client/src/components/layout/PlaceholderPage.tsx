@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { Badge } from "@/components/ui/badge";
+
 interface PlaceholderPageProps {
   eyebrow?: string;
   title: string;
@@ -19,11 +21,7 @@ export function PlaceholderPage({
 }: PlaceholderPageProps) {
   return (
     <div className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-5 px-4 py-12 text-center">
-      {eyebrow && (
-        <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold tracking-wide text-secondary-foreground uppercase">
-          {eyebrow}
-        </span>
-      )}
+      {eyebrow && <Badge>{eyebrow}</Badge>}
       <h1 className="text-3xl font-semibold text-foreground">{title}</h1>
       {description && (
         <p className="text-balance text-muted-foreground">{description}</p>
