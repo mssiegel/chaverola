@@ -9,17 +9,22 @@ really talking to. Only the teacher sees real names, and can reveal them at the 
 > backend logic. Every screen is driven by mock data and demo events, and nothing is a
 > dead end. See [Shared_Project_Context.md](Shared_Project_Context.md) for the full brief.
 
+> **AI agents:** read [AGENTS.md](AGENTS.md) before doing any work, and check
+> [DECISIONS.md](DECISIONS.md) for the area you're touching — behavior that looks like a
+> bug or an oversight is often an intentional, recorded decision.
+
 ## Repository structure
 
 This is a **pnpm workspaces** monorepo.
 
 ```text
 chaverola/
-├─ client/     # the app — React 19 + TypeScript + Vite + Tailwind + ShadCN
+├─ client/     # the app — React 19 + TypeScript + Vite + Tailwind v4 + ShadCN
 ├─ server/     # empty for now (placeholder)
-├─ Shared_Project_Context.md      # the source-of-truth project brief
-├─ AGENTS.md                      # guidance for AI agents / contributors
-└─ PROJECT_DOCUMENTATION_STANDARD.md
+├─ Shared_Project_Context.md          # the source-of-truth project brief
+├─ AGENTS.md                          # guidance for AI agents / contributors
+├─ DECISIONS.md                       # product/UX decisions and their reasoning
+└─ PROJECT_DOCUMENTATION_STANDARD.md  # structure future docs must follow
 ```
 
 ## Getting started
@@ -29,28 +34,46 @@ pnpm install        # install all workspace dependencies
 pnpm dev            # run the client dev server (Vite)
 ```
 
-Then open the URL Vite prints. Useful during development:
+Then open the URL Vite prints. The demo join code **`1234`** always works.
 
-| Route                | What it shows                                          |
-| -------------------- | ------------------------------------------------------ |
-| `/`                  | Homepage                                               |
-| `/activity/join`     | Student join-code entry                                |
-| `/demo/student-chat` | **Live demo of the student chatbox** (temporary route) |
+| Route                      | What it shows                                                      |
+| -------------------------- | ------------------------------------------------------------------ |
+| `/`                        | Homepage — the hero chatbox is the real product running a demo     |
+| `/activity/join`           | Student join-code entry                                            |
+| `/activity/join/:joinCode` | Name entry → waiting lobby (one URL for the whole student journey) |
+| `/activity/create`         | Teacher activity setup (placeholder page for now)                  |
+| `/activity/host/:joinCode` | Teacher's live activity page (placeholder page for now)            |
+| `/demo/student-chat`       | Live demo of the student chatbox (temporary route)                 |
+| `/demo/teacher-chat`       | Live demo of the teacher chat cards (temporary route)              |
 
-The demo join code **`1234`** always works.
+Every route also exists under an `/he` prefix (Hebrew variant — same English text for
+now). Routes are canonical: don't invent new ones beyond the project brief's table.
 
 ## Common scripts (run from the repo root)
 
-| Command          | Description                              |
-| ---------------- | ---------------------------------------- |
-| `pnpm dev`       | Start the client dev server              |
-| `pnpm build`     | Type-check and build the client for prod |
-| `pnpm preview`   | Preview the production build             |
-| `pnpm typecheck` | Type-check the client                    |
-| `pnpm format`    | Format the whole repo with Prettier      |
+| Command             | Description                              |
+| ------------------- | ---------------------------------------- |
+| `pnpm dev`          | Start the client dev server              |
+| `pnpm build`        | Type-check and build the client for prod |
+| `pnpm preview`      | Preview the production build             |
+| `pnpm typecheck`    | Type-check the client                    |
+| `pnpm format`       | Format the whole repo with Prettier      |
+| `pnpm format:check` | Check formatting without writing         |
+
+There is no test runner or ESLint yet — see the Commands section of
+[AGENTS.md](AGENTS.md) for why.
 
 ## Documentation
 
-- [Shared_Project_Context.md](Shared_Project_Context.md) — the project brief (source of truth)
-- [AGENTS.md](AGENTS.md) — guidance for AI agents and contributors
-- [PROJECT_DOCUMENTATION_STANDARD.md](PROJECT_DOCUMENTATION_STANDARD.md) — documentation structure
+Read in this order:
+
+1. [Shared_Project_Context.md](Shared_Project_Context.md) — the project brief: what
+   Chaverola is, scope, tech stack, canonical routes, branding, and chatbox conventions.
+   The source of truth for requirements.
+2. [AGENTS.md](AGENTS.md) — how to work in this repo: current status, commands,
+   architecture, conventions, and working rules for AI agents and contributors.
+3. [DECISIONS.md](DECISIONS.md) — product, UX, and business decisions with their
+   reasoning, grouped by area. Check it before changing behavior that looks odd, and add
+   an entry when a new decision is made.
+4. [PROJECT_DOCUMENTATION_STANDARD.md](PROJECT_DOCUMENTATION_STANDARD.md) — the
+   structure future documentation must follow.
