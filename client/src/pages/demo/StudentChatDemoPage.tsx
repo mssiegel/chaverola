@@ -154,7 +154,7 @@ function DemoControls({
               disabled={!peerConnected || isEnded}
               icon={<MessageCirclePlus className="size-4" />}
             >
-              Poke peer
+              Make peer talk
             </EventButton>
             <EventButton
               onClick={onEndChat}
