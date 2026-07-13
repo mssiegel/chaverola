@@ -25,16 +25,25 @@ export function useHeroCtaPassed(): boolean | null {
   const { pathname } = useLocation();
   const [passed, setPassed] = useState<boolean | null>(null);
 
+  // Reset during render on navigation (not in the effect) so pages without a
+  // hero CTA never briefly keep the previous page's value.
+  const [seenPath, setSeenPath] = useState(pathname);
+  if (seenPath !== pathname) {
+    setSeenPath(pathname);
+    setPassed(null);
+  }
+
   // Layout effect so the first paint already knows whether a hero CTA
   // exists — no one-frame flash of the wrong navbar mode.
   useLayoutEffect(() => {
     const el = document.getElementById(HERO_JOIN_CTA_ID);
-    if (!el) {
-      setPassed(null);
-      return;
-    }
+    if (!el) return; // no CTA on this page; state is already null
 
     const hasPassed = (rect: DOMRect) => rect.bottom <= NAVBAR_HEIGHT;
+    // Measure-before-paint: the observer below only reports asynchronously,
+    // so without this synchronous read the first frame after navigating to
+    // the homepage shows the wrong navbar mode.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPassed(hasPassed(el.getBoundingClientRect()));
 
     const observer = new IntersectionObserver(

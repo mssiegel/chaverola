@@ -72,13 +72,12 @@ Run from the repo root:
 - **Dev:** `pnpm dev` — start the Vite dev server (client)
 - **Build:** `pnpm build` — type-check + production build (client)
 - **Typecheck:** `pnpm typecheck` — `tsc -b` (client)
+- **Lint:** `pnpm lint` — ESLint 9 flat config (`client/eslint.config.js`), including
+  the React Hooks + React Compiler lints
 - **Preview:** `pnpm preview` — serve the production build
 - **Format:** `pnpm format` / `pnpm format:check` — Prettier over the whole repo
 
-_No ESLint yet:_ the app targets **TypeScript 7**, which `typescript-eslint` does not
-support at time of writing (it caps at `typescript <6.1.0`). Re-add ESLint once a
-TS7-compatible release ships, rather than downgrading the compiler. There is no test
-runner configured yet.
+There is no test runner configured yet.
 
 ## Architecture
 

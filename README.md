@@ -57,11 +57,12 @@ now). Routes are canonical: don't invent new ones beyond the project brief's tab
 | `pnpm build`        | Type-check and build the client for prod |
 | `pnpm preview`      | Preview the production build             |
 | `pnpm typecheck`    | Type-check the client                    |
+| `pnpm lint`         | Lint the client with ESLint              |
 | `pnpm format`       | Format the whole repo with Prettier      |
 | `pnpm format:check` | Check formatting without writing         |
 
-There is no test runner or ESLint yet — see the Commands section of
-[AGENTS.md](AGENTS.md) for why.
+There is no test runner yet — see the Commands section of
+[AGENTS.md](AGENTS.md).
 
 ## Documentation
 

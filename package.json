@@ -12,6 +12,7 @@
     "build": "pnpm --filter client build",
     "preview": "pnpm --filter client preview",
     "typecheck": "pnpm --filter client typecheck",
+    "lint": "pnpm --filter client lint",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
