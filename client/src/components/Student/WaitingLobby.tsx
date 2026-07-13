@@ -13,7 +13,7 @@ interface WaitingLobbyProps {
  */
 export function WaitingLobby({ activity, studentName }: WaitingLobbyProps) {
   return (
-    <section className="flex w-full flex-col items-center gap-6 text-center duration-500 animate-in fade-in slide-in-from-bottom-4 motion-reduce:animate-none">
+    <section className="flex w-full animate-in flex-col items-center gap-6 text-center duration-500 fade-in slide-in-from-bottom-4 motion-reduce:animate-none">
       <div className="space-y-2 pt-2">
         <h1 className="text-3xl font-semibold text-foreground">
           You're in, {studentName}! 🎉

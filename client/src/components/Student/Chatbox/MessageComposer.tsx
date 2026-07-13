@@ -143,7 +143,7 @@ export function MessageComposer({
             </button>
 
             {pickerOpen && (
-              <div className="absolute bottom-11 left-0 z-30 origin-bottom-left animate-in fade-in zoom-in-95">
+              <div className="absolute bottom-11 left-0 z-30 origin-bottom-left animate-in zoom-in-95 fade-in">
                 <Suspense
                   fallback={
                     <div className="grid h-[340px] w-[300px] place-items-center rounded-lg border border-border bg-card text-sm text-muted-foreground shadow-lg">

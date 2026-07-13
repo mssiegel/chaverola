@@ -109,13 +109,13 @@ export function JoinActivityPage() {
         // Phones anchor the card high so the form is visible without
         // scrolling or hunting; from `sm` up it centers in the viewport.
         <div className="flex w-full max-w-sm flex-1 flex-col items-center justify-start gap-4 pt-2 sm:justify-center sm:pt-0">
-          <div className="flex w-full flex-col gap-6 rounded-3xl bg-card px-6 py-8 text-center shadow-2xl shadow-brand-grape-strong/30 duration-500 animate-in fade-in slide-in-from-bottom-4 sm:px-8 motion-reduce:animate-none">
+          <div className="flex w-full animate-in flex-col gap-6 rounded-3xl bg-card px-6 py-8 text-center shadow-2xl shadow-brand-grape-strong/30 duration-500 fade-in slide-in-from-bottom-4 motion-reduce:animate-none sm:px-8">
             <div className="space-y-2">
               <h1 className="text-3xl font-semibold text-foreground">
                 Join an Activity
               </h1>
               {stage === "name" && activity ? (
-                <p className="text-muted-foreground duration-300 animate-in fade-in motion-reduce:animate-none">
+                <p className="animate-in text-muted-foreground duration-300 fade-in motion-reduce:animate-none">
                   Hosted by{" "}
                   <span className="font-semibold text-foreground">
                     {activity.hostName}
@@ -151,7 +151,7 @@ export function JoinActivityPage() {
                   maxLength={40}
                   aria-label="Your name"
                   placeholder="Your name"
-                  className="w-full rounded-2xl border-0 bg-brand-grape-soft px-4 py-4 text-center text-xl font-semibold outline-none duration-300 animate-in fade-in slide-in-from-bottom-2 focus:ring-2 focus:ring-brand-grape/40 motion-reduce:animate-none"
+                  className="w-full animate-in rounded-2xl border-0 bg-brand-grape-soft px-4 py-4 text-center text-xl font-semibold duration-300 outline-none fade-in slide-in-from-bottom-2 focus:ring-2 focus:ring-brand-grape/40 motion-reduce:animate-none"
                 />
               ) : (
                 <>

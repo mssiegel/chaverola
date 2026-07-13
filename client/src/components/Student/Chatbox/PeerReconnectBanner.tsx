@@ -42,7 +42,7 @@ export function PeerReconnectBanner({
   return (
     <div
       className={cn(
-        "animate-in fade-in slide-in-from-top-2 mx-auto flex w-fit max-w-full items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium shadow-sm",
+        "mx-auto flex w-fit max-w-full animate-in items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium shadow-sm fade-in slide-in-from-top-2",
         config.className
       )}
       role="status"

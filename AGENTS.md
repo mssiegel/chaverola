@@ -75,7 +75,10 @@ Run from the repo root:
 - **Lint:** `pnpm lint` — ESLint 9 flat config (`client/eslint.config.js`), including
   the React Hooks + React Compiler lints
 - **Preview:** `pnpm preview` — serve the production build
-- **Format:** `pnpm format` / `pnpm format:check` — Prettier over the whole repo
+- **Format:** `pnpm format` / `pnpm format:check` — Prettier over the whole repo.
+  `prettier-plugin-tailwindcss` sorts Tailwind classes (including inside `cn()`/
+  `cva()` calls) into canonical order — never hand-order class strings; run
+  `pnpm format` and let it decide.
 
 There is no test runner configured yet.
 

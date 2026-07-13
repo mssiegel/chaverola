@@ -34,7 +34,7 @@ export function HomePage() {
     <div className="flex flex-1 flex-col">
       <section className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-10 px-4 pt-6 pb-6 sm:pt-14 lg:grid-cols-2 lg:gap-14 lg:pt-16 lg:pb-12">
         {/* Pitch */}
-        <div className="flex flex-col items-start gap-5 duration-700 animate-in fade-in slide-in-from-bottom-4 motion-reduce:animate-none sm:gap-6">
+        <div className="flex animate-in flex-col items-start gap-5 duration-700 fade-in slide-in-from-bottom-4 motion-reduce:animate-none sm:gap-6">
           <p className="text-sm font-bold tracking-[0.14em] text-brand-grape uppercase">
             A classroom activity for teachers
           </p>
@@ -94,7 +94,7 @@ export function HomePage() {
         </div>
 
         {/* Live sample chat */}
-        <div className="flex flex-col gap-3 duration-700 animate-in fade-in slide-in-from-bottom-6 motion-reduce:animate-none">
+        <div className="flex animate-in flex-col gap-3 duration-700 fade-in slide-in-from-bottom-6 motion-reduce:animate-none">
           <p className="text-center text-sm font-semibold text-brand-grape">
             This is the student side, live. Go ahead, type as the Moon.
           </p>
