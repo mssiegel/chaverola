@@ -37,12 +37,14 @@ export function useTeacherChatsDemo(scenarios: TeacherChatScenario[]) {
         );
         if (active.length === 0) return prev;
 
-        const target = active[Math.floor(roll * active.length)];
+        // `active` is non-empty (checked above) and roll < 1, so this hits.
+        const target = active[Math.floor(roll * active.length)]!;
         const scenario = byId.get(target.id)!;
         // Lines dripped so far = messages beyond the seed. Loops the script.
         const dripped = target.messages.length - scenario.seedMessages.length;
+        // `active` only holds chats whose scenario has upcoming lines.
         const line =
-          scenario.upcomingLines[dripped % scenario.upcomingLines.length];
+          scenario.upcomingLines[dripped % scenario.upcomingLines.length]!;
 
         return prev.map((chat) =>
           chat.id === target.id

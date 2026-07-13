@@ -111,6 +111,9 @@ There is no test runner configured yet.
 
 - **Prettier** config lives at the repo root (`.prettierrc`); run `pnpm format` before
   committing. 2-space indent, double quotes, semicolons, 80-col, `es5` trailing commas.
+- **Indexed access is checked** (`noUncheckedIndexedAccess`): `array[i]` /
+  `record[key]` may be `undefined` — handle it, or assert with `!` plus a one-line
+  comment stating why the access can't miss.
 - **Path alias:** import app code via `@/…` (maps to `client/src/`).
 - **ShadCN** primitives live in `client/src/components/ui/` (new-york style). Prefer adding
   components there over hand-rolling equivalents.

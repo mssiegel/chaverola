@@ -47,7 +47,9 @@ export function useHeroCtaPassed(): boolean | null {
     setPassed(hasPassed(el.getBoundingClientRect()));
 
     const observer = new IntersectionObserver(
-      ([entry]) => setPassed(hasPassed(entry.boundingClientRect)),
+      ([entry]) => {
+        if (entry) setPassed(hasPassed(entry.boundingClientRect));
+      },
       { rootMargin: `-${NAVBAR_HEIGHT}px 0px 0px 0px` }
     );
     observer.observe(el);

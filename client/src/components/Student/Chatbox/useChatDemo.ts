@@ -25,7 +25,8 @@ function nextId(prefix: string): string {
 }
 
 function randomFrom<T>(items: readonly T[]): T {
-  return items[Math.floor(Math.random() * items.length)];
+  // Callers always pass non-empty arrays, and the index is < items.length.
+  return items[Math.floor(Math.random() * items.length)]!;
 }
 
 /**
