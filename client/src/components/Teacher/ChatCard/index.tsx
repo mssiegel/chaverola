@@ -18,6 +18,7 @@ export interface ChatCardProps {
   messages: ChatMessage[];
   /** Completed chats render the muted variant with no End chat button. */
   isEnded: boolean;
+  /** Omit to hide the End chat button (e.g. the homepage preview card). */
   onEndChat?: () => void;
 }
 
@@ -129,7 +130,7 @@ export function ChatCard({
           {expanded ? "Minimize" : "Full chat"}
         </Button>
 
-        {!isEnded && (
+        {!isEnded && onEndChat && (
           <Button
             variant="outline"
             size="sm"

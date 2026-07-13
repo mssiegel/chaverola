@@ -10,8 +10,12 @@ first feature — the **student chatbox** — is built as a working, mock-driven
 `/demo/student-chat`; it is wired into the real student flow in a later prompt. The
 **teacher chat cards** follow the same pattern at `/demo/teacher-chat` and get wired
 into `/activity/host/:joinCode` later. The **navbar** (logo, language switcher,
-Join CTA) and the **homepage hero** at `/` — with a live sample chatbox reusing
-the student chat pieces — are in place.
+Join CTA) and the **full homepage** at `/` are in place: a hero with a live
+sample chatbox reusing the student chat pieces, a teacher's-view section that
+mirrors the same live chat through the real `ChatCard`, a
+how-it-works-for-teachers section, and the founder's note (headshot at
+`client/public/founder-moshe.jpg`, with a marked placeholder fallback if the
+file ever goes missing).
 
 ## Project Brief
 

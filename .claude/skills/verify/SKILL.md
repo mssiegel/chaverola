@@ -32,10 +32,17 @@ Useful, stable handles:
 
 ## Gotchas
 
+- **Port 5173 may belong to another project.** Other repos' Vite servers
+  (e.g. LetsGo) often hold the default port; a 200 response proves nothing.
+  Launch with `pnpm dev --port <free port> --strictPort` and confirm the page
+  actually says Chaverola before asserting anything.
 - The chat demo engine keeps **one** pending "typing" timer: a scripted line
   can replace a queued reply if you type during the opening script. Wait for
-  the last scripted line (hero: "so maybe act natural", ~13s after load)
+  the last scripted line (hero: ends with "act natural", ~9s after load)
   before asserting on replies to typed messages.
+- The hero scenario has **no ambient lines** — after its two scripted lines
+  the chat stays quiet until the visitor types, so exact message-count
+  assertions are safe there. Other demo scenarios do keep ambient chatter.
 - Full-page mobile screenshots paint the sticky navbar mid-page — artifact of
   `fullPage: true`, not a layout bug. Check
   `document.documentElement.scrollWidth` for real overflow.

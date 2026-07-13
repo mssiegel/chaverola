@@ -5,19 +5,34 @@ import type { ChatScenario, Participant } from "@/types/chat";
   with Neil Armstrong — short, funny, classroom-appropriate lines that show the
   roleplay format at a glance. Played by the same demo engine as the student
   chatbox demo (`useChatDemo`), so typing in the hero gets a reply.
+
+  Two deliberate limits (see DECISIONS.md → "The hero demo goes quiet after
+  two Armstrong lines"):
+  - After the Moon's "you could've knocked first 😤", Armstrong sends exactly
+    two one-sentence lines. The teacher preview mirrors this same feed and
+    always shows its newest lines, so a longer script buries the Moon's zinger
+    in both views.
+  - `ambientLines` is empty on purpose — no idle chatter. Once the script
+    ends, the room waits for the visitor to answer.
+
+  Names: the demo's fiction is that the visitor is borrowing Dana K's seat.
+  The teacher card names the Moon "Dana K", never "You" — the teacher assigns
+  chats and is not a player. Real names stay short ("Sam A") to keep the card
+  header tight. See DECISIONS.md → "Demo students have short names, and the
+  teacher is never one of them".
 */
 
 const moon: Participant = {
   id: "self-moon",
   character: { id: "moon", name: "the Moon", emoji: "🌕" },
-  realName: "You",
+  realName: "Dana K",
   isSelf: true,
 };
 
 const armstrong: Participant = {
   id: "peer-armstrong",
   character: { id: "armstrong", name: "Neil Armstrong", emoji: "🚀" },
-  realName: "Sam Alvarez",
+  realName: "Sam A",
 };
 
 export const heroChatScenario: ChatScenario = {
@@ -33,23 +48,17 @@ export const heroChatScenario: ChatScenario = {
   script: [
     {
       senderId: armstrong.id,
-      text: "i brought you a flag tho. it's very nice",
+      // No flag emoji here: Windows renders 🇺🇸 as the letters "US".
+      text: "i brought you a very nice flag tho",
       delayMs: 4200,
     },
     {
       senderId: armstrong.id,
-      text: "also like 600 million people are watching us rn 📺",
-      delayMs: 3800,
+      text: "also like 600 million people are watching us rn, so maybe act natural 📺",
+      delayMs: 4200,
     },
-    { senderId: armstrong.id, text: "so maybe act natural", delayMs: 4200 },
   ],
-  ambientLines: [
-    "the view of earth from here is unreal 🌍",
-    "my boots are SO dusty",
-    "one sec, houston keeps calling",
-    "is it cool if i take a rock home?",
-    "buzz says hi btw",
-  ],
+  ambientLines: [],
   replyLines: [
     "haha ok fair",
     "that's exactly what a moon would say",

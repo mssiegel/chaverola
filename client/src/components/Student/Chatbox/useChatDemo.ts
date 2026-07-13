@@ -10,6 +10,14 @@ import type {
 
 export type ChatStatus = "active" | "ended";
 
+/**
+ * Everything `useChatDemo` hands back — state plus actions. Exported so a
+ * parent can own the hook and fan its chat out to more than one view (the
+ * homepage feeds the same live chat to the student hero box and the teacher
+ * preview card).
+ */
+export type ChatDemo = ReturnType<typeof useChatDemo>;
+
 let idCounter = 0;
 function nextId(prefix: string): string {
   idCounter += 1;
@@ -121,7 +129,11 @@ export function useChatDemo(scenario: ChatScenario) {
       cumulative += line.delayMs;
       later(() => runScriptedLine(line), cumulative);
     });
-    later(scheduleAmbient, cumulative + 6000);
+    // An empty ambient pool means the room goes quiet once the script ends
+    // (the homepage hero does this on purpose — see DECISIONS.md).
+    if (scenario.ambientLines.length > 0) {
+      later(scheduleAmbient, cumulative + 6000);
+    }
 
     return clearAllTimers;
     // Re-boot only when the scenario changes; the compiler keeps the helper

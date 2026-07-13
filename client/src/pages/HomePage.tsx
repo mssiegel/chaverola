@@ -1,22 +1,34 @@
 import type { ReactNode } from "react";
 import { GraduationCap, MessageCircle } from "lucide-react";
 
+import { FounderNote } from "@/components/home/FounderNote";
 import { HeroChatbox } from "@/components/home/HeroChatbox";
+import { HowItWorksSection } from "@/components/home/HowItWorksSection";
+import { TeacherViewSection } from "@/components/home/TeacherViewSection";
 import { LocaleLink } from "@/components/layout/LocaleLink";
 import { Button } from "@/components/ui/button";
+import { useChatDemo } from "@/components/Student/Chatbox/useChatDemo";
 import { HERO_JOIN_CTA_ID } from "@/lib/useHeroCtaPassed";
 import { usePageTitle } from "@/lib/usePageTitle";
+import { heroChatScenario } from "@/mockData";
 
 /**
- * Homepage hero. The pitch to a teacher in one glance: a classroom activity
- * where students chat with each other in character (a real classmate behind
- * every character), quick to set up, with the who's-who mystery — and a live
- * sample chatbox to prove it. Styling stays deliberately plain (highlighter
- * mark, numbered list), and the copy never mentions AI — see DECISIONS.md →
- * "The hero looks hand-made and never mentions AI".
+ * The homepage: hero (student-side live chat), the teacher's view of that
+ * same chat, how hosting works, and the founder's note. The pitch to a
+ * teacher in one glance: a classroom activity where students chat with each
+ * other in character (a real classmate behind every character), quick to set
+ * up, with the who's-who mystery — and live chatboxes to prove it. Styling
+ * stays deliberately plain (highlighter mark, numbered lists), and the copy
+ * never mentions AI — see DECISIONS.md → "The hero looks hand-made and never
+ * mentions AI".
+ *
+ * The demo chat is owned here, not by the hero, so the student view (hero)
+ * and the teacher preview render one shared conversation — see DECISIONS.md
+ * → "The teacher preview mirrors the hero chat live".
  */
 export function HomePage() {
   usePageTitle("Chaverola | A Classroom Activity That Students Love");
+  const chat = useChatDemo(heroChatScenario);
 
   return (
     <div className="flex flex-1 flex-col">
@@ -45,23 +57,6 @@ export function HomePage() {
             end.
           </p>
 
-          {/* On phones this list drops below the CTAs (order-1) so both
-              buttons land above the fold — see DECISIONS.md. */}
-          <div className="order-1 space-y-2.5 lg:order-none">
-            <p className="text-sm font-semibold text-foreground/80">
-              Setup takes about a minute:
-            </p>
-            <ol className="space-y-2 text-[15px] text-foreground/90">
-              <HowStep n={1}>
-                Create an activity and pick your characters.
-              </HowStep>
-              <HowStep n={2}>Put the join code on the board.</HowStep>
-              <HowStep n={3}>
-                Students chat. You watch, then reveal who was who.
-              </HowStep>
-            </ol>
-          </div>
-
           <div className="flex w-full flex-col gap-3 pt-1 sm:w-auto sm:flex-row">
             <Button
               asChild
@@ -81,9 +76,21 @@ export function HomePage() {
               </LocaleLink>
             </Button>
           </div>
-          <p className="-mt-2 text-sm text-muted-foreground">
-            Your students tap Join. You do the hosting.
-          </p>
+
+          <div className="space-y-2.5">
+            <p className="text-sm font-semibold text-foreground/80">
+              Setup takes about a minute:
+            </p>
+            <ol className="space-y-2 text-[15px] text-foreground/90">
+              <HowStep n={1}>
+                Create an activity and pick your characters.
+              </HowStep>
+              <HowStep n={2}>Put the join code on the board.</HowStep>
+              <HowStep n={3}>
+                Students chat. You watch, then reveal who was who.
+              </HowStep>
+            </ol>
+          </div>
         </div>
 
         {/* Live sample chat */}
@@ -91,13 +98,22 @@ export function HomePage() {
           <p className="text-center text-sm font-semibold text-brand-grape">
             This is the student side, live. Go ahead, type as the Moon.
           </p>
-          <HeroChatbox />
+          <HeroChatbox chat={chat} />
           <div className="mx-auto max-w-[92%] -rotate-1 rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-muted-foreground shadow-md">
             🤫 In a real round, the Moon and Neil are both your students. Only
             you know who's playing who, until the reveal at the end.
           </div>
         </div>
       </section>
+
+      <TeacherViewSection
+        participants={chat.participants}
+        messages={chat.messages}
+      />
+
+      <HowItWorksSection />
+
+      <FounderNote />
 
       {/* Temporary demo shortcuts — keep every corner reachable. */}
       <div className="mx-auto w-full max-w-6xl px-4 pb-8 text-sm text-muted-foreground">

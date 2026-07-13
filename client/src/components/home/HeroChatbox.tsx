@@ -1,8 +1,16 @@
 import { Conversation } from "@/components/Student/Chatbox/Conversation";
 import { MessageComposer } from "@/components/Student/Chatbox/MessageComposer";
-import { useChatDemo } from "@/components/Student/Chatbox/useChatDemo";
+import type { ChatDemo } from "@/components/Student/Chatbox/useChatDemo";
 import { assignCharacterColors } from "@/lib/characterColor";
-import { heroChatScenario } from "@/mockData";
+
+interface HeroChatboxProps {
+  /**
+   * The live demo chat, owned by the homepage so the teacher preview further
+   * down can mirror the exact same conversation. See DECISIONS.md → "The
+   * teacher preview mirrors the hero chat live".
+   */
+  chat: ChatDemo;
+}
 
 /**
  * The live sample chat on the homepage hero. It reuses the real student
@@ -11,9 +19,7 @@ import { heroChatScenario } from "@/mockData";
  * chat controls that don't belong on a landing page. See DECISIONS.md →
  * "Hero chatbox is a live demo".
  */
-export function HeroChatbox() {
-  const chat = useChatDemo(heroChatScenario);
-
+export function HeroChatbox({ chat }: HeroChatboxProps) {
   // Own character first so "you" (the Moon) are green — same rule as the app.
   const characterColors = assignCharacterColors([
     chat.self.character.id,
