@@ -12,7 +12,6 @@ const cleopatra: Participant = {
   id: "self-cleopatra",
   character: { id: "cleopatra", name: "Cleopatra", emoji: "👑" },
   realName: "You",
-  isSelf: true,
 };
 
 const caesar: Participant = {
@@ -70,7 +69,6 @@ const robin: Participant = {
   id: "self-robin",
   character: { id: "robin", name: "Robin Hood", emoji: "🏹" },
   realName: "You",
-  isSelf: true,
 };
 
 const arthur: Participant = {

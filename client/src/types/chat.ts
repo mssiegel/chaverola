@@ -19,8 +19,6 @@ export interface Participant {
    * the teacher reveals names (mocked in the demo).
    */
   realName: string;
-  /** True for the local student ("you"). */
-  isSelf?: boolean;
 }
 
 export interface ChatMessage {

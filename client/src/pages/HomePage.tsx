@@ -7,7 +7,7 @@ import { HowItWorksSection } from "@/components/home/HowItWorksSection";
 import { TeacherViewSection } from "@/components/home/TeacherViewSection";
 import { LocaleLink } from "@/components/layout/LocaleLink";
 import { Button } from "@/components/ui/button";
-import { useChatDemo } from "@/components/Student/Chatbox/useChatDemo";
+import { useChatDemo } from "@/components/chat/useChatDemo";
 import { HERO_JOIN_CTA_ID } from "@/lib/useHeroCtaPassed";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { heroChatScenario } from "@/mockData";
@@ -93,7 +93,9 @@ export function HomePage() {
           </div>
         </div>
 
-        {/* Live sample chat */}
+        {/* Live sample chat. "the Moon" / "Neil" in this copy must match
+            mockData/heroChatDemo.ts — renaming there means updating this
+            copy too (with a humanizer pass). */}
         <div className="flex animate-in flex-col gap-3 duration-700 fade-in slide-in-from-bottom-6 motion-reduce:animate-none">
           <p className="text-center text-sm font-semibold text-brand-grape">
             This is the student side, live. Go ahead, type as the Moon.

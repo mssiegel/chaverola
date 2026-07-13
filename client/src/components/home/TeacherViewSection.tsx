@@ -47,7 +47,10 @@ export function TeacherViewSection({
 
           {/* No "this card" here: on phones the card renders well below this
               text, so spatial pointing breaks. The caption right above the
-              card does the pointing instead — see DECISIONS.md. */}
+              card does the pointing instead — see DECISIONS.md.
+              "the Moon" / "Neil Armstrong" / "Dana K" below must match
+              mockData/heroChatDemo.ts — renaming there means updating this
+              copy too (with a humanizer pass). */}
           <p className="max-w-lg text-lg text-pretty text-muted-foreground">
             At the top of this page, someone plays the Moon and someone plays
             Neil Armstrong. As the teacher, you see that same chat with each

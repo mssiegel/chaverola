@@ -20,13 +20,17 @@ import type { ChatScenario, Participant } from "@/types/chat";
   chats and is not a player. Real names stay short ("Sam A") to keep the card
   header tight. See DECISIONS.md → "Demo students have short names, and the
   teacher is never one of them".
+
+  Coupling: "the Moon", "Neil"/"Neil Armstrong", and "Dana K" appear verbatim
+  in homepage copy (HomePage.tsx and TeacherViewSection.tsx). Renaming anyone
+  here is a coordinated copy change across those files — and copy changes go
+  through the humanizer pass (see AGENTS.md).
 */
 
 const moon: Participant = {
   id: "self-moon",
   character: { id: "moon", name: "the Moon", emoji: "🌕" },
   realName: "Dana K",
-  isSelf: true,
 };
 
 const armstrong: Participant = {

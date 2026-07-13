@@ -101,8 +101,14 @@ There is no test runner configured yet.
   pair; the SVG stops in `Logo.tsx`/`favicon.svg` are pinned mirrors of it.
 - **Chatbox** ([client/src/components/Student/Chatbox/](client/src/components/Student/Chatbox/)):
   the shell (`index.tsx`) is **presentational** — driven entirely by props. The mock
-  "engine" (`useChatDemo.ts`) simulates a live peer on timers and is swapped for a real
-  data source later. The same chatbox conventions back the Teacher view.
+  "engine" ([client/src/components/chat/useChatDemo.ts](client/src/components/chat/useChatDemo.ts)
+  — under `chat/` because the homepage hero uses it too) simulates a live peer on
+  timers and is swapped for a real data source later. The same chatbox conventions
+  back the Teacher view.
+- **Navbar ↔ homepage contract:** `HERO_JOIN_CTA_ID`
+  ([client/src/lib/useHeroCtaPassed.ts](client/src/lib/useHeroCtaPassed.ts)) ties two
+  files together — `HomePage` puts the id on the hero's Join CTA, and `AppLayout`
+  watches that element to swap the mobile navbar mode.
 - **Shared chat pieces** ([client/src/components/chat/](client/src/components/chat/)):
   the card chrome (`ChatFrame` / `CHAT_FRAME_CLASS`), the gradient "You're X … with Y"
   header (`ChatHeader`), the message-line renderer (`ConversationLines`), and the
@@ -134,6 +140,18 @@ There is no test runner configured yet.
   layout is a current convention, not a commitment — if you see a clearly better
   structure, reorganize at any time, then update this bullet (and any stale paths
   elsewhere in this file) to match.
+- **Directory casing:** the role-chrome roots `components/Student/` and
+  `components/Teacher/` are PascalCase; every other directory is lowercase. New
+  directories should be lowercase. Don't case-rename the existing two: case-only
+  renames misbehave in git on Windows, and TypeScript's casing checks already catch
+  wrong-case imports.
+- **Hooks have no dedicated directory:** a hook lives next to the components it
+  drives (e.g. `components/chat/useChatDemo.ts`, `pages/demo/useTeacherChatsDemo.ts`);
+  generic cross-cutting hooks live in `lib/` (`usePageTitle`, `useHeroCtaPassed`, and
+  the hooks inside `locale.ts` / `studentSession.ts`).
+- **`index.tsx` means folder-as-component** (`Student/Chatbox/`, `Teacher/ChatCard/`):
+  one component whose private sub-parts share the folder. The only barrel file is
+  `mockData/index.ts` — don't add new barrels.
 - **Mobile-first:** design and verify every screen at phone width.
 
 ## Working Rules for AI Agents

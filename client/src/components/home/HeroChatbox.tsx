@@ -2,7 +2,7 @@ import { ChatFrame } from "@/components/chat/ChatFrame";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { Conversation } from "@/components/Student/Chatbox/Conversation";
 import { MessageComposer } from "@/components/Student/Chatbox/MessageComposer";
-import type { ChatDemo } from "@/components/Student/Chatbox/useChatDemo";
+import type { ChatDemo } from "@/components/chat/useChatDemo";
 import { characterLabel } from "@/lib/characterLabel";
 import { selfFirstCharacterColors } from "@/lib/characterColor";
 

@@ -14,8 +14,10 @@ interface StudentIdentityBarProps {
  * The "you're signed in" strip for the student flow: avatar initial + name
  * on the left and the current stage on the right on desktop; just the name,
  * centered, on phones. Deliberately NOT shown in the waiting lobby — a name
- * bar there reads like a lobby roster (see DECISIONS.md). Intended for the
- * chatting stage, wired in a later prompt.
+ * bar there reads like a lobby roster (see DECISIONS.md).
+ *
+ * Deliberately not imported anywhere yet — do NOT delete. Reserved for the
+ * chatting stage, which gets wired in a later prompt.
  */
 export function StudentIdentityBar({
   name,

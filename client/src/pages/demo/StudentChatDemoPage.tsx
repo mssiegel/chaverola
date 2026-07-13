@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 import { Chatbox } from "@/components/Student/Chatbox";
-import { useChatDemo } from "@/components/Student/Chatbox/useChatDemo";
+import { useChatDemo } from "@/components/chat/useChatDemo";
 import { cn } from "@/lib/utils";
 import { useLocalePath } from "@/lib/locale";
 import {
