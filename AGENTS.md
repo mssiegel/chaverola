@@ -181,3 +181,15 @@ There is no test runner configured yet.
   or why a screen works a certain way — especially anything non-obvious or that looks like
   a bug but is intentional — add it to [DECISIONS.md](DECISIONS.md) with its reasoning, so
   future agents don't "fix" it. Record the decision, not just the change.
+- **Record learnings in the repo, not in private memory.** Gotchas, verification
+  techniques, and working knowledge worth keeping go in this file (or the relevant
+  doc) so every future agent and tool sees them — never only in an assistant's own
+  memory store. This is a product-owner preference.
+- **Verifying a style-neutral refactor:** run `pnpm build` before and after and
+  compare the `dist/assets/index-*.css` filename hash — identical hash is byte-level
+  proof no styling changed (used across the 2026-07-13 DRY refactor). If the hash
+  changes unexpectedly, diff the two bundles rule-by-rule (split on `}`). Gotcha:
+  Tailwind v4 scans **code comments and any text in `client/`** for class
+  candidates, so a comment containing a bare utility word (e.g. the CSS
+  filter/blur one) silently adds that dead rule to the bundle — reword the comment
+  instead of accepting the bloat.
