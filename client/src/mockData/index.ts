@@ -3,8 +3,7 @@
   always works, and all mock content is classroom appropriate and fun.
 */
 
-export const DEMO_JOIN_CODE = "1234";
-
+export * from "./activityDemo";
 export * from "./heroChatDemo";
 export * from "./studentChatDemo";
 export * from "./teacherChatDemo";

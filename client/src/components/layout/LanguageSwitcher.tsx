@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { switchLocalePath, useLocale, type Locale } from "@/lib/locale";
+import { cn } from "@/lib/utils";
 
 const LOCALE_INITIALS: Record<Locale, string> = {
   en: "EN",
@@ -21,8 +22,11 @@ const LOCALE_INITIALS: Record<Locale, string> = {
  * current URL in place (search/hash preserved); from there `LocaleLink`
  * keeps the chosen locale on every internal navigation. Both locales render
  * English text for now — translation and RTL come later.
+ *
+ * `className` restyles the trigger for non-navbar surfaces (e.g. the
+ * floating pill on the student world's purple backdrop).
  */
-export function LanguageSwitcher() {
+export function LanguageSwitcher({ className }: { className?: string }) {
   const locale = useLocale();
   const { pathname, search, hash } = useLocation();
   const navigate = useNavigate();
@@ -40,7 +44,10 @@ export function LanguageSwitcher() {
           variant="ghost"
           size="sm"
           aria-label="Change language"
-          className="gap-1.5 px-2.5 text-muted-foreground hover:text-foreground"
+          className={cn(
+            "gap-1.5 px-2.5 text-muted-foreground hover:text-foreground",
+            className
+          )}
         >
           <Globe className="size-4" />
           <span>{LOCALE_INITIALS[locale]}</span>

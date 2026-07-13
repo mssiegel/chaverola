@@ -23,9 +23,17 @@ const browser = await chromium.launch({ channel: "chrome", headless: true });
 
 Useful, stable handles:
 
-- Navbar = first `header` element; language dropdown trigger has
-  `aria-label="Change language"`; its options are `role=menuitemradio` named
-  `EN` / `עב` (Radix portal — query from `page`, not the header).
+- Navbar = first `header` element — but the student join routes
+  (`/activity/join`, `/activity/join/:joinCode`) render **no `header` at
+  all**: they live in `StudentWorldLayout` (purple backdrop + drifting
+  `.doodle` elements, `aria-hidden`, `pointer-events: none`). The language
+  dropdown trigger still has `aria-label="Change language"` everywhere (a
+  floating pill on join routes); its options are `role=menuitemradio` named
+  `EN` / `עב` (Radix portal — query from `page`, not the header). The
+  "Chaverola home" link on join routes is the gradient pill.
+- Doodle motion: `emulateMedia`/context `reducedMotion: "reduce"` freezes
+  doodles into static transforms (`animation: none`) — assert on that, not
+  on absence.
 - Hero chatbox composer: `getByPlaceholder(/Talk as the Moon/)`; press Enter
   to send. Conversation feed scroll region has class `.scroll-soft`.
 - Locale checks: `waitForURL` with exact URLs (`/he`, `/he/activity/join`).

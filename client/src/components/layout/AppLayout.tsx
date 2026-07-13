@@ -10,19 +10,19 @@ import { LocaleLink } from "./LocaleLink";
 
 /**
  * App shell: navbar (logo home, language switcher, the student Join CTA)
- * over the routed page content. Join is the only navbar CTA — teachers reach
- * Host an Activity from the hero.
+ * over the routed page content. The Join CTA renders only on the homepage
+ * (the only page with the hero CTA) — elsewhere it's just noise. The
+ * student join flow doesn't use this shell at all; see StudentWorldLayout.
  *
  * On phones, the homepage navbar swaps modes as you scroll: while the hero's
  * own Join button is on screen the bar shows just the brand; once you scroll
  * past it, the wordmark slides away and a "Join Activity" button slides in —
- * see DECISIONS.md. Other pages keep a short "Join" button. From `sm` up the
- * bar is static.
+ * see DECISIONS.md. From `sm` up the bar is static.
  */
 export function AppLayout() {
   const heroCtaPassed = useHeroCtaPassed();
-  // null = no hero CTA on this page (show the static short Join button).
-  const showMobileJoin = heroCtaPassed !== false;
+  // null = no hero CTA, i.e. not the homepage → no navbar Join CTA at all.
+  const onHomepage = heroCtaPassed !== null;
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
@@ -45,26 +45,28 @@ export function AppLayout() {
 
           <div className="flex items-center gap-1 sm:gap-2">
             <LanguageSwitcher />
-            {/* From `sm` up: always there, full label, no swap. */}
-            <Button asChild size="sm" className="max-sm:hidden">
-              <LocaleLink to="/activity/join">Join an Activity</LocaleLink>
-            </Button>
-            {/* Phones: hidden while the hero's own Join CTA is on screen. */}
-            <div
-              inert={!showMobileJoin}
-              className={cn(
-                "overflow-hidden transition-all duration-300 ease-out motion-reduce:transition-none sm:hidden",
-                showMobileJoin
-                  ? "visible max-w-36 translate-x-0 opacity-100"
-                  : "invisible max-w-0 translate-x-4 opacity-0"
-              )}
-            >
-              <Button asChild size="sm">
-                <LocaleLink to="/activity/join">
-                  {heroCtaPassed === null ? "Join" : "Join Activity"}
-                </LocaleLink>
-              </Button>
-            </div>
+            {onHomepage && (
+              <>
+                {/* From `sm` up: always there, full label, no swap. */}
+                <Button asChild size="sm" className="max-sm:hidden">
+                  <LocaleLink to="/activity/join">Join an Activity</LocaleLink>
+                </Button>
+                {/* Phones: hidden while the hero's own Join CTA is on screen. */}
+                <div
+                  inert={heroCtaPassed !== true}
+                  className={cn(
+                    "overflow-hidden transition-all duration-300 ease-out motion-reduce:transition-none sm:hidden",
+                    heroCtaPassed
+                      ? "visible max-w-36 translate-x-0 opacity-100"
+                      : "invisible max-w-0 translate-x-4 opacity-0"
+                  )}
+                >
+                  <Button asChild size="sm">
+                    <LocaleLink to="/activity/join">Join Activity</LocaleLink>
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </header>

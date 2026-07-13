@@ -15,7 +15,22 @@ sample chatbox reusing the student chat pieces, a teacher's-view section that
 mirrors the same live chat through the real `ChatCard`, a
 how-it-works-for-teachers section, and the founder's note (headshot at
 `client/public/founder-moshe.jpg`, with a marked placeholder fallback if the
-file ever goes missing).
+file ever goes missing). The **student join flow and waiting lobby** are real:
+one page (`client/src/pages/student/JoinActivityPage.tsx`) serves both
+`/activity/join` and `/activity/join/:joinCode`, carrying the student through
+code entry → name entry → lobby (the chatting/ended stages get wired in a
+later prompt); landing back on code entry signs the student out (see
+DECISIONS.md). Student identity is a sessionStorage-backed session
+(`client/src/lib/studentSession.ts`); `StudentIdentityBar` is reserved for
+the future chatting stage (deliberately absent from the lobby — see
+DECISIONS.md). The mock activity behind code `1234` lives in
+`client/src/mockData/activityDemo.ts`. The join flow renders **navbar-free**
+inside `client/src/components/layout/StudentWorldLayout.tsx` — an immersive
+purple "world" with drifting hand-drawn doodles
+(`client/src/components/decor/`), a floating language pill, and a gradient
+`ChaverolaPill` (`client/src/components/brand/`) that links home; the route
+tree in `client/src/App.tsx` is split into two pathless layout groups
+(AppLayout vs. StudentWorldLayout) per locale. See DECISIONS.md.
 
 ## Project Brief
 

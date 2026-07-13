@@ -1,31 +1,40 @@
 import { Route, Routes } from "react-router-dom";
 
 import { AppLayout } from "@/components/layout/AppLayout";
+import { StudentWorldLayout } from "@/components/layout/StudentWorldLayout";
 import { HomePage } from "@/pages/HomePage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { StudentChatDemoPage } from "@/pages/demo/StudentChatDemoPage";
 import { TeacherChatDemoPage } from "@/pages/demo/TeacherChatDemoPage";
 import { JoinActivityPage } from "@/pages/student/JoinActivityPage";
-import { JoinCodePage } from "@/pages/student/JoinCodePage";
 import { CreateActivityPage } from "@/pages/teacher/CreateActivityPage";
 import { HostActivityPage } from "@/pages/teacher/HostActivityPage";
 
 /**
- * The canonical route tree (see Shared_Project_Context.md). Rendered once at the
- * root and once under `/he` (Hebrew variant — same English text for now).
+ * The canonical route tree (see Shared_Project_Context.md). Rendered once at
+ * the root and once under `/he` (Hebrew variant — same English text for now).
+ * Two pathless layout groups: most pages live under the navbar shell
+ * (AppLayout), while the student join flow gets the immersive, navbar-free
+ * StudentWorldLayout.
  */
 function LocalizedRoutes() {
   return (
     <>
-      <Route index element={<HomePage />} />
-      <Route path="activity/join" element={<JoinCodePage />} />
-      <Route path="activity/join/:joinCode" element={<JoinActivityPage />} />
-      <Route path="activity/create" element={<CreateActivityPage />} />
-      <Route path="activity/host/:joinCode" element={<HostActivityPage />} />
-      {/* Temporary demo routes — wired into the real flows in later prompts. */}
-      <Route path="demo/student-chat" element={<StudentChatDemoPage />} />
-      <Route path="demo/teacher-chat" element={<TeacherChatDemoPage />} />
-      <Route path="*" element={<NotFoundPage />} />
+      <Route element={<AppLayout />}>
+        <Route index element={<HomePage />} />
+        <Route path="activity/create" element={<CreateActivityPage />} />
+        <Route path="activity/host/:joinCode" element={<HostActivityPage />} />
+        {/* Temporary demo routes — wired into the real flows in later prompts. */}
+        <Route path="demo/student-chat" element={<StudentChatDemoPage />} />
+        <Route path="demo/teacher-chat" element={<TeacherChatDemoPage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+      <Route element={<StudentWorldLayout />}>
+        {/* Both join routes render the same page so the code input can swap
+            in-place for the name input when a code checks out. */}
+        <Route path="activity/join" element={<JoinActivityPage />} />
+        <Route path="activity/join/:joinCode" element={<JoinActivityPage />} />
+      </Route>
     </>
   );
 }
@@ -33,12 +42,8 @@ function LocalizedRoutes() {
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<AppLayout />}>
-        {LocalizedRoutes()}
-      </Route>
-      <Route path="/he" element={<AppLayout />}>
-        {LocalizedRoutes()}
-      </Route>
+      <Route path="/">{LocalizedRoutes()}</Route>
+      <Route path="/he">{LocalizedRoutes()}</Route>
     </Routes>
   );
 }

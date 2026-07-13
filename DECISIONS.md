@@ -11,6 +11,234 @@ here.
 
 ---
 
+## One URL for the whole student journey
+
+**Decision:** The student stays on `/activity/join/:joinCode` from name entry
+through the lobby, the chat itself, and the chat-ended screen. The URL never
+changes to reflect the stage (no `/activity/lobby/...` or `/activity/chat/...`).
+The UI swaps by stage, exactly as the canonical routes table in
+[Shared_Project_Context.md](Shared_Project_Context.md) specifies.
+
+**Why:** The URL identifies the _room_, not the student's progress through it.
+`/activity/join/1234` is the link a teacher can project or share, and whoever
+opens it lands in the right place for them: a new student gets the name step, a
+signed-in student gets their current stage. Stage-specific URLs would be a
+second copy of state that already lives in the session and (later) the realtime
+backend, and every disagreement between the two needs a redirect rule — a whole
+category of sync bugs. Stage transitions are also pushed _to_ the student (the
+teacher matches them), so stage URLs would mean programmatic navigations that
+pollute browser history and complicate the back-as-reset behavior below. A
+student's chat is not independently addressable anyway: it exists for one
+session in one tab, so a chat URL could never be opened, shared, or restored.
+Kahoot and Blooket players likewise sit on one URL from name entry to the final
+screen. Distinct URLs pay off where pages are addressable and revisitable —
+the teacher side — and the route table reflects that (`/activity/create`,
+`/activity/host/:joinCode`).
+
+---
+
+## Landing on code entry signs the student out
+
+**Decision:** Whenever the join page renders the code-entry stage — bare
+`/activity/join` or an unknown code in the URL — any stored student session
+is cleared. Browser back from the lobby is therefore the way to fix a wrong
+name: back → code entry (signed out) → re-enter the code → fresh, blank
+name field. Refreshing the lobby URL still keeps the student in the lobby,
+and visiting the homepage alone does not sign them out. There is no edit
+name button.
+
+**Why:** Without this, a student who mistyped their name was stuck — the
+session survived back navigation, so re-entering the code teleported them
+straight back into the lobby under the old name. Back-as-reset fixes that
+with zero new UI. Refresh must keep the lobby because classroom devices are
+flaky, and the homepage can't sign students out because that would make the
+Chaverola pill (a decorative-looking logo) a destructive tap. The name
+field comes back blank rather than prefilled: computers are shared between
+students, and often the whole name is wrong, not just a typo.
+
+**Lobby-only rule:** this applies while waiting for a match. The future
+chatting stage must NOT let a stray back-swipe silently kill a live chat —
+it needs its own guard (the end-chat confirmation pattern) when it's built.
+
+_Implemented in
+[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._
+
+---
+
+## Lobby waiting dots are mint, not grape
+
+**Decision:** The three bouncing dots next to "Waiting for your match" are
+`brand-mint` green; the pill around them stays grape.
+
+**Why:** Mint is the app's established "live" color — the teacher chat
+card's pulsing live dot and the identity bar's stage dot already use it.
+Green dots read as "the system is actively working on your match" rather
+than decoration, and they pop against the grape pill.
+
+---
+
+## The lobby shows no identity bar
+
+**Decision:** The white name strip (avatar initial + "Waiting in lobby")
+does not render in the waiting lobby. The student's identity is confirmed
+only by the lobby heading ("You're in, {name}!"). The `StudentIdentityBar`
+component is kept for the chatting stage, which arrives in a later prompt.
+
+**Why:** A floating name bar above the lobby card reads like a roster of
+who's in the lobby, and lobby occupancy must stay a mystery — if a student
+can tell only two people are waiting, they know exactly who they'll be
+matched with, which defeats the anonymous-roleplay premise. The heading
+already tells the student they're signed in, so the bar added nothing there.
+
+_Removed from
+[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._
+
+---
+
+## No emoji bubble row in the waiting lobby
+
+**Decision:** The lobby shows no row of bouncing character-emoji circles
+above the heading. Character emojis appear only in the "Characters in this
+activity" chips.
+
+**Why:** Round, pale, evenly spaced circles read as buttons — students will
+try to tap them and nothing happens. The lobby's energy comes from the
+heading and the animated "Waiting for your match" dots instead.
+
+_Removed from [WaitingLobby](client/src/components/Student/WaitingLobby.tsx)._
+
+---
+
+## The student join flow lives in its own navbar-free "world"
+
+**Decision:** `/activity/join` and `/activity/join/:joinCode` render under
+`StudentWorldLayout` — a full-viewport purple gradient with slowly drifting
+hand-drawn doodles and navbar-style corner pills (gradient "Chaverola" pill
+top-left, language pill top-right) — instead of the navbar shell every
+other page uses.
+The Chaverola pill (text-only; a face-tile variant lost a visual pick) is
+the world's only link home. The language switcher is a solid white pill:
+translucent white vanished against the lavender backdrop.
+
+**Why:** Joining is the student's "entering the game" moment, and the
+navbar is marketing/teacher chrome that pulls a kid out of it. The whole
+flow — code entry, name entry, waiting lobby — stays inside the world so
+there's no jarring theme switch mid-flow. The homepage hero stays
+deliberately plain and teacher pages keep the navbar; this treatment is the
+student flow's own.
+
+_Implemented in
+[StudentWorldLayout](client/src/components/layout/StudentWorldLayout.tsx);
+routes split into two pathless layout groups in
+[App.tsx](client/src/App.tsx)._
+
+---
+
+## Background doodles are deterministic, and freeze (not hide) under reduced motion
+
+**Decision:** The drifting doodles come from a hardcoded config (position,
+speed, drift angle, sway, size per instance) — no randomness. Each takes
+45–90 seconds to cross the screen. With `prefers-reduced-motion`, they
+render as a static, hand-scattered arrangement rather than disappearing.
+
+**Why:** Slow and varied keeps the page feeling alive without pulling focus
+from the join form (a student may sit in the lobby a while). Deterministic
+placement is art-directable and keeps screenshots stable for automated
+checks. Reduced-motion users should still get the decorated world — just a
+still one; stripping the doodles entirely would make it a different,
+blander product for them.
+
+_Implemented in
+[DriftingDoodles](client/src/components/decor/DriftingDoodles.tsx) and the
+`.doodle` rules in [index.css](client/src/index.css)._
+
+---
+
+## The navbar Join CTA appears only on the homepage
+
+**Decision:** The navbar's "Join an Activity" button (and its mobile
+scroll-swap variant) renders only on the homepage. Every other page shows
+just the logo and the language switcher.
+
+**Why:** The CTA exists to route homepage visitors into the join flow. On
+any other page it's noise — most obviously inside the join flow itself,
+where a student would see a "Join an Activity" button pointing at the page
+they're already on. The homepage is detected by the presence of the hero's
+Join CTA (`useHeroCtaPassed` returns `null` elsewhere), so no route list to
+maintain.
+
+_Implemented in [AppLayout](client/src/components/layout/AppLayout.tsx)._
+
+---
+
+## No "use a different code" escape on the name step
+
+**Decision:** The name-entry step (`/activity/join/:joinCode`) has no link
+back to code entry. One form serves both gate steps; only the input and the
+button label ("Continue" vs "Join Activity") change.
+
+**Why:** A student on the name step got there with a code that checks out —
+wanting a _different_ activity at that moment is vanishingly rare, and the
+browser back button already covers it. Dropping the link leaves one action
+on screen, which is the right amount for a kid joining a class activity.
+
+_Implemented in
+[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._
+
+---
+
+## One page serves both join routes; a wrong code never changes the URL
+
+**Decision:** `/activity/join` and `/activity/join/:joinCode` render the same
+`JoinActivityPage`, and the stage is **derived, not stored**: no code param
+(or an unknown one) means code entry, a known code without a session means
+name entry, a matching session means the lobby. Submitting a wrong code shows
+"Activity was not found. Recheck the Join Code you entered." and stays on
+`/activity/join` — only a valid code navigates. A shared link with a bad code
+falls back to code entry with the code prefilled and that same message
+already showing.
+
+**Why:** The brief wants the code input replaced **in-place** by the name
+input when a code checks out; one component across both routes makes that a
+state change instead of a page swap. Deriving stage from URL + session means
+a refresh or a directly shared link always lands on the right screen with no
+stored stage to go stale. Not navigating on a wrong code keeps not-found URLs
+out of the address bar and browser history, so students can't share or
+re-open a dead link they think worked.
+
+_Implemented in
+[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx); routes in
+[App.tsx](client/src/App.tsx)._
+
+---
+
+## Student sign-in lives in the tab, and removal sends you to the name step
+
+**Decision:** The student's "session" (name + joined activity code) is kept
+in **sessionStorage**: a refresh keeps them signed in, closing the tab signs
+them out, as does landing back on code entry (see "Landing on code entry
+signs the student out" above). (The identity bar that used to display the
+signed-in name on every stage no longer appears in the lobby — see "The
+lobby shows no identity bar" above.) When the teacher removes a student
+(mock event for now), they are
+signed out
+on the spot and land on the **name step** of the same activity — not code
+entry — with a notice that the teacher removed them; joining again clears it.
+
+**Why:** Per-tab storage fits shared classroom computers — the next student
+at the machine shouldn't inherit a classmate's name, but a mid-activity
+refresh shouldn't dump anyone back to the start either. Removal clears only
+the identity: the join code in the URL is still a real activity, so making
+the student retype a code they're looking at would be pure friction. The
+notice tells them why they got bounced; rejoining stays possible because
+removal is sometimes a mix-up (and the teacher can always remove them again).
+
+_Implemented in [studentSession.ts](client/src/lib/studentSession.ts),
+[StudentIdentityBar](client/src/components/Student/StudentIdentityBar.tsx),
+and [JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._
+
+---
+
 ## The hero demo goes quiet after two Armstrong lines
 
 **Decision:** After the Moon's "you could've knocked first 😤", Neil Armstrong
