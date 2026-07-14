@@ -230,7 +230,7 @@ Build the student join flow and waiting lobby. (The chat itself is wired in the 
 ### Waiting lobby
 
 - Welcomes the student by name; message that they're waiting for the teacher to match them with another student.
-- Shows the activity's character list, the teacher's name, and the scenario if one was set.
+- Shows the activity's character list, the teacher's name, and the scene if one was set.
 - Should feel exciting and pump the student up (playful animation is welcome).
 - If the teacher removed the student (mock event), they land back here logged out, seeing a message that the teacher removed them and they need to sign in again.
 
@@ -307,30 +307,40 @@ Build the teacher's activity setup page. Before changing any existing behavior, 
 
 Meta title: `Chaverola | Teachers View`
 
+The page is a **single scrolling form** — no stepped wizard. The form is short, teachers refill it for every activity in a series (forms beat wizards for repeat users), and seeing the whole thing at once backs up the homepage's "setup takes about a minute" promise. Keep first-timers oriented with visual grouping instead: clear sections (characters → about you → scene → settings), with the settings block visually quieter since its defaults are already the recommended state. This also matches Prompt 8's live settings accordion, so the teacher learns one flat layout of these fields, and it keeps tap-Host-to-highlight-the-first-problem coherent — no error hiding on a previous step.
+
+The form auto-saves a draft to **sessionStorage** as the teacher types (fields, emojis, toggles), so a refresh on a flaky classroom device doesn't lose the setup. Closing the tab discards the draft — same per-tab spirit as the student session.
+
 Fields:
 
-- **Characters (required, 2–4):** two character rows by default. A character is a **name plus an optional single emoji, stored as separate fields** — see `Character` in `client/src/types/chat.ts` and DECISIONS.md → "A character's emoji is optional, and labels simply drop it". Each row is a name input with an emoji slot button beside it. Name placeholders: "Caesar's ghost" for the first, "Brutus" for the second; emoji slots start empty. The emoji slot opens the emoji picker (emojis only — no stickers or GIFs; reuse the emoji picker from the student chatbox); picking sets or replaces the row's single emoji, and it can be cleared. A character with no emoji is valid and renders name-only everywhere. Labels shown to students always compose via `characterLabel` — never parse emojis out of the name. **Character names hard-block at 30 characters**, with a quiet counter appearing only near the limit (same spirit as the chat input's 75-char cap) — names prefix every chat line, so they must stay short. An "add character" action allows up to 4 total. Show a note: starting with two characters (1:1 chats) is recommended; a 3rd character is only used when a group of 3 students is paired, and a 4th only for a group of 4. At least two characters are required to start.
-- **Hosted by (required):** the teacher's name as students will see it.
-- **Teacher email (optional):** to later get emailed all the chats from the activity.
-- **Scenario (optional, max 20 words):** sets the scene for students. Placeholder: "Caesar's ghost meets Brutus after the assassination."
+- **Characters (required, 2–4):** two character rows by default. A character is a **name plus an optional single emoji, stored as separate fields** — see `Character` in `client/src/types/chat.ts` and DECISIONS.md → "A character's emoji is optional, and labels simply drop it". Each row is a name input with an emoji slot button beside it. Give the name inputs whatever placeholder text you feel is appropriate; emoji slots start empty. The emoji slot opens the emoji picker (emojis only — no stickers or GIFs; reuse the emoji picker from the student chatbox); picking sets or replaces the row's single emoji, and it can be cleared. A character with no emoji is valid and renders name-only everywhere. Labels shown to students always compose via `characterLabel` — never parse emojis out of the name. **Character names hard-block at 30 characters**, with a quiet counter appearing only near the limit (same spirit as the chat input's 75-char cap) — names prefix every chat line, so they must stay short. An "add character" action allows up to 4 total. The default two rows cannot be removed (at least two characters are required anyway, so removing them would be dead-end UI); added rows 3–4 get a remove control, with no confirmation — retyping a name is cheap. An added row left empty (or whitespace-only) is silently ignored when hosting: the activity starts with just the filled characters, and an abandoned row never blocks a class from starting. **Duplicate character names are blocked** (case-insensitive, trimmed comparison) with an inline error on the offending row — students would see two identical labels with no way to tell the characters apart. Show a note: starting with two characters (1:1 chats) is recommended; a 3rd character is only used when a group of 3 students is paired, and a 4th only for a group of 4. At least two characters are required to start.
+- **Hosted by (required):** the teacher's name as students will see it. Hard-blocks at 30 characters with the same quiet-counter pattern as character names — it renders in the student lobby ("Hosted by …") and must not overflow it.
+- **Teacher email (optional):** to later get emailed all the chats from the activity. Empty is fine, but a non-empty invalid email is flagged when the teacher tries to host — a typo'd address would silently never receive the transcripts, defeating the field's whole purpose.
+- **Scene (optional, max 20 words):** sets the scene for students. Use whatever placeholder text you feel is appropriate. Hard-blocks at 20 words (input that would start word 21 is blocked), with a quiet word counter appearing only near the limit — same spirit as the name caps.
 
 Settings (4 toggles — make clear that keeping them on is recommended, and that all of these can be edited during the activity itself, since Chaverola is really a series of activities with the same students):
 
 1. **Reveal names after chat ends** — students never know who they're chatting with during the chat; turn this on to reveal names at the end. Default: on.
-2. **Auto-end all chats after a set time** — default 7 minutes, adjustable up/down. Default: on.
+2. **Auto-end all chats after a set time** — default 7 minutes, adjustable 1–30 minutes in 1-minute steps. Default: on.
 3. **Show a visual warning when the same students are about to be rematched.** Default: on.
-4. **Auto-match students 1:1** — when at least two students are waiting, have waited at least 20 seconds (adjustable), and weren't recently matched together. Default: on.
+4. **Auto-match students 1:1** — when at least two students are waiting, have waited at least 20 seconds (adjustable 5–120 seconds in 5-second steps), and weren't recently matched together. Default: on.
 
-A "Host the Activity" button becomes enabled once all required fields are filled, and navigates to `/activity/host/:joinCode` (mock-generate a code; the live activity page is built in the next prompt, so stub the destination for now if needed).
+When a toggle with a sub-control is off, the sub-control (the minutes stepper, the seconds stepper) stays visible but disabled — the teacher can see what turning it on will do, and nothing jumps around when toggling.
+
+A "Host the Activity" button is **always tappable** — never disabled. If anything is missing or invalid (fewer than 2 filled characters, no hosted-by, duplicate names, an invalid non-empty email), tapping it scrolls to and highlights the first problem field with an inline error instead of navigating. Once everything checks out, it navigates to `/activity/host/:joinCode` (mock-generate a **4-digit numeric code** — the format the student join input and the `1234` demo already use; the live activity page is built in the next prompt, so stub the destination for now if needed).
 
 ### Acceptance checklist
 
-- [ ] Host button disabled until characters (≥2) + hosted-by are filled
+- [ ] Single scrolling form with grouped sections — no wizard/stepper
+- [ ] Host button always tappable; tapping with missing/invalid fields highlights the first problem instead of navigating; valid form navigates with a 4-digit code
 - [ ] Emoji slot on each character row sets/replaces/clears the optional emoji; a character without one is valid
-- [ ] Character names hard-block at 30 chars, counter only near the limit
-- [ ] Up to 4 characters can be added, with the group-of-3/4 note shown
-- [ ] Scenario capped at 20 words; placeholder text correct
-- [ ] All 4 toggles present with correct defaults and adjustable values
+- [ ] Character names and hosted-by hard-block at 30 chars, counter only near the limit
+- [ ] Up to 4 characters can be added, with the group-of-3/4 note shown; rows 3–4 removable, first two fixed
+- [ ] An empty added row is ignored at host time; duplicate names show an inline error
+- [ ] Scene hard-blocks at 20 words, counter only near the limit
+- [ ] Invalid non-empty teacher email blocks hosting; empty email is fine
+- [ ] All 4 toggles present with correct defaults and bounds; sub-controls visible but disabled when their toggle is off
+- [ ] Draft survives a refresh (sessionStorage), discarded when the tab closes
 - [ ] Mobile friendly throughout
 
 ---
