@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useOutletContext, useParams } from "react-router-dom";
 import { ArrowRight, Handshake, Users, UserX } from "lucide-react";
 
 import { DemoControlsPanel, EventButton } from "@/components/demo/DemoControls";
+import type { StudentWorldOutletContext } from "@/components/layout/StudentWorldLayout";
 import { ChatStage } from "@/components/Student/ChatStage";
 import { WaitingLobby } from "@/components/Student/WaitingLobby";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,7 @@ const STUDENT_CARD_CLASS =
 export function JoinActivityPage() {
   const { joinCode: joinCodeParam } = useParams();
   const navigate = useLocaleNavigate();
+  const { setHomeLinkHidden } = useOutletContext<StudentWorldOutletContext>();
   const { session, signIn, signOut } = useStudentSession();
 
   // Set by the lobby's demo match triggers; a real backend pushes this later.
@@ -81,6 +83,15 @@ export function JoinActivityPage() {
   useEffect(() => {
     if (stage === "code" && session) signOut();
   }, [stage, session, signOut]);
+
+  // While a chat is on screen (live or just ended) the layout hides its brand
+  // pill — same condition that renders ChatStage below. See DECISIONS.md →
+  // "The brand home link disappears mid-chat and while hosting".
+  const inChat = Boolean(activity && session && match);
+  useEffect(() => {
+    setHomeLinkHidden(inChat);
+    return () => setHomeLinkHidden(false);
+  }, [inChat, setHomeLinkHidden]);
 
   usePageTitle(PAGE_TITLES[stage]);
 

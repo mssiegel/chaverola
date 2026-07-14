@@ -1,7 +1,8 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 
 import { Logo } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
+import { localePrefix } from "@/lib/locale";
 import { useHeroCtaPassed } from "@/lib/useHeroCtaPassed";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,8 @@ import { LocaleLink } from "./LocaleLink";
  * over the routed page content. The Join CTA renders only on the homepage
  * (the only page with the hero CTA) — elsewhere it's just noise. The
  * student join flow doesn't use this shell at all; see StudentWorldLayout.
+ * On the teacher's live host route the logo (the home link) is removed
+ * entirely so it can't be clicked by accident mid-activity.
  *
  * On phones, the homepage navbar swaps modes as you scroll: while the hero's
  * own Join button is on screen the bar shows just the brand; once you scroll
@@ -24,26 +27,37 @@ export function AppLayout() {
   // null = no hero CTA, i.e. not the homepage → no navbar Join CTA at all.
   const onHomepage = heroCtaPassed !== null;
 
+  // Hosting a live activity: the brand link disappears so a stray click can't
+  // yank the teacher off their running activity — see DECISIONS.md → "The
+  // brand home link disappears mid-chat and while hosting".
+  const { pathname } = useLocation();
+  const hostingActivity = pathname
+    .slice(localePrefix(pathname).length)
+    .startsWith("/activity/host/");
+
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <header className="sticky top-0 z-20 border-b border-border/70 bg-background/80 backdrop-blur-sm">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-2 px-4 sm:h-16">
-          <LocaleLink
-            to="/"
-            className="rounded-lg transition-opacity hover:opacity-80"
-            aria-label="Chaverola home"
-          >
-            <Logo
-              size={30}
-              wordmarkClassName={cn(
-                "max-w-32 overflow-hidden transition-all duration-300 ease-out motion-reduce:transition-none",
-                heroCtaPassed === true &&
-                  "max-sm:max-w-0 max-sm:-translate-x-2 max-sm:opacity-0"
-              )}
-            />
-          </LocaleLink>
+          {!hostingActivity && (
+            <LocaleLink
+              to="/"
+              className="rounded-lg transition-opacity hover:opacity-80"
+              aria-label="Chaverola home"
+            >
+              <Logo
+                size={30}
+                wordmarkClassName={cn(
+                  "max-w-32 overflow-hidden transition-all duration-300 ease-out motion-reduce:transition-none",
+                  heroCtaPassed === true &&
+                    "max-sm:max-w-0 max-sm:-translate-x-2 max-sm:opacity-0"
+                )}
+              />
+            </LocaleLink>
+          )}
 
-          <div className="flex items-center gap-1 sm:gap-2">
+          {/* `ms-auto` keeps this end-pinned when the brand link is hidden. */}
+          <div className="ms-auto flex items-center gap-1 sm:gap-2">
             <LanguageSwitcher />
             {onHomepage && (
               <>

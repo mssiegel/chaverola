@@ -36,7 +36,10 @@ scenarios it feeds live in `client/src/mockData/activityChatDemo.ts`. The join f
 inside `client/src/components/layout/StudentWorldLayout.tsx` — an immersive
 purple "world" with drifting hand-drawn doodles
 (`client/src/components/decor/`), a floating language pill, and a gradient
-`ChaverolaPill` (`client/src/components/brand/`) that links home; the route
+`ChaverolaPill` (`client/src/components/brand/`) that links home — hidden
+while a chat is on screen, as is AppLayout's logo on the teacher host route
+(see DECISIONS.md → "The brand home link disappears mid-chat and while
+hosting"); the route
 tree in `client/src/App.tsx` is split into two pathless layout groups
 (AppLayout vs. StudentWorldLayout) per locale. See DECISIONS.md.
 The **teacher setup page** at `/activity/create` is real: one scrolling

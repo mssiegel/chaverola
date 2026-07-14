@@ -1047,6 +1047,30 @@ its scenario in [heroChatDemo.ts](client/src/mockData/heroChatDemo.ts)._
 
 ## Navbar
 
+### The brand home link disappears mid-chat and while hosting
+
+_2026-07-15_
+
+**Decision:** The Chaverola brand mark in the top-left — the navbar logo in
+AppLayout, the ChaverolaPill in the student world — is a link home, and it is
+**removed entirely** (not just made non-clickable) on two screens: while a
+student has a chat on screen (the chatting **and** just-ended stages, until
+they tap back to the lobby), and on the teacher's live host page
+(`/activity/host/:joinCode`). The language switcher stays and keeps its
+end-aligned spot via `ms-auto`.
+
+**Why:** Product-owner call. One stray tap on the brand would dump the user
+on the homepage: for a student that kills a live conversation (chat state is
+memory-only, so there's no way back into it), and for a teacher it walks them
+away from an activity their class is actively using. On those screens no
+shortcut to the homepage should exist at all. The student's chat stage lives
+in page state rather than the route, so the page reports it to the layout
+through the router Outlet context (`setHomeLinkHidden`).
+
+_Implemented in [AppLayout](client/src/components/layout/AppLayout.tsx),
+[StudentWorldLayout](client/src/components/layout/StudentWorldLayout.tsx),
+and [JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._
+
 ### The navbar Join CTA appears only on the homepage
 
 _2026-07-13_
