@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 
 import { ConversationLines } from "@/components/chat/ConversationLines";
 import { characterLabel } from "@/lib/characterLabel";
+import { participantsById } from "@/lib/participants";
 import type {
   ChatMessage,
   Participant,
@@ -39,8 +40,7 @@ export function Conversation({
   reconnectSecondsLeft = null,
   characterColors,
 }: ConversationProps) {
-  const byId = new Map<string, Participant>();
-  for (const p of participants) byId.set(p.id, p);
+  const byId = participantsById(participants);
 
   const isGroup = participants.length > 2;
   const feedRef = useRef<HTMLDivElement>(null);

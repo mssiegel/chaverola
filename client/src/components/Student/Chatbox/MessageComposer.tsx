@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import type { EmojiClickData } from "emoji-picker-react";
 import { SendHorizontal, Smile } from "lucide-react";
 
+import { charCount, clampChars } from "@/lib/text";
 import { cn } from "@/lib/utils";
 
 // Code-split the (heavy) emoji picker — only loaded when opened.
@@ -11,9 +12,6 @@ const EmojiPickerPopover = lazy(
 
 const MAX_CHARS = 75;
 const COUNTER_VISIBLE_AT = 60;
-
-/** Count by code points so multi-unit emoji count as one character. */
-const charCount = (text: string) => Array.from(text).length;
 
 interface MessageComposerProps {
   onSend: (text: string) => void;
@@ -74,11 +72,7 @@ export function MessageComposer({
   }, [pickerOpen]);
 
   const handleChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const raw = event.target.value;
-    const points = Array.from(raw);
-    setValue(
-      points.length > MAX_CHARS ? points.slice(0, MAX_CHARS).join("") : raw
-    );
+    setValue(clampChars(event.target.value, MAX_CHARS));
   };
 
   const insertEmoji = ({ emoji }: EmojiClickData) => {

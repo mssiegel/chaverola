@@ -1,21 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  FastForward,
-  LogOut,
-  MessageCirclePlus,
-  Unplug,
-  Wifi,
-  WifiOff,
-  XCircle,
-} from "lucide-react";
+import { XCircle } from "lucide-react";
 
-import {
-  DemoControlsPanel,
-  DemoToggle,
-  EventButton,
-  SegmentButton,
-} from "@/components/demo/DemoControls";
+import { ChatDemoControls } from "@/components/demo/ChatDemoControls";
+import { EventButton, SegmentButton } from "@/components/demo/DemoControls";
 import { DemoPageHeader } from "@/components/demo/DemoPageHeader";
 import { Chatbox } from "@/components/Student/Chatbox";
 import { useChatDemo } from "@/components/chat/useChatDemo";
@@ -70,146 +58,41 @@ export function StudentChatDemoPage() {
         />
       </div>
 
-      <DemoControls
-        scenarioKey={scenarioKey}
-        onScenarioChange={setScenarioKey}
+      <ChatDemoControls
+        chat={chat}
         revealNames={revealNames}
         onRevealNamesChange={setRevealNames}
-        peerConnected={chat.peerState === "connected"}
-        isEnded={chat.isEnded}
-        canSkipWait={chat.reconnectSecondsLeft !== null}
-        onDisconnect={chat.disconnectPeer}
-        onReconnect={chat.reconnectPeer}
-        onSkipWait={chat.skipReconnectWait}
-        onNudge={chat.nudgePeer}
-        onPeerEndsChat={chat.peerEndsChat}
-        onSelfTimeout={() => chat.endChat("self-timeout")}
-        onEndChat={() => chat.endChat("student")}
+        header={
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+              Scenario (switching restarts the chat)
+            </p>
+            <div className="flex gap-1 rounded-xl bg-muted p-1">
+              <SegmentButton
+                active={scenarioKey === "duo"}
+                onClick={() => setScenarioKey("duo")}
+              >
+                1:1 duo
+              </SegmentButton>
+              <SegmentButton
+                active={scenarioKey === "group"}
+                onClick={() => setScenarioKey("group")}
+              >
+                Group (3)
+              </SegmentButton>
+            </div>
+          </div>
+        }
+        extraEvents={
+          <EventButton
+            onClick={() => chat.endChat("student")}
+            disabled={chat.isEnded}
+            icon={<XCircle className="size-4" />}
+          >
+            End chat
+          </EventButton>
+        }
       />
     </div>
-  );
-}
-
-interface DemoControlsProps {
-  scenarioKey: StudentChatScenarioKey;
-  onScenarioChange: (key: StudentChatScenarioKey) => void;
-  revealNames: boolean;
-  onRevealNamesChange: (value: boolean) => void;
-  peerConnected: boolean;
-  isEnded: boolean;
-  canSkipWait: boolean;
-  onDisconnect: () => void;
-  onReconnect: () => void;
-  onSkipWait: () => void;
-  onNudge: () => void;
-  onPeerEndsChat: () => void;
-  onSelfTimeout: () => void;
-  onEndChat: () => void;
-}
-
-function DemoControls({
-  scenarioKey,
-  onScenarioChange,
-  revealNames,
-  onRevealNamesChange,
-  peerConnected,
-  isEnded,
-  canSkipWait,
-  onDisconnect,
-  onReconnect,
-  onSkipWait,
-  onNudge,
-  onPeerEndsChat,
-  onSelfTimeout,
-  onEndChat,
-}: DemoControlsProps) {
-  return (
-    <DemoControlsPanel>
-      <div className="space-y-4">
-        <div>
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">
-            Scenario (switching restarts the chat)
-          </p>
-          <div className="flex gap-1 rounded-xl bg-muted p-1">
-            <SegmentButton
-              active={scenarioKey === "duo"}
-              onClick={() => onScenarioChange("duo")}
-            >
-              1:1 duo
-            </SegmentButton>
-            <SegmentButton
-              active={scenarioKey === "group"}
-              onClick={() => onScenarioChange("group")}
-            >
-              Group (3)
-            </SegmentButton>
-          </div>
-        </div>
-
-        <label className="flex cursor-pointer items-center justify-between gap-3">
-          <span className="text-sm font-medium text-foreground">
-            Reveal names when chat ends
-          </span>
-          <DemoToggle checked={revealNames} onChange={onRevealNamesChange} />
-        </label>
-
-        <div>
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">
-            Trigger events
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <EventButton
-              onClick={onDisconnect}
-              disabled={!peerConnected || isEnded}
-              icon={<WifiOff className="size-4" />}
-            >
-              Peer drops
-            </EventButton>
-            <EventButton
-              onClick={onReconnect}
-              disabled={peerConnected || isEnded}
-              icon={<Wifi className="size-4" />}
-            >
-              Peer reconnects
-            </EventButton>
-            <EventButton
-              onClick={onSkipWait}
-              disabled={!canSkipWait || isEnded}
-              icon={<FastForward className="size-4" />}
-            >
-              Skip the wait
-            </EventButton>
-            <EventButton
-              onClick={onNudge}
-              disabled={!peerConnected || isEnded}
-              icon={<MessageCirclePlus className="size-4" />}
-            >
-              Make peer talk
-            </EventButton>
-            <EventButton
-              onClick={onPeerEndsChat}
-              disabled={!peerConnected || isEnded}
-              icon={<LogOut className="size-4" />}
-            >
-              Peer ends chat
-            </EventButton>
-            <EventButton
-              onClick={onSelfTimeout}
-              disabled={isEnded}
-              icon={<Unplug className="size-4" />}
-            >
-              You drop (2 min pass)
-            </EventButton>
-            <EventButton
-              onClick={onEndChat}
-              disabled={isEnded}
-              icon={<XCircle className="size-4" />}
-            >
-              End chat
-            </EventButton>
-          </div>
-        </div>
-      </div>
-    </DemoControlsPanel>
   );
 }

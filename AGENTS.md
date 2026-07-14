@@ -164,9 +164,12 @@ There is no test runner configured yet.
   badge styling.
 - **Dev-only demo chrome** lives in `client/src/components/demo/`
   (`DemoControlsPanel`, `SegmentButton`, `EventButton`, `DemoToggle`,
-  `DemoPageHeader`) — used by the `/demo/*` pages and the join-flow lobby panel, and
-  by the teacher host page when it gets wired. The `onWorld` prop switches to the
-  white/glass theme for the purple student world.
+  `DemoPageHeader`, and `ChatDemoControls` — the student-seat trigger panel
+  shared by the join flow's chatting stage and `/demo/student-chat`, with
+  `header`/`extraEvents` slots for each surface's extras) — used by the
+  `/demo/*` pages and the join-flow lobby panel, and by the teacher host page
+  when it gets wired. The `onWorld` prop switches to the white/glass theme for
+  the purple student world.
 - **Accepted duplication** (deliberate — don't extract): the sticky-note captions on
   the homepage, the two numbered-step renderers (HomePage vs HowItWorksSection emit
   different markup), the page-section wrapper strings, the page-H1 strings, the
@@ -191,8 +194,12 @@ There is no test runner configured yet.
   wrong-case imports.
 - **Hooks have no dedicated directory:** a hook lives next to the components it
   drives (e.g. `components/chat/useChatDemo.ts`, `pages/demo/useTeacherChatsDemo.ts`);
-  generic cross-cutting hooks live in `lib/` (`usePageTitle`, `useHeroCtaPassed`, and
-  the hooks inside `locale.ts` / `studentSession.ts`).
+  generic cross-cutting hooks live in `lib/` (`usePageTitle` — it prepends the
+  "Chaverola | " brand prefix itself, callers pass just the page name —
+  `useHeroCtaPassed`, and the hooks inside `locale.ts` / `studentSession.ts`).
+  All per-tab persistence goes through the sessionStorage helpers in
+  `lib/storage.ts` (`readSessionJson`/`writeSessionJson`/`removeSessionItem`)
+  — don't hand-roll try/catch JSON storage access.
 - **`index.tsx` means folder-as-component** (`Student/Chatbox/`, `Teacher/ChatCard/`):
   one component whose private sub-parts share the folder. The only barrel file is
   `mockData/index.ts` — don't add new barrels.

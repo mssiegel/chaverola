@@ -1,4 +1,5 @@
 import { characterLabel } from "@/lib/characterLabel";
+import { participantsById } from "@/lib/participants";
 import type { ChatMessage, Participant } from "@/types/chat";
 
 interface ConversationLinesProps {
@@ -26,8 +27,7 @@ export function ConversationLines({
   selfId,
   showRealNames = false,
 }: ConversationLinesProps) {
-  const byId = new Map<string, Participant>();
-  for (const p of participants) byId.set(p.id, p);
+  const byId = participantsById(participants);
 
   return (
     <div className="flex flex-col">

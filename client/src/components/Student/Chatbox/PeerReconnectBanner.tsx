@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Loader2, Wifi, WifiOff } from "lucide-react";
 
+import { RECONNECT_WINDOW_SECONDS } from "@/components/chat/useChatDemo";
 import { cn } from "@/lib/utils";
 import type { PeerConnectionState } from "@/types/chat";
 
@@ -56,7 +57,9 @@ export function PeerReconnectBanner({
               </span>
               {" to come back"}
             </span>
-            <span className="sr-only">they have 2 minutes to come back</span>
+            <span className="sr-only">
+              they have {RECONNECT_WINDOW_SECONDS / 60} minutes to come back
+            </span>
           </>
         ),
       className: "bg-amber-50 text-amber-700 border-amber-200",

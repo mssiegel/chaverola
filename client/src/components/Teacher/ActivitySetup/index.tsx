@@ -23,6 +23,7 @@ import {
 } from "@/lib/activitySetup";
 import { useLocalePath } from "@/lib/locale";
 import { charCount, clampChars, clampWords, countWords } from "@/lib/text";
+import { cn } from "@/lib/utils";
 import { mockGenerateJoinCode } from "@/mockData";
 import type { ActivitySettings } from "@/types/activity";
 
@@ -293,13 +294,7 @@ export function ActivitySetupForm() {
               characters={form.characters}
             />
             <div className="flex flex-col gap-2.5">
-              <Button type="submit" size="lg" className="w-full">
-                Host the Activity
-                <ArrowRight className="size-4" />
-              </Button>
-              <p className="text-center text-sm text-muted-foreground">
-                Your join code shows up on the next screen.
-              </p>
+              <HostCta hintClassName="text-sm" />
             </div>
           </div>
         </aside>
@@ -309,16 +304,25 @@ export function ActivitySetupForm() {
           pays off when a returning teacher rehosts an already-filled draft. */}
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-background/85 backdrop-blur-sm lg:hidden">
         <div className="mx-auto w-full max-w-2xl px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <Button type="submit" size="lg" className="w-full">
-            Host the Activity
-            <ArrowRight className="size-4" />
-          </Button>
-          <p className="mt-2 text-center text-xs text-muted-foreground">
-            Your join code shows up on the next screen.
-          </p>
+          <HostCta hintClassName="mt-2 text-xs" />
         </div>
       </div>
     </form>
+  );
+}
+
+/** The one submit, rendered in both of its breakpoint homes (rail + dock). */
+function HostCta({ hintClassName }: { hintClassName: string }) {
+  return (
+    <>
+      <Button type="submit" size="lg" className="w-full">
+        Host the Activity
+        <ArrowRight className="size-4" />
+      </Button>
+      <p className={cn("text-center text-muted-foreground", hintClassName)}>
+        Your join code shows up on the next screen.
+      </p>
+    </>
   );
 }
 

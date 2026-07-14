@@ -15,9 +15,6 @@ interface StudentIdentityBarProps {
  * on the left and the current stage on the right on desktop; just the name,
  * centered, on phones. Deliberately NOT shown in the waiting lobby — a name
  * bar there reads like a lobby roster (see DECISIONS.md).
- *
- * Deliberately not imported anywhere yet — do NOT delete. Reserved for the
- * chatting stage, which gets wired in a later prompt.
  */
 export function StudentIdentityBar({
   name,

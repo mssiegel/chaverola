@@ -1,6 +1,6 @@
 import { Minus, Plus } from "lucide-react";
 
-import type { StepperBounds } from "@/lib/activitySetup";
+import { clampToBounds, type StepperBounds } from "@/lib/activitySetup";
 import { cn } from "@/lib/utils";
 
 const STEP_BUTTON_CLASS =
@@ -32,10 +32,7 @@ export function NumberStepper({
   onChange,
 }: NumberStepperProps) {
   const stepBy = (direction: 1 | -1) => {
-    const next = Math.min(
-      bounds.max,
-      Math.max(bounds.min, value + direction * bounds.step)
-    );
+    const next = clampToBounds(value + direction * bounds.step, bounds);
     if (next !== value) onChange(next);
   };
 

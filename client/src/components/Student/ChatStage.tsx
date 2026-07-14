@@ -1,26 +1,13 @@
 import { useEffect, useState } from "react";
-import {
-  FastForward,
-  GraduationCap,
-  LogOut,
-  MessageCirclePlus,
-  TimerOff,
-  Unplug,
-  Wifi,
-  WifiOff,
-} from "lucide-react";
+import { GraduationCap, TimerOff } from "lucide-react";
 
 import { useChatDemo } from "@/components/chat/useChatDemo";
-import {
-  DemoControlsPanel,
-  DemoToggle,
-  EventButton,
-} from "@/components/demo/DemoControls";
+import { ChatDemoControls } from "@/components/demo/ChatDemoControls";
+import { EventButton } from "@/components/demo/DemoControls";
 import { Chatbox } from "@/components/Student/Chatbox";
 import { StudentIdentityBar } from "@/components/Student/StudentIdentityBar";
 import { peerListLabel } from "@/lib/characterLabel";
 import { useBackGuard } from "@/lib/useBackGuard";
-import type { ChatDemo } from "@/components/chat/useChatDemo";
 import {
   activityChatScenarios,
   type ActivityChatScenarioKey,
@@ -104,109 +91,34 @@ export function ChatStage({
         </div>
       </div>
 
-      <ChatStageDemoControls
+      {/* The join flow's extra triggers: end sources that exist only once a
+          teacher and an activity clock are in the room. */}
+      <ChatDemoControls
         chat={chat}
+        onWorld
         revealNames={revealNames}
         onRevealNamesChange={setRevealNames}
+        extraEvents={
+          <>
+            <EventButton
+              onWorld
+              onClick={() => chat.endChat("teacher")}
+              disabled={chat.isEnded}
+              icon={<GraduationCap className="size-4" />}
+            >
+              Teacher ends chat
+            </EventButton>
+            <EventButton
+              onWorld
+              onClick={() => chat.endChat("timer")}
+              disabled={chat.isEnded}
+              icon={<TimerOff className="size-4" />}
+            >
+              Auto-end timer fires
+            </EventButton>
+          </>
+        }
       />
     </>
-  );
-}
-
-/**
- * Dev-only triggers for the mock events a real backend will push later:
- * connection drops, the teacher or the activity timer ending the chat, and a
- * fast-forward so the 2-minute reconnect window is testable without standing
- * around.
- */
-function ChatStageDemoControls({
-  chat,
-  revealNames,
-  onRevealNamesChange,
-}: {
-  chat: ChatDemo;
-  revealNames: boolean;
-  onRevealNamesChange: (value: boolean) => void;
-}) {
-  const peerConnected = chat.peerState === "connected";
-
-  return (
-    <DemoControlsPanel onWorld>
-      <div className="space-y-4">
-        <label className="flex cursor-pointer items-center justify-between gap-3">
-          <span className="text-sm font-medium text-white/90">
-            Reveal names when chat ends
-          </span>
-          <DemoToggle checked={revealNames} onChange={onRevealNamesChange} />
-        </label>
-
-        <div className="grid grid-cols-2 gap-2">
-          <EventButton
-            onWorld
-            onClick={chat.disconnectPeer}
-            disabled={!peerConnected || chat.isEnded}
-            icon={<WifiOff className="size-4" />}
-          >
-            Peer drops
-          </EventButton>
-          <EventButton
-            onWorld
-            onClick={chat.reconnectPeer}
-            disabled={peerConnected || chat.isEnded}
-            icon={<Wifi className="size-4" />}
-          >
-            Peer reconnects
-          </EventButton>
-          <EventButton
-            onWorld
-            onClick={chat.skipReconnectWait}
-            disabled={chat.reconnectSecondsLeft === null || chat.isEnded}
-            icon={<FastForward className="size-4" />}
-          >
-            Skip the wait
-          </EventButton>
-          <EventButton
-            onWorld
-            onClick={chat.nudgePeer}
-            disabled={!peerConnected || chat.isEnded}
-            icon={<MessageCirclePlus className="size-4" />}
-          >
-            Make peer talk
-          </EventButton>
-          <EventButton
-            onWorld
-            onClick={chat.peerEndsChat}
-            disabled={!peerConnected || chat.isEnded}
-            icon={<LogOut className="size-4" />}
-          >
-            Peer ends chat
-          </EventButton>
-          <EventButton
-            onWorld
-            onClick={() => chat.endChat("self-timeout")}
-            disabled={chat.isEnded}
-            icon={<Unplug className="size-4" />}
-          >
-            You drop (2 min pass)
-          </EventButton>
-          <EventButton
-            onWorld
-            onClick={() => chat.endChat("teacher")}
-            disabled={chat.isEnded}
-            icon={<GraduationCap className="size-4" />}
-          >
-            Teacher ends chat
-          </EventButton>
-          <EventButton
-            onWorld
-            onClick={() => chat.endChat("timer")}
-            disabled={chat.isEnded}
-            icon={<TimerOff className="size-4" />}
-          >
-            Auto-end timer fires
-          </EventButton>
-        </div>
-      </div>
-    </DemoControlsPanel>
   );
 }

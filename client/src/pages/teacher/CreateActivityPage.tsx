@@ -9,7 +9,7 @@ import { usePageTitle } from "@/lib/usePageTitle";
  * a docked bottom bar, so the page carries extra bottom padding for it.
  */
 export function CreateActivityPage() {
-  usePageTitle("Chaverola | Teachers View");
+  usePageTitle("Teachers View");
 
   return (
     <div className="relative isolate">

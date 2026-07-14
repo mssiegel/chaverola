@@ -1,6 +1,7 @@
 import type { ActivitySettings, HostedActivity } from "@/types/activity";
 import type { Character } from "@/types/chat";
 
+import { readSessionJson, writeSessionJson } from "./storage";
 import { clampChars, clampWords } from "./text";
 
 /*
@@ -91,6 +92,11 @@ function asBoolean(value: unknown, fallback: boolean): boolean {
   return typeof value === "boolean" ? value : fallback;
 }
 
+/** Keep a stepper value inside its bounds. */
+export function clampToBounds(value: number, bounds: StepperBounds): number {
+  return Math.min(bounds.max, Math.max(bounds.min, value));
+}
+
 /** Clamp to bounds and snap onto the step grid (steps count from `min`). */
 function snapToBounds(value: unknown, bounds: StepperBounds): number {
   const n =
@@ -99,7 +105,7 @@ function snapToBounds(value: unknown, bounds: StepperBounds): number {
       : bounds.default;
   const stepped =
     Math.round((n - bounds.min) / bounds.step) * bounds.step + bounds.min;
-  return Math.min(bounds.max, Math.max(bounds.min, stepped));
+  return clampToBounds(stepped, bounds);
 }
 
 /** Rebuild a trustworthy draft from whatever was in storage. */
@@ -160,22 +166,12 @@ function sanitizeDraft(raw: unknown): ActivityDraft {
 }
 
 export function readActivityDraft(): ActivityDraft {
-  try {
-    const raw = sessionStorage.getItem(DRAFT_KEY);
-    if (raw) return sanitizeDraft(JSON.parse(raw));
-  } catch {
-    // Corrupt or inaccessible storage — start the form fresh.
-  }
-  return defaultActivityDraft();
+  // sanitizeDraft never rejects — a corrupt or missing draft reads as fresh.
+  return readSessionJson(DRAFT_KEY, sanitizeDraft) ?? defaultActivityDraft();
 }
 
 export function saveActivityDraft(draft: ActivityDraft): void {
-  try {
-    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-  } catch {
-    // Storage unavailable — the in-memory form still works, just no refresh
-    // safety net.
-  }
+  writeSessionJson(DRAFT_KEY, draft);
 }
 
 // ---------------------------------------------------------------------------
@@ -308,31 +304,26 @@ const HOSTED_ACTIVITY_KEY = "chaverola.hostedActivity";
  * The host page falls back to the Rome demo activity for direct visits.
  */
 export function saveHostedActivity(activity: HostedActivity): void {
-  try {
-    sessionStorage.setItem(HOSTED_ACTIVITY_KEY, JSON.stringify(activity));
-  } catch {
-    // Storage unavailable — the host page will fall back to its demo seed.
-  }
+  writeSessionJson(HOSTED_ACTIVITY_KEY, activity);
 }
 
 export function readHostedActivity(
   joinCode: string
 ): HostedActivity | undefined {
-  try {
-    const raw = sessionStorage.getItem(HOSTED_ACTIVITY_KEY);
-    if (!raw) return undefined;
-    const parsed: unknown = JSON.parse(raw);
-    if (
-      typeof parsed === "object" &&
-      parsed !== null &&
-      (parsed as HostedActivity).joinCode === joinCode &&
-      typeof (parsed as HostedActivity).hostName === "string" &&
-      Array.isArray((parsed as HostedActivity).characters)
-    ) {
-      return parsed as HostedActivity;
+  const stashed = readSessionJson(
+    HOSTED_ACTIVITY_KEY,
+    (parsed): HostedActivity | null => {
+      if (
+        typeof parsed === "object" &&
+        parsed !== null &&
+        (parsed as HostedActivity).joinCode === joinCode &&
+        typeof (parsed as HostedActivity).hostName === "string" &&
+        Array.isArray((parsed as HostedActivity).characters)
+      ) {
+        return parsed as HostedActivity;
+      }
+      return null;
     }
-  } catch {
-    // Corrupt or inaccessible storage — treat as no hand-off.
-  }
-  return undefined;
+  );
+  return stashed ?? undefined;
 }

@@ -1,6 +1,7 @@
 import { EyeOff, RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { SectionLabel } from "@/components/ui/section-label";
 import { characterLabel } from "@/lib/characterLabel";
 import type { ChatEndReason, Participant } from "@/types/chat";
 
@@ -118,9 +119,9 @@ export function ChatEndedSection({
 
         {revealNames ? (
           <div className="w-full rounded-xl border border-border bg-card p-3 text-left shadow-sm">
-            <p className="mb-2 text-center text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            <SectionLabel className="mb-2 text-center">
               You were really chatting with
-            </p>
+            </SectionLabel>
             <ul className="space-y-1.5">
               {peers.map((peer) => (
                 <li

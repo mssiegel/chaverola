@@ -1,5 +1,6 @@
 import { TypingDots } from "@/components/chat/TypingDots";
 import { MaskDoodle, SparkleDoodle } from "@/components/decor/doodles";
+import { SectionLabel } from "@/components/ui/section-label";
 import { isFilledCharacter } from "@/lib/activitySetup";
 
 import type { CharacterRowState } from "./CharacterRowsField";
@@ -28,9 +29,7 @@ export function LobbyPreview({
 
   return (
     <div>
-      <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-        What students see
-      </p>
+      <SectionLabel>What students see</SectionLabel>
 
       <div className="student-world-bg relative mt-3 overflow-hidden rounded-3xl p-4 shadow-md">
         {/* Static scatter of the student world's doodles — decoration only. */}
@@ -52,9 +51,7 @@ export function LobbyPreview({
 
           <div className="w-full space-y-4 rounded-2xl bg-card/95 p-4 shadow-sm">
             <div>
-              <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                Hosted by
-              </p>
+              <SectionLabel>Hosted by</SectionLabel>
               <p className="mt-0.5 text-sm font-medium text-foreground">
                 {host || "…"}
               </p>
@@ -62,9 +59,7 @@ export function LobbyPreview({
 
             {sceneText && (
               <div>
-                <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  The scene
-                </p>
+                <SectionLabel>The scene</SectionLabel>
                 <p className="mt-0.5 text-sm leading-relaxed text-foreground">
                   {sceneText}
                 </p>
@@ -72,9 +67,7 @@ export function LobbyPreview({
             )}
 
             <div>
-              <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                Characters in this activity
-              </p>
+              <SectionLabel>Characters in this activity</SectionLabel>
               {cast.length > 0 ? (
                 <ul className="mt-2 flex flex-wrap gap-1.5">
                   {cast.map((character) => (

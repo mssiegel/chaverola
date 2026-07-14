@@ -26,11 +26,11 @@ interface ActiveMatch {
 }
 
 const PAGE_TITLES: Record<StudentStage, string> = {
-  code: "Chaverola | Join an Activity",
-  name: "Chaverola | Join an Activity",
-  lobby: "Chaverola | Waiting Lobby",
-  chatting: "Chaverola | Chatting",
-  ended: "Chaverola | Chat Ended",
+  code: "Join an Activity",
+  name: "Join an Activity",
+  lobby: "Waiting Lobby",
+  chatting: "Chatting",
+  ended: "Chat Ended",
 };
 
 /** The floating white card the student world's stages render on. */

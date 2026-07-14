@@ -31,7 +31,7 @@ import { heroChatScenario } from "@/mockData";
  * → "The teacher preview mirrors the hero chat live".
  */
 export function HomePage() {
-  usePageTitle("Chaverola | A Classroom Activity That Students Love");
+  usePageTitle("A Classroom Activity That Students Love");
   const chat = useChatDemo(heroChatScenario);
 
   return (

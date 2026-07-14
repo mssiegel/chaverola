@@ -1,4 +1,5 @@
 import { TypingDots } from "@/components/chat/TypingDots";
+import { SectionLabel } from "@/components/ui/section-label";
 import type { Activity } from "@/types/activity";
 
 interface WaitingLobbyProps {
@@ -35,9 +36,7 @@ export function WaitingLobby({ activity, studentName }: WaitingLobbyProps) {
 
       <div className="w-full space-y-4 rounded-2xl border border-border bg-card p-5 text-left shadow-sm">
         <div>
-          <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            Hosted by
-          </p>
+          <SectionLabel>Hosted by</SectionLabel>
           <p className="mt-0.5 font-medium text-foreground">
             {activity.hostName}
           </p>
@@ -45,9 +44,7 @@ export function WaitingLobby({ activity, studentName }: WaitingLobbyProps) {
 
         {activity.scenario && (
           <div>
-            <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              The scene
-            </p>
+            <SectionLabel>The scene</SectionLabel>
             <p className="mt-0.5 text-sm leading-relaxed text-foreground">
               {activity.scenario}
             </p>
@@ -55,9 +52,7 @@ export function WaitingLobby({ activity, studentName }: WaitingLobbyProps) {
         )}
 
         <div>
-          <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            Characters in this activity
-          </p>
+          <SectionLabel>Characters in this activity</SectionLabel>
           <ul className="mt-2 flex flex-wrap gap-2">
             {activity.characters.map((character) => (
               <li
