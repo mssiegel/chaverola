@@ -351,7 +351,7 @@ Meta title: `Chaverola | Teachers View`
   - The teacher can pair two students to chat (they get the two characters). With 3 characters defined, groups of 3 can be paired; with 4 characters, groups of 4.
   - A button pairs up ALL waiting students into 1:1 chats.
   - Per setting #3, show a visual warning when a proposed pairing would rematch the same students.
-- **Chats in progress (accordion):** accordion title shows the number of chats in progress. Inside: a toggle to reveal real names to the students, a count of how many students are chatting, and an "End all chats" button (opens a confirmation modal before ending all chats). Each chat renders as the teacher chat card from Prompt 2 (last 5 lines, expand/minimize, and end chat with its confirmation modal). When the teacher ends a chat (individually or via End all), the affected students are NOT sent back to the lobby — they see their ChatEndedSection and only re-enter the lobby/match queue when they click the return button themselves. So on the teacher's side, those students don't appear in the "waiting to chat" count until they've clicked back to the lobby.
+- **Chats in progress (accordion):** accordion title shows the number of chats in progress. Inside: a toggle to reveal real names to the students, a count of how many students are chatting, and an "End all chats" button (opens a confirmation modal before ending all chats). Each chat renders as the teacher chat card from Prompt 2 (last 5 lines, expand/minimize, and end chat with its confirmation modal). When the teacher ends a chat (individually or via End all), the affected students are NOT sent back to the lobby — they see their ChatEndedSection with the teacher-specific copy: chat ends carry a `ChatEndReason` (see DECISIONS.md → "Every chat end explains itself"), so teacher ends fire with reason `"teacher"` ("Your teacher ended the chat") and an auto-end timer expiry fires with `"timer"` ("Time's up!"), never the generic copy. Students only re-enter the lobby/match queue when they click the return button themselves. So on the teacher's side, those students don't appear in the "waiting to chat" count until they've clicked back to the lobby.
 - **Completed chats (accordion):** accordion title shows the number completed; inside, a count plus the muted completed-chat cards with expand/minimize.
 - If the accordions share similar code, refactor them into one reusable accordion template — use your judgment.
 
@@ -368,4 +368,5 @@ Meta title: `Chaverola | Teachers View`
 - [ ] Closed accordions show the specified subtexts/counts
 - [ ] Remove-student confirm modal works; pair, pair-all, group pairing per character count
 - [ ] Reveal-names toggle works; end-all and per-chat end both require confirmation via modal; expand/minimize works with mock data
+- [ ] Teacher-initiated ends and timer expiries reach students with reasons `"teacher"` / `"timer"`, showing the reason-aware ended copy
 - [ ] Mobile friendly throughout
