@@ -17,7 +17,9 @@ export const demoActivity: Activity = {
     { id: "caesars-ghost", name: "Caesar's ghost", emoji: "👻" },
     { id: "brutus", name: "Brutus", emoji: "🔪" },
     { id: "cleopatra", name: "Cleopatra", emoji: "👑" },
-    { id: "marc-antony", name: "Marc Antony", emoji: "🗡️" },
+    // No emoji on purpose: emojis are per-character optional, and the demo
+    // roster should exercise the name-only path somewhere visible.
+    { id: "marc-antony", name: "Marc Antony" },
   ],
 };
 

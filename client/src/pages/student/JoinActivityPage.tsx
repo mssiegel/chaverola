@@ -1,17 +1,37 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowRight, UserX } from "lucide-react";
+import { ArrowRight, Handshake, Users, UserX } from "lucide-react";
 
 import { DemoControlsPanel, EventButton } from "@/components/demo/DemoControls";
+import { ChatStage } from "@/components/Student/ChatStage";
 import { WaitingLobby } from "@/components/Student/WaitingLobby";
 import { Button } from "@/components/ui/button";
 import { useLocalePath } from "@/lib/locale";
 import { useStudentSession } from "@/lib/studentSession";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
-import { DEMO_JOIN_CODE, findActivityByCode } from "@/mockData";
+import {
+  DEMO_JOIN_CODE,
+  findActivityByCode,
+  type ActivityChatScenarioKey,
+} from "@/mockData";
 
-type StudentStage = "code" | "name" | "lobby";
+type StudentStage = "code" | "name" | "lobby" | "chatting" | "ended";
+
+/** One mock match the lobby's demo trigger fired the student into. */
+interface ActiveMatch {
+  /** Bumped per match so ChatStage remounts with a fresh chat every time. */
+  seq: number;
+  scenarioKey: ActivityChatScenarioKey;
+}
+
+const PAGE_TITLES: Record<StudentStage, string> = {
+  code: "Chaverola | Join an Activity",
+  name: "Chaverola | Join an Activity",
+  lobby: "Chaverola | Waiting Lobby",
+  chatting: "Chaverola | Chatting",
+  ended: "Chaverola | Chat Ended",
+};
 
 /** The floating white card the student world's stages render on. */
 const STUDENT_CARD_CLASS =
@@ -21,17 +41,25 @@ const STUDENT_CARD_CLASS =
  * The student flow. Serves both `/activity/join` (code entry) and
  * `/activity/join/:joinCode`, which carries the student through every later
  * stage on one route (enter name → waiting lobby → chatting → chat ended);
- * the UI changes by stage. Chatting/ended are wired in a later prompt.
+ * the UI changes by stage.
  *
  * Stage is derived, not stored: no `:joinCode` param (or an unknown code)
  * means code entry, a known code without a signed-in session means name
- * entry, and a session that matches the code means the lobby.
+ * entry, and a session that matches the code means the lobby — until a mock
+ * match starts a chat. The match itself lives only in memory (chat state is
+ * mock-only), so a mid-chat refresh lands back in the lobby by design.
  */
 export function JoinActivityPage() {
   const { joinCode: joinCodeParam } = useParams();
   const navigate = useNavigate();
   const localePath = useLocalePath();
   const { session, signIn, signOut } = useStudentSession();
+
+  // Set by the lobby's demo match triggers; a real backend pushes this later.
+  const [match, setMatch] = useState<ActiveMatch | null>(null);
+  // Mirrors the chat engine's ended flag up here so the stage (and with it
+  // the page title) can tell chatting from ended.
+  const [chatEnded, setChatEnded] = useState(false);
 
   const activity = joinCodeParam
     ? findActivityByCode(joinCodeParam)
@@ -40,9 +68,13 @@ export function JoinActivityPage() {
     activity !== undefined && session?.joinCode === activity.joinCode;
   const stage: StudentStage = !activity
     ? "code"
-    : isSignedIn
-      ? "lobby"
-      : "name";
+    : !isSignedIn
+      ? "name"
+      : match
+        ? chatEnded
+          ? "ended"
+          : "chatting"
+        : "lobby";
 
   // Reaching the code-entry gate ends any session: browser back from the
   // lobby is how a student redoes a wrong name (see DECISIONS.md). Refreshing
@@ -51,11 +83,18 @@ export function JoinActivityPage() {
     if (stage === "code" && session) signOut();
   }, [stage, session, signOut]);
 
-  usePageTitle(
-    stage === "lobby"
-      ? "Chaverola | Waiting Lobby"
-      : "Chaverola | Join an Activity"
-  );
+  usePageTitle(PAGE_TITLES[stage]);
+
+  const startMatch = (scenarioKey: ActivityChatScenarioKey) => {
+    setChatEnded(false);
+    setMatch((prev) => ({ seq: (prev?.seq ?? 0) + 1, scenarioKey }));
+  };
+
+  // Back to the queue: only ever by the student's own tap (see DECISIONS.md).
+  const backToLobby = () => {
+    setMatch(null);
+    setChatEnded(false);
+  };
 
   // Shared-link arrivals with a bad code land on code entry with the code
   // filled in and the not-found message already showing.
@@ -83,6 +122,9 @@ export function JoinActivityPage() {
     if (stage === "name") {
       if (!activity) return;
       setRemovedByTeacher(false);
+      // A fresh sign-in always starts in the lobby — never in a chat a
+      // previous session left behind (e.g. after hopping via the URL bar).
+      backToLobby();
       signIn({ name: name.trim(), joinCode: activity.joinCode });
       return;
     }
@@ -104,12 +146,25 @@ export function JoinActivityPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center gap-6">
-      {stage === "lobby" && activity && session ? (
+      {activity && session && match ? (
+        // Chatting + chat ended, on this same route. Keyed per match so a
+        // rematch always boots a fresh chat.
+        <ChatStage
+          key={match.seq}
+          studentName={session.name}
+          scenarioKey={match.scenarioKey}
+          onEndedChange={setChatEnded}
+          onBackToLobby={backToLobby}
+        />
+      ) : stage === "lobby" && activity && session ? (
         <>
           <div className={cn(STUDENT_CARD_CLASS, "w-full p-5 sm:p-6")}>
             <WaitingLobby activity={activity} studentName={session.name} />
           </div>
-          <LobbyDemoControls onTeacherRemove={teacherRemovesStudent} />
+          <LobbyDemoControls
+            onTeacherRemove={teacherRemovesStudent}
+            onMatch={startMatch}
+          />
         </>
       ) : (
         // Phones anchor the card high so the form is visible without
@@ -227,23 +282,45 @@ export function JoinActivityPage() {
 }
 
 /**
- * Dev-only trigger for the "teacher removed you" mock event. Goes away once a
- * real backend drives removal.
+ * Dev-only triggers for the lobby's mock events: the teacher matching this
+ * student into a chat (1:1 or a group of 3, so the group drop behavior is
+ * demoable too) and the teacher removing them from the activity. Goes away
+ * once a real backend pushes these.
  */
 function LobbyDemoControls({
   onTeacherRemove,
+  onMatch,
 }: {
   onTeacherRemove: () => void;
+  onMatch: (scenarioKey: ActivityChatScenarioKey) => void;
 }) {
   return (
     <DemoControlsPanel onWorld>
-      <EventButton
-        onWorld
-        onClick={onTeacherRemove}
-        icon={<UserX className="size-4" />}
-      >
-        Teacher removes you
-      </EventButton>
+      <div className="grid grid-cols-2 gap-2">
+        <EventButton
+          onWorld
+          onClick={() => onMatch("duo")}
+          icon={<Handshake className="size-4" />}
+        >
+          Match: 1:1
+        </EventButton>
+        <EventButton
+          onWorld
+          onClick={() => onMatch("group")}
+          icon={<Users className="size-4" />}
+        >
+          Match: group of 3
+        </EventButton>
+        <div className="col-span-2">
+          <EventButton
+            onWorld
+            onClick={onTeacherRemove}
+            icon={<UserX className="size-4" />}
+          >
+            Teacher removes you
+          </EventButton>
+        </div>
+      </div>
     </DemoControlsPanel>
   );
 }

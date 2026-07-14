@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 
+import { characterLabel } from "@/lib/characterLabel";
 import type {
+  ChatEndReason,
   ChatMessage,
   ChatScenario,
   ChatStatus,
@@ -17,6 +19,18 @@ import type {
  */
 export type ChatDemo = ReturnType<typeof useChatDemo>;
 
+/**
+ * How long a disconnected peer has to come back before the room moves on:
+ * a 1:1 chat ends, a group drops them and keeps going (see DECISIONS.md).
+ */
+export const RECONNECT_WINDOW_SECONDS = 120;
+
+/** Where "skip the wait" jumps the countdown to, so the timeout is testable. */
+const SKIP_WAIT_SECONDS = 3;
+
+/** Sender id for conversation notices that nobody actually "sent". */
+const NOTICE_SENDER_ID = "system";
+
 let idCounter = 0;
 function nextId(prefix: string): string {
   idCounter += 1;
@@ -32,7 +46,9 @@ function randomFrom<T>(items: readonly T[]): T {
  * The demo chat "engine". With no backend, this simulates a live room: the
  * peer(s) send scripted opening lines, keep chatting with ambient banter, react
  * to what the student sends, and it exposes dev controls to trigger
- * disconnect / reconnect / end-chat events.
+ * disconnect / reconnect / end-chat events. A disconnected peer gets a
+ * reconnect window with a live countdown; if it runs out, a 1:1 chat ends
+ * ("peer-timeout") while a group chat drops the peer and keeps going.
  */
 export function useChatDemo(scenario: ChatScenario) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -40,15 +56,28 @@ export function useChatDemo(scenario: ChatScenario) {
   const [peerState, setPeerState] = useState<PeerConnectionState>("connected");
   const [offlinePeerId, setOfflinePeerId] = useState<string | null>(null);
   const [status, setStatus] = useState<ChatStatus>("active");
+  const [endReason, setEndReason] = useState<ChatEndReason | null>(null);
+  /** Who ended the chat, when endReason is "peer". */
+  const [endedByPeerId, setEndedByPeerId] = useState<string | null>(null);
+  /** Peers removed from the room after their reconnect window ran out. */
+  const [droppedPeerIds, setDroppedPeerIds] = useState<ReadonlySet<string>>(
+    () => new Set()
+  );
+  /** Countdown (seconds) of the reconnect window; null when nobody is out. */
+  const [reconnectSecondsLeft, setReconnectSecondsLeft] = useState<
+    number | null
+  >(null);
 
   // Refs so timer callbacks always read the latest state. Synced in an effect
   // (not during render) so the React Compiler can optimize this hook — timers
   // fire asynchronously, after the commit, so the refs are current by then.
   const statusRef = useRef(status);
   const peerStateRef = useRef(peerState);
+  const droppedPeerIdsRef = useRef(droppedPeerIds);
   useEffect(() => {
     statusRef.current = status;
     peerStateRef.current = peerState;
+    droppedPeerIdsRef.current = droppedPeerIds;
   });
 
   const timers = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
@@ -73,7 +102,14 @@ export function useChatDemo(scenario: ChatScenario) {
     setMessages((prev) => [...prev, { id: nextId("m"), senderId, text }]);
   };
 
-  const randomPeer = (): Participant => randomFrom(scenario.peers);
+  /** The peers still in the room, per the freshest dropped set (timer-safe). */
+  const activePeersNow = () =>
+    scenario.peers.filter((p) => !droppedPeerIdsRef.current.has(p.id));
+
+  const randomActivePeer = (): Participant | undefined => {
+    const active = activePeersNow();
+    return active.length > 0 ? randomFrom(active) : undefined;
+  };
 
   /** Show a typing indicator for `senderId`, then post their message. */
   const peerSpeak = (senderId: string, text: string, typeMs = 1200) => {
@@ -97,11 +133,18 @@ export function useChatDemo(scenario: ChatScenario) {
     setPeerState("connected");
     setOfflinePeerId(null);
     setStatus("active");
+    setEndReason(null);
+    setEndedByPeerId(null);
+    setDroppedPeerIds(new Set());
+    setReconnectSecondsLeft(null);
     statusRef.current = "active";
     peerStateRef.current = "connected";
+    droppedPeerIdsRef.current = new Set();
 
     const runScriptedLine = (line: ScriptedLine) => {
       if (statusRef.current !== "active") return;
+      // A dropped peer's lines die with them.
+      if (droppedPeerIdsRef.current.has(line.senderId)) return;
       // If the peer is offline when a line is due, retry shortly.
       if (peerStateRef.current !== "connected") {
         later(() => runScriptedLine(line), 1500);
@@ -118,7 +161,8 @@ export function useChatDemo(scenario: ChatScenario) {
           peerStateRef.current === "connected" &&
           !typingTimer.current
         ) {
-          peerSpeak(randomPeer().id, randomFrom(scenario.ambientLines));
+          const speaker = randomActivePeer();
+          if (speaker) peerSpeak(speaker.id, randomFrom(scenario.ambientLines));
         }
         if (statusRef.current === "active") scheduleAmbient();
       }, delay);
@@ -155,7 +199,8 @@ export function useChatDemo(scenario: ChatScenario) {
         ) {
           return;
         }
-        peerSpeak(randomPeer().id, randomFrom(scenario.replyLines));
+        const speaker = randomActivePeer();
+        if (speaker) peerSpeak(speaker.id, randomFrom(scenario.replyLines));
       },
       800 + Math.random() * 900
     );
@@ -164,16 +209,23 @@ export function useChatDemo(scenario: ChatScenario) {
   // ---- Dev/demo event triggers ---------------------------------------------
 
   const disconnectPeer = () => {
-    setOfflinePeerId(scenario.peers[0]?.id ?? null);
+    if (statusRef.current !== "active") return;
+    const target = activePeersNow()[0];
+    if (!target) return;
+    setOfflinePeerId(target.id);
     setPeerState("disconnected");
     setTypingPeerId(null);
     if (typingTimer.current) {
       clearTimeout(typingTimer.current);
       typingTimer.current = null;
     }
+    // Their reconnect window starts now.
+    setReconnectSecondsLeft(RECONNECT_WINDOW_SECONDS);
   };
 
   const reconnectPeer = () => {
+    // Made it back in time — the countdown clears right away.
+    setReconnectSecondsLeft(null);
     setPeerState("reconnecting");
     later(() => {
       setPeerState("reconnected");
@@ -184,6 +236,13 @@ export function useChatDemo(scenario: ChatScenario) {
     }, 1600);
   };
 
+  /** Dev-only: fast-forward the reconnect window to its last few seconds. */
+  const skipReconnectWait = () => {
+    setReconnectSecondsLeft((s) =>
+      s === null ? s : Math.min(s, SKIP_WAIT_SECONDS)
+    );
+  };
+
   const nudgePeer = () => {
     if (
       statusRef.current !== "active" ||
@@ -191,34 +250,99 @@ export function useChatDemo(scenario: ChatScenario) {
     ) {
       return;
     }
+    const speaker = randomActivePeer();
+    if (!speaker) return;
     peerSpeak(
-      randomPeer().id,
+      speaker.id,
       randomFrom([...scenario.ambientLines, ...scenario.replyLines])
     );
   };
 
-  const endChat = () => {
+  const endChat = (reason: ChatEndReason) => {
     setStatus("ended");
     statusRef.current = "ended";
+    setEndReason(reason);
     setTypingPeerId(null);
+    setReconnectSecondsLeft(null);
     clearAllTimers();
   };
 
+  /** Another student in the room taps End chat — it ends for everyone. */
+  const peerEndsChat = () => {
+    if (statusRef.current !== "active") return;
+    // Prefer a peer who's actually online; someone offline can't tap anything.
+    const active = activePeersNow();
+    const ender = active.find((p) => p.id !== offlinePeerId) ?? active[0];
+    if (!ender) return;
+    setEndedByPeerId(ender.id);
+    endChat("peer");
+  };
+
+  // The reconnect window's clock. Ticks once a second; at zero the room moves
+  // on — a 1:1 chat ends (nobody is left to talk to), a group chat drops the
+  // peer with a notice and keeps going. Dropping is NOT ending: see
+  // DECISIONS.md → "A group chat drops a timed-out peer instead of ending".
+  useEffect(() => {
+    if (reconnectSecondsLeft === null || status !== "active") return;
+    if (reconnectSecondsLeft > 0) {
+      const handle = setTimeout(
+        () => setReconnectSecondsLeft((s) => (s === null ? null : s - 1)),
+        1000
+      );
+      return () => clearTimeout(handle);
+    }
+
+    // Window expired.
+    setReconnectSecondsLeft(null);
+    const offline = scenario.peers.find((p) => p.id === offlinePeerId);
+    const remaining = scenario.peers.filter(
+      (p) => !droppedPeerIds.has(p.id) && p.id !== offlinePeerId
+    );
+    if (!offline || remaining.length === 0) {
+      endChat("peer-timeout");
+      return;
+    }
+    setDroppedPeerIds((prev) => new Set(prev).add(offline.id));
+    droppedPeerIdsRef.current = new Set(droppedPeerIds).add(offline.id);
+    setPeerState("connected");
+    setOfflinePeerId(null);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: nextId("m"),
+        senderId: NOTICE_SENDER_ID,
+        kind: "notice",
+        text: `${characterLabel(offline)} couldn't get back in and left the chat`,
+      },
+    ]);
+    // The countdown itself is the only real dependency; the rest is read once
+    // at expiry, and the compiler keeps endChat referentially stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reconnectSecondsLeft, status, offlinePeerId, droppedPeerIds, scenario]);
+
+  /** Everyone still in the room (a group may have dropped someone). */
+  const activePeers = scenario.peers.filter((p) => !droppedPeerIds.has(p.id));
+  /** Everyone who was ever in the room — message lines and colors need them. */
   const participants = [scenario.self, ...scenario.peers];
 
   return {
     self: scenario.self,
-    peers: scenario.peers,
+    peers: activePeers,
     participants,
     messages,
     typingPeerId,
     peerState,
     offlinePeerId,
+    reconnectSecondsLeft,
     isEnded: status === "ended",
+    endReason,
+    endedByPeerId,
     send,
     endChat,
+    peerEndsChat,
     disconnectPeer,
     reconnectPeer,
+    skipReconnectWait,
     nudgePeer,
   };
 }

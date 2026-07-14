@@ -3,6 +3,7 @@
   always works, and all mock content is classroom appropriate and fun.
 */
 
+export * from "./activityChatDemo";
 export * from "./activityDemo";
 export * from "./heroChatDemo";
 export * from "./studentChatDemo";

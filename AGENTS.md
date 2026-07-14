@@ -7,7 +7,7 @@ This file is the canonical source of guidance for all AI agents (Claude Code, Cu
 Scaffolding is in place: a pnpm-workspaces monorepo with a working `client/` app
 (React 19 + TypeScript + Vite + Tailwind v4 + ShadCN) and an empty `server/`. The
 first feature — the **student chatbox** — is built as a working, mock-driven demo at
-`/demo/student-chat`; it is wired into the real student flow in a later prompt. The
+`/demo/student-chat` and is wired into the real student flow (see below). The
 **teacher chat cards** follow the same pattern at `/demo/teacher-chat` and get wired
 into `/activity/host/:joinCode` later. The **navbar** (logo, language switcher,
 Join CTA) and the **full homepage** at `/` are in place: a hero with a live
@@ -15,16 +15,24 @@ sample chatbox reusing the student chat pieces, a teacher's-view section that
 mirrors the same live chat through the real `ChatCard`, a
 how-it-works-for-teachers section, and the founder's note (headshot at
 `client/public/founder-moshe.jpg`, with a marked placeholder fallback if the
-file ever goes missing). The **student join flow and waiting lobby** are real:
-one page (`client/src/pages/student/JoinActivityPage.tsx`) serves both
+file ever goes missing). The **full student flow** is real: one page
+(`client/src/pages/student/JoinActivityPage.tsx`) serves both
 `/activity/join` and `/activity/join/:joinCode`, carrying the student through
-code entry → name entry → lobby (the chatting/ended stages get wired in a
-later prompt); landing back on code entry signs the student out (see
-DECISIONS.md). Student identity is a sessionStorage-backed session
-(`client/src/lib/studentSession.ts`); `StudentIdentityBar` is reserved for
-the future chatting stage (deliberately absent from the lobby — see
-DECISIONS.md). The mock activity behind code `1234` lives in
-`client/src/mockData/activityDemo.ts`. The join flow renders **navbar-free**
+code entry → name entry → lobby → chatting → chat ended on that one route
+(mock match triggers in the lobby's demo panel start a 1:1 or group-of-3
+chat; `client/src/components/Student/ChatStage.tsx` owns the chatting/ended
+stages, keyed per match). Landing back on code entry signs the student out,
+and browser back during a live chat opens the end-chat confirmation via
+`client/src/lib/useBackGuard.ts` (see DECISIONS.md for both). The demo chat
+engine (`useChatDemo`) also owns the 2-minute peer-reconnect window with its
+live countdown: a 1:1 timeout ends the chat with an end **reason** (reason-
+aware copy in `ChatEndedSection`), a group timeout drops the peer with a
+conversation notice instead of ending (see DECISIONS.md). Student identity
+is a sessionStorage-backed session (`client/src/lib/studentSession.ts`);
+`StudentIdentityBar` renders in the chatting/ended stages only (deliberately
+absent from the lobby — see DECISIONS.md). The mock activity behind code
+`1234` lives in `client/src/mockData/activityDemo.ts`, and the matched-chat
+scenarios it feeds live in `client/src/mockData/activityChatDemo.ts`. The join flow renders **navbar-free**
 inside `client/src/components/layout/StudentWorldLayout.tsx` — an immersive
 purple "world" with drifting hand-drawn doodles
 (`client/src/components/decor/`), a floating language pill, and a gradient

@@ -16,7 +16,9 @@ const cleopatra: Participant = {
 
 const caesar: Participant = {
   id: "peer-caesar",
-  character: { id: "caesar", name: "Julius Caesar", emoji: "🏛️" },
+  // No emoji on purpose: the default demo chat keeps the name-only label
+  // exercised across the header, feed, banner, and reveal.
+  character: { id: "caesar", name: "Julius Caesar" },
   realName: "Leo Rivera",
 };
 

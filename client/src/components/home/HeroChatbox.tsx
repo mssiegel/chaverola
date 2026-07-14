@@ -33,6 +33,7 @@ export function HeroChatbox({ chat }: HeroChatboxProps) {
       <ChatHeader
         self={chat.self}
         peers={chat.peers}
+        characterColors={characterColors}
         peerSuffix={
           <span className="text-white/60"> · played by a classmate</span>
         }
@@ -45,6 +46,7 @@ export function HeroChatbox({ chat }: HeroChatboxProps) {
         typingPeerId={chat.typingPeerId}
         peerState={chat.peerState}
         offlinePeerId={chat.offlinePeerId}
+        reconnectSecondsLeft={chat.reconnectSecondsLeft}
         characterColors={characterColors}
       />
 

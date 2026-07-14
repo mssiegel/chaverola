@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import { ConversationLines } from "@/components/chat/ConversationLines";
+import { characterLabel } from "@/lib/characterLabel";
 import type {
   ChatMessage,
   Participant,
@@ -17,6 +18,8 @@ interface ConversationProps {
   typingPeerId: string | null;
   peerState: PeerConnectionState;
   offlinePeerId: string | null;
+  /** Seconds left in the offline peer's reconnect window (null: no window). */
+  reconnectSecondsLeft?: number | null;
   /** Distinct color (CSS var) per character id in this room. */
   characterColors: Map<string, string>;
 }
@@ -33,6 +36,7 @@ export function Conversation({
   typingPeerId,
   peerState,
   offlinePeerId,
+  reconnectSecondsLeft = null,
   characterColors,
 }: ConversationProps) {
   const byId = new Map<string, Participant>();
@@ -52,9 +56,10 @@ export function Conversation({
   const typingName = typingPeerId
     ? (byId.get(typingPeerId)?.character.name ?? null)
     : null;
-  const offlineName = offlinePeerId
-    ? (byId.get(offlinePeerId)?.character.name ?? null)
-    : null;
+  // Full "name emoji" label: the banner is chat chrome, and the countdown
+  // copy ("Brutus 🔪 lost connection…") should read like the header does.
+  const offlinePeer = offlinePeerId ? byId.get(offlinePeerId) : undefined;
+  const offlineName = offlinePeer ? characterLabel(offlinePeer) : null;
 
   return (
     <div
@@ -63,7 +68,11 @@ export function Conversation({
     >
       {peerState !== "connected" && (
         <div className="sticky top-0 z-10 -mx-3 mb-2 flex justify-center px-3 sm:-mx-4 sm:px-4">
-          <PeerReconnectBanner peerState={peerState} peerName={offlineName} />
+          <PeerReconnectBanner
+            peerState={peerState}
+            peerName={offlineName}
+            reconnectSecondsLeft={reconnectSecondsLeft}
+          />
         </div>
       )}
 

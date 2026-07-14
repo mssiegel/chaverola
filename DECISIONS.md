@@ -42,6 +42,31 @@ the affected part. Link related entries by title anchor, never by "above" /
 
 ## Student join flow & lobby
 
+### Back during a live chat asks before ending it
+
+_2026-07-14_
+
+**Decision:** During the chatting stage, browser back does not navigate: it
+opens the same end-chat confirmation as the End chat button. Confirming ends
+the chat and lands the student on the chat-ended screen — it never continues
+out of the page; canceling stays in the chat. The guard arms only while a
+chat is live: the lobby keeps its back-as-reset behavior, and the ended
+screen doesn't trap the student.
+
+**Why:** This is the guard promised by the lobby-only note in
+[Landing on code entry signs the student out](#landing-on-code-entry-signs-the-student-out):
+on this route, back lands on code entry, which signs the student out — so
+during a live chat a stray swipe would silently kill a conversation that
+(per
+[Ending a chat ends it for everyone in the room](#ending-a-chat-ends-it-for-everyone-in-the-room))
+ends for the partners too. Students on phones swipe screen edges constantly;
+an accidental gesture must never cost three people their chat. Routing back
+through the existing confirmation reuses a decision the student already
+understands instead of inventing a second "are you sure" pattern.
+
+_Implemented in [useBackGuard](client/src/lib/useBackGuard.ts), armed by
+[ChatStage](client/src/components/Student/ChatStage.tsx)._
+
 ### One URL for the whole student journey
 
 _2026-07-13_
@@ -94,6 +119,9 @@ students, and often the whole name is wrong, not just a typo.
 chatting stage must NOT let a stray back-swipe silently kill a live chat —
 it needs its own guard (the end-chat confirmation pattern) when it's built.
 
+**Update (2026-07-14):** the chatting stage is built and has that guard —
+see [Back during a live chat asks before ending it](#back-during-a-live-chat-asks-before-ending-it).
+
 _Implemented in
 [JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._
 
@@ -123,6 +151,10 @@ who's in the lobby, and lobby occupancy must stay a mystery — if a student
 can tell only two people are waiting, they know exactly who they'll be
 matched with, which defeats the anonymous-roleplay premise. The heading
 already tells the student they're signed in, so the bar added nothing there.
+
+**Update (2026-07-14):** the chatting stage is built and shows the bar with
+stage text ("Chatting with Brutus 🔪", then "Chat ended"); the lobby stays
+bar-free.
 
 _Removed from
 [JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._
@@ -258,6 +290,132 @@ and [JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._
 
 ## Chat behavior
 
+### Every chat end explains itself
+
+_2026-07-14_
+
+**Decision:** The chat-ended screen's tile, title, and body are keyed by the
+end reason — no two causes share copy. You ended it: 🎬 "And… scene!", with
+the body scoped to the room ("You ended this chat" in a 1:1, "…for the whole
+group" in a group, since ending kills it for everyone). Another student
+ended it: the title names their **character** — "Brutus 🔪 ended the chat" —
+never their real name; the mystery holds until the reveal. The teacher
+ending it (🎓), the activity timer running out (⏰ "Time's up!"), a partner's
+2-minute window expiring (the existing 🔌 copy), and the student's own
+missed window (📶 "self-timeout": you lost connection, two minutes passed,
+and you got back to find the chat over) each get their own copy too. The
+engine tracks who ended a chat (`endedByPeerId`) alongside the reason.
+Reveal behavior and the manual back-to-lobby button are identical for every
+reason.
+
+**Why:** Product-owner call (2026-07-14): the shared "Nicely played 👏" for
+every cause read like the app didn't notice what happened — the same
+reasoning that gave the 1:1 disconnect timeout its own copy, now applied
+across the board. Naming the ender by character keeps a group ending from
+feeling arbitrary ("who killed our chat?") without leaking identities. The
+self-timeout copy says the chat "ended **for you**" because in a group the
+room actually keeps going after a drop — only your seat ended.
+
+_Implemented in
+[ChatEndedSection](client/src/components/Student/Chatbox/ChatEndedSection.tsx)
+(copy map) and [useChatDemo](client/src/components/chat/useChatDemo.ts)
+(`peerEndsChat` + `endedByPeerId`)._
+
+### The chat header summarizes the room, and tapping it shows everyone
+
+_2026-07-14_
+
+**Decision:** The chat header's "with …" line is a summary, not a roster. A
+1:1 spells out the peer's full label ("with Brutus 🔪"); a group shows the
+first active peer plus a count pill ("and 1 other" / "and 2 others") at
+**every** screen width — desktop doesn't get the full comma list either.
+Tapping the line opens a "Who's in this chat" popover listing everyone in
+the room, you included, each with the same color dot their name wears in the
+conversation. The popover shows **characters only** — real names stay hidden
+until the end-of-chat reveal, same as everywhere else. As a backstop, both
+header lines wrap instead of truncating: character names are teacher-authored
+and unbounded, so a single long name can outgrow any width.
+
+**Why:** On phones, a group's full peer list collided with the End chat
+button and truncated ("with Brutus 🔪, Caesar's ghost…"), silently hiding
+who's in the room — the one thing the header exists to say, and the signal
+that a peer was dropped. A row per peer was rejected (the header would eat
+the chat on phones), and emoji-chip avatars were rejected because emojis are
+optional per character — the teacher decides, so chips can't be counted on.
+One-name-plus-count never overflows and behaves identically at all sizes; a
+count that appeared only on phones would mean two different headers to
+reason about. Nothing is lost: every conversation line and the end reveal
+still carry full names, the popover answers "who else is here?" on demand,
+and in a group of 3 the pill disappearing (back to a plain "with Caesar's
+ghost 👻") doubles as a visible drop signal. The pill is styled like the
+header's other tappable things so the roster is discoverable; in a 1:1 the
+line still opens the popover, just without a pill advertising it.
+
+_Implemented in [ChatHeader](client/src/components/chat/ChatHeader.tsx),
+with the popover primitive in
+[popover](client/src/components/ui/popover.tsx)._
+
+### A disconnected peer gets 2 minutes to come back, and the student watches the clock
+
+_2026-07-14_
+
+**Decision:** When a peer loses connection, the reconnect banner counts down
+a **2-minute** window live ("Brutus 🔪 lost connection… 1:43 to come back").
+Reconnecting in time clears the countdown and plays the existing
+reconnecting → "is back! 🎉" flow. If the window runs out in a **1:1 chat**,
+the chat ends and the chat-ended screen swaps the congratulatory copy for
+disconnect copy ("Your partner lost connection" / "They couldn't get back
+in, so this chat ended. Not your fault!") — the name reveal and the
+back-to-lobby button behave exactly as on a normal end, and every other end
+source keeps the standard copy. The window lives in the shared demo engine,
+so `/demo/student-chat` behaves identically, and the chat demo panels get a
+dev-only "Skip the wait" fast-forward so testing the timeout doesn't mean
+standing around for two minutes.
+
+**Update (2026-07-14):** "every other end source keeps the standard copy" is
+superseded — every end reason now has its own wrap-up copy, including the
+student's own missed window. See
+[Every chat end explains itself](#every-chat-end-explains-itself).
+
+**Why:** Classroom devices drop constantly (the same reality behind
+refresh-keeps-the-lobby), so a vanished partner needs a grace period rather
+than an instant kill — but the student left waiting deserves to see how long
+they're expected to hang on, or they'll assume the app froze and bail. Two
+minutes is long enough to hop back on the wifi, short enough that a 1:1
+student isn't held hostage by an empty seat. The disconnect-specific ended
+copy exists because "Great roleplay! 👏" after your partner evaporated reads
+like the app didn't notice what happened.
+
+_Implemented in [useChatDemo](client/src/components/chat/useChatDemo.ts)
+(window + countdown), with the copy in
+[PeerReconnectBanner](client/src/components/Student/Chatbox/PeerReconnectBanner.tsx)
+and [ChatEndedSection](client/src/components/Student/Chatbox/ChatEndedSection.tsx)._
+
+### A group chat drops a timed-out peer instead of ending
+
+_2026-07-14_
+
+**Decision:** When the 2-minute reconnect window expires in a group chat
+(3–4 participants), the chat does **not** end: the disconnected student is
+dropped — a centered notice appears in the conversation ("Caesar's ghost 👻
+couldn't get back in and left the chat"), they leave the header's peer list,
+and the rest keep chatting. This deliberately does not contradict
+[Ending a chat ends it for everyone in the room](#ending-a-chat-ends-it-for-everyone-in-the-room):
+**dropping a member is not ending the chat** — nobody chose to end anything,
+and the remaining students still have partners to talk to. If the last peer
+times out too, the room is down to one student and the chat ends as a 1:1
+timeout. The end-of-chat reveal still lists a dropped peer: their lines are
+in the transcript, so their mystery gets an answer like everyone else's.
+
+**Why:** The ends-for-everyone rule exists because a chat without partners
+is dead air. In a group, partners remain — killing the whole room over one
+flaky Chromebook would punish two students for a third's wifi. The notice
+keeps the drop from feeling like a glitch ("where did the ghost go?").
+
+_Implemented in [useChatDemo](client/src/components/chat/useChatDemo.ts);
+notice rendering in
+[ConversationLines](client/src/components/chat/ConversationLines.tsx)._
+
 ### Ending a chat ends it for everyone in the room
 
 _2026-07-12_
@@ -325,6 +483,36 @@ dark-mode variants); assignment is in
 first so it lands on green._
 
 ---
+
+## Characters & rosters
+
+### A character's emoji is optional, and labels simply drop it
+
+_2026-07-14_
+
+**Decision:** Whether a character gets an emoji next to its name is the
+teacher's call, per character — the data model does not require one. Every
+surface that shows a character (chat header, conversation lines, lobby
+roster chips, reconnect banner, roster popover, end-of-chat reveal, composer
+placeholder) renders "Name emoji" when there is one and plain "Name" when
+there isn't: no placeholder glyph, no reserved gap, no trailing space.
+`characterLabel` in [characterLabel](client/src/lib/characterLabel.ts) is
+the single formatter — nothing may hand-roll `name + emoji` (ConversationLines
+used to; it no longer does). The demo data keeps the path visibly exercised:
+Marc Antony in the join-flow roster and Julius Caesar on `/demo/student-chat`
+have no emoji on purpose.
+
+**Why:** Product-owner call (2026-07-14). Requiring an emoji forces teachers
+to decorate characters that don't want decorating (try picking one for
+"Brutus's conscience"), and a stock fallback glyph or initials avatar would
+invent identity the teacher didn't author — plus a repeated fallback makes
+distinct characters look like the same one. This rule is also why
+[the chat header summarizes the room](#the-chat-header-summarizes-the-room-and-tapping-it-shows-everyone)
+uses a count pill rather than emoji-chip avatars: chips can't be counted on
+when some characters have no emoji.
+
+_Implemented in [chat types](client/src/types/chat.ts) and
+[characterLabel](client/src/lib/characterLabel.ts)._
 
 ## Teacher monitoring view
 

@@ -7,6 +7,7 @@ import { EndChatConfirmationModal } from "@/components/chat/EndChatConfirmationM
 import { characterLabel } from "@/lib/characterLabel";
 import { selfFirstCharacterColors } from "@/lib/characterColor";
 import type {
+  ChatEndReason,
   ChatMessage,
   Participant,
   PeerConnectionState,
@@ -18,18 +19,33 @@ import { MessageComposer } from "./MessageComposer";
 
 export interface ChatboxProps {
   self: Participant;
+  /** Peers still in the room (a group may have dropped someone). */
   peers: Participant[];
+  /** Everyone who was ever in the room — lines and colors outlive a drop. */
   participants: Participant[];
   messages: ChatMessage[];
   typingPeerId: string | null;
   peerState: PeerConnectionState;
   offlinePeerId: string | null;
+  /** Seconds left in the offline peer's reconnect window (null: no window). */
+  reconnectSecondsLeft?: number | null;
   isEnded: boolean;
+  /** Why the chat ended; drives the wrap-up copy. Null while it's going. */
+  endReason?: ChatEndReason | null;
+  /** Which peer ended it, when endReason is "peer". */
+  endedByPeerId?: string | null;
   /** Teacher's "reveal names" setting (mocked in the demo). */
   revealNames: boolean;
   onSend: (text: string) => void;
   onEndChat: () => void;
   onBackToLobby: () => void;
+  /**
+   * Optional external control of the end-chat confirm dialog — the join
+   * flow's back-swipe guard opens it from outside. Pass both or neither;
+   * when absent the dialog manages itself.
+   */
+  endConfirmOpen?: boolean;
+  onEndConfirmOpenChange?: (open: boolean) => void;
 }
 
 /**
@@ -46,17 +62,29 @@ export function Chatbox({
   typingPeerId,
   peerState,
   offlinePeerId,
+  reconnectSecondsLeft = null,
   isEnded,
+  endReason = null,
+  endedByPeerId = null,
   revealNames,
   onSend,
   onEndChat,
   onBackToLobby,
+  endConfirmOpen,
+  onEndConfirmOpenChange,
 }: ChatboxProps) {
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [internalConfirmOpen, setInternalConfirmOpen] = useState(false);
+  const confirmOpen = endConfirmOpen ?? internalConfirmOpen;
+  const setConfirmOpen = onEndConfirmOpenChange ?? setInternalConfirmOpen;
 
   // Color per speaker, assigned by order — "you" are always green. Shared by
   // the feed + the end-of-chat reveal.
   const characterColors = selfFirstCharacterColors(self, participants);
+
+  // The reveal lists everyone the student actually chatted with, including a
+  // group member who got dropped along the way — their lines are still in the
+  // transcript, so their mystery deserves an answer too.
+  const everPeers = participants.filter((p) => p.id !== self.id);
 
   const handleConfirmEnd = () => {
     setConfirmOpen(false);
@@ -68,6 +96,7 @@ export function Chatbox({
       <ChatHeader
         self={self}
         peers={peers}
+        characterColors={characterColors}
         actions={
           !isEnded && (
             <button
@@ -90,15 +119,19 @@ export function Chatbox({
         typingPeerId={isEnded ? null : typingPeerId}
         peerState={isEnded ? "connected" : peerState}
         offlinePeerId={offlinePeerId}
+        reconnectSecondsLeft={reconnectSecondsLeft}
         characterColors={characterColors}
       />
 
       {/* Bottom section */}
       {isEnded ? (
         <ChatEndedSection
-          peers={peers}
+          peers={everPeers}
           revealNames={revealNames}
           characterColors={characterColors}
+          endReason={endReason}
+          endedByPeerId={endedByPeerId}
+          endedInGroup={peers.length > 1}
           onBackToLobby={onBackToLobby}
         />
       ) : (

@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MessageCirclePlus, Wifi, WifiOff, XCircle } from "lucide-react";
+import {
+  FastForward,
+  LogOut,
+  MessageCirclePlus,
+  Unplug,
+  Wifi,
+  WifiOff,
+  XCircle,
+} from "lucide-react";
 
 import {
   DemoControlsPanel,
@@ -51,10 +59,13 @@ export function StudentChatDemoPage() {
           typingPeerId={chat.typingPeerId}
           peerState={chat.peerState}
           offlinePeerId={chat.offlinePeerId}
+          reconnectSecondsLeft={chat.reconnectSecondsLeft}
           isEnded={chat.isEnded}
+          endReason={chat.endReason}
+          endedByPeerId={chat.endedByPeerId}
           revealNames={revealNames}
           onSend={chat.send}
-          onEndChat={chat.endChat}
+          onEndChat={() => chat.endChat("student")}
           onBackToLobby={backToLobby}
         />
       </div>
@@ -66,10 +77,14 @@ export function StudentChatDemoPage() {
         onRevealNamesChange={setRevealNames}
         peerConnected={chat.peerState === "connected"}
         isEnded={chat.isEnded}
+        canSkipWait={chat.reconnectSecondsLeft !== null}
         onDisconnect={chat.disconnectPeer}
         onReconnect={chat.reconnectPeer}
+        onSkipWait={chat.skipReconnectWait}
         onNudge={chat.nudgePeer}
-        onEndChat={chat.endChat}
+        onPeerEndsChat={chat.peerEndsChat}
+        onSelfTimeout={() => chat.endChat("self-timeout")}
+        onEndChat={() => chat.endChat("student")}
       />
     </div>
   );
@@ -82,9 +97,13 @@ interface DemoControlsProps {
   onRevealNamesChange: (value: boolean) => void;
   peerConnected: boolean;
   isEnded: boolean;
+  canSkipWait: boolean;
   onDisconnect: () => void;
   onReconnect: () => void;
+  onSkipWait: () => void;
   onNudge: () => void;
+  onPeerEndsChat: () => void;
+  onSelfTimeout: () => void;
   onEndChat: () => void;
 }
 
@@ -95,9 +114,13 @@ function DemoControls({
   onRevealNamesChange,
   peerConnected,
   isEnded,
+  canSkipWait,
   onDisconnect,
   onReconnect,
+  onSkipWait,
   onNudge,
+  onPeerEndsChat,
+  onSelfTimeout,
   onEndChat,
 }: DemoControlsProps) {
   return (
@@ -150,11 +173,32 @@ function DemoControls({
               Peer reconnects
             </EventButton>
             <EventButton
+              onClick={onSkipWait}
+              disabled={!canSkipWait || isEnded}
+              icon={<FastForward className="size-4" />}
+            >
+              Skip the wait
+            </EventButton>
+            <EventButton
               onClick={onNudge}
               disabled={!peerConnected || isEnded}
               icon={<MessageCirclePlus className="size-4" />}
             >
               Make peer talk
+            </EventButton>
+            <EventButton
+              onClick={onPeerEndsChat}
+              disabled={!peerConnected || isEnded}
+              icon={<LogOut className="size-4" />}
+            >
+              Peer ends chat
+            </EventButton>
+            <EventButton
+              onClick={onSelfTimeout}
+              disabled={isEnded}
+              icon={<Unplug className="size-4" />}
+            >
+              You drop (2 min pass)
             </EventButton>
             <EventButton
               onClick={onEndChat}

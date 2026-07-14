@@ -1,3 +1,4 @@
+import { characterLabel } from "@/lib/characterLabel";
 import type { ChatMessage, Participant } from "@/types/chat";
 
 interface ConversationLinesProps {
@@ -31,6 +32,19 @@ export function ConversationLines({
   return (
     <div className="flex flex-col">
       {messages.map((message, index) => {
+        // System notices (e.g. a peer got dropped) sit centered between the
+        // spoken lines and belong to no participant.
+        if (message.kind === "notice") {
+          return (
+            <div
+              key={message.id}
+              className="my-2 text-center text-xs font-medium text-muted-foreground"
+            >
+              {message.text}
+            </div>
+          );
+        }
+
         const sender = byId.get(message.senderId);
         if (!sender) return null;
 
@@ -54,7 +68,7 @@ export function ConversationLines({
               className="font-semibold"
               style={{ color: characterColors.get(sender.character.id) }}
             >
-              {sender.character.name} {sender.character.emoji}
+              {characterLabel(sender)}
               {isSelf && (
                 <span className="ml-1 align-middle text-[11px] font-medium text-muted-foreground">
                   (you)

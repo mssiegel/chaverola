@@ -7,8 +7,12 @@ export interface Character {
   id: string;
   /** Display name, e.g. "Caesar's ghost". */
   name: string;
-  /** A single emoji shown with the name, e.g. "👻". */
-  emoji: string;
+  /**
+   * A single emoji shown with the name, e.g. "👻". Optional: the teacher
+   * decides per character whether it gets one, and every label simply
+   * drops it when absent (see lib/characterLabel).
+   */
+  emoji?: string;
 }
 
 export interface Participant {
@@ -23,13 +27,30 @@ export interface Participant {
 
 export interface ChatMessage {
   id: string;
-  /** Participant id of the sender. */
+  /** Participant id of the sender (a reserved non-participant id for notices). */
   senderId: string;
   text: string;
+  /**
+   * "notice" renders as a centered system line in the conversation (e.g. a
+   * peer got dropped after a disconnect) instead of a spoken message.
+   */
+  kind?: "notice";
 }
 
 /** Whether a chat is still going or has been ended. */
 export type ChatStatus = "active" | "ended";
+
+/**
+ * Why a chat ended — every reason gets its own wrap-up copy on the student
+ * side (the mapping lives in ChatEndedSection). "peer" means another student
+ * in the room ended it, and travels with the ender's participant id so the
+ * copy can name their character (never their real name — the mystery holds
+ * until the reveal). "peer-timeout" is a partner who never came back from a
+ * disconnect; "self-timeout" is the student's own missed reconnect window,
+ * seen when they finally get back in.
+ */
+export type ChatEndReason =
+  "student" | "peer" | "teacher" | "timer" | "peer-timeout" | "self-timeout";
 
 /** A chat message before a demo engine stamps an id on it. */
 export type SeedMessage = Omit<ChatMessage, "id">;
