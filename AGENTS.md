@@ -39,6 +39,28 @@ purple "world" with drifting hand-drawn doodles
 `ChaverolaPill` (`client/src/components/brand/`) that links home; the route
 tree in `client/src/App.tsx` is split into two pathless layout groups
 (AppLayout vs. StudentWorldLayout) per locale. See DECISIONS.md.
+The **teacher setup page** at `/activity/create` is real: one scrolling
+form (`client/src/components/Teacher/ActivitySetup/` — 2–4 character rows
+with optional emoji slots, hosted-by, optional email, 20-word scene, four
+recommended-on toggles with steppers), with the caps, sessionStorage draft,
+validation, and hosted-activity hand-off in
+`client/src/lib/activitySetup.ts` (char/word clamps in
+`client/src/lib/text.ts`). "Host the Activity" is never disabled — an
+invalid tap scrolls to the first problem; a valid one saves a
+`HostedActivity` under the `chaverola.hostedActivity` sessionStorage key and
+navigates to `/activity/host/:joinCode` with a fresh non-`1234` 4-digit code
+(`mockGenerateJoinCode`), where the still-placeholder host page will read it
+via `readHostedActivity` when it's built. The emoji picker now lives at
+`client/src/components/chat/EmojiPickerPopover.tsx` (shared by the student
+composer and the setup's emoji slots), and `ui/` gained switch, input, and
+textarea primitives. Layout-wise the page is a warm brand pass: sections open
+with accent icon chips (grape/coral/sky/mint via `FormSection`'s `accent`
+prop), character rows lead with a round emoji-avatar slot, from `lg` up a
+sticky `LobbyPreview` rail (a live miniature of `WaitingLobby`, Host button
+beneath) sits beside the form — the grid must NOT get `items-start` or the
+sticky rail loses its track — and below `lg` the Host button docks to a fixed
+bottom bar (the page carries `pb-36` for clearance). See DECISIONS.md →
+"Teacher activity setup".
 
 ## Project Brief
 

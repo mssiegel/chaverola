@@ -5,7 +5,9 @@ import { SendHorizontal, Smile } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Code-split the (heavy) emoji picker — only loaded when opened.
-const EmojiPickerPopover = lazy(() => import("./EmojiPickerPopover"));
+const EmojiPickerPopover = lazy(
+  () => import("@/components/chat/EmojiPickerPopover")
+);
 
 const MAX_CHARS = 75;
 const COUNTER_VISIBLE_AT = 60;

@@ -27,3 +27,16 @@ export const demoActivity: Activity = {
 export function findActivityByCode(code: string): Activity | undefined {
   return code === demoActivity.joinCode ? demoActivity : undefined;
 }
+
+/**
+ * Mock stand-in for the backend handing out a join code when a teacher hosts
+ * an activity: any 4-digit code except the demo's `1234`, so a teacher-made
+ * activity never masquerades as the always-works demo activity.
+ */
+export function mockGenerateJoinCode(): string {
+  let code = DEMO_JOIN_CODE;
+  while (code === DEMO_JOIN_CODE) {
+    code = String(Math.floor(1000 + Math.random() * 9000));
+  }
+  return code;
+}
