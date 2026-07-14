@@ -53,7 +53,7 @@ const STUDENT_CARD_CLASS =
 export function JoinActivityPage() {
   const { joinCode: joinCodeParam } = useParams();
   const navigate = useLocaleNavigate();
-  const { setHomeLinkHidden } = useOutletContext<StudentWorldOutletContext>();
+  const { setChatStudentName } = useOutletContext<StudentWorldOutletContext>();
   const { session, signIn, signOut } = useStudentSession();
 
   // Set by the lobby's demo match triggers; a real backend pushes this later.
@@ -84,14 +84,15 @@ export function JoinActivityPage() {
     if (stage === "code" && session) signOut();
   }, [stage, session, signOut]);
 
-  // While a chat is on screen (live or just ended) the layout hides its brand
-  // pill — same condition that renders ChatStage below. See DECISIONS.md →
-  // "The brand home link disappears mid-chat and while hosting".
-  const inChat = Boolean(activity && session && match);
+  // While a chat is on screen (live or just ended) the layout swaps its brand
+  // pill for the student's name badge — same condition that renders ChatStage
+  // below. See DECISIONS.md → "The brand home link disappears mid-chat and
+  // while hosting" and "Mid-chat, the student's name is a corner badge".
+  const chatStudentName = activity && session && match ? session.name : null;
   useEffect(() => {
-    setHomeLinkHidden(inChat);
-    return () => setHomeLinkHidden(false);
-  }, [inChat, setHomeLinkHidden]);
+    setChatStudentName(chatStudentName);
+    return () => setChatStudentName(null);
+  }, [chatStudentName, setChatStudentName]);
 
   usePageTitle(PAGE_TITLES[stage]);
 

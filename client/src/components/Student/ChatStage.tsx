@@ -5,8 +5,6 @@ import { useChatDemo } from "@/components/chat/useChatDemo";
 import { ChatDemoControls } from "@/components/demo/ChatDemoControls";
 import { EventButton } from "@/components/demo/DemoControls";
 import { Chatbox } from "@/components/Student/Chatbox";
-import { StudentIdentityBar } from "@/components/Student/StudentIdentityBar";
-import { peerListLabel } from "@/lib/characterLabel";
 import { useBackGuard } from "@/lib/useBackGuard";
 import {
   activityChatScenarios,
@@ -24,10 +22,11 @@ interface ChatStageProps {
 }
 
 /**
- * The chatting + chat-ended stages of the student flow: identity bar (the
- * lobby deliberately has none — see DECISIONS.md), the real chatbox driven by
- * the mock engine, and the dev-only event triggers. Mounted fresh per match
- * (the page keys it), so every match starts a clean chat.
+ * The chatting + chat-ended stages of the student flow: the real chatbox
+ * driven by the mock engine, plus the dev-only event triggers. Mounted fresh
+ * per match (the page keys it), so every match starts a clean chat. No
+ * identity bar here — the chat header already says who you're with (see
+ * DECISIONS.md).
  */
 export function ChatStage({
   studentName,
@@ -58,27 +57,16 @@ export function ChatStage({
 
   return (
     <>
-      <div className="flex w-full animate-in flex-col gap-3 duration-500 fade-in slide-in-from-bottom-4 motion-reduce:animate-none">
-        <StudentIdentityBar
-          name={studentName}
-          stageLabel={
-            chat.isEnded
-              ? "Chat ended"
-              : `Chatting with ${peerListLabel(chat.peers)}`
-          }
-          stageLive={!chat.isEnded}
+      <div className="h-[min(70dvh,620px)] w-full animate-in duration-500 fade-in slide-in-from-bottom-4 motion-reduce:animate-none">
+        <Chatbox
+          chat={chat}
+          revealNames={revealNames}
+          onSend={chat.send}
+          onEndChat={() => chat.endChat("student")}
+          onBackToLobby={onBackToLobby}
+          endConfirmOpen={confirmOpen}
+          onEndConfirmOpenChange={setConfirmOpen}
         />
-        <div className="h-[min(70dvh,620px)]">
-          <Chatbox
-            chat={chat}
-            revealNames={revealNames}
-            onSend={chat.send}
-            onEndChat={() => chat.endChat("student")}
-            onBackToLobby={onBackToLobby}
-            endConfirmOpen={confirmOpen}
-            onEndConfirmOpenChange={setConfirmOpen}
-          />
-        </div>
       </div>
 
       {/* The join flow's extra triggers: end sources that exist only once a

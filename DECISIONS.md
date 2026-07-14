@@ -156,7 +156,63 @@ already tells the student they're signed in, so the bar added nothing there.
 stage text ("Chatting with Brutus 🔪", then "Chat ended"); the lobby stays
 bar-free.
 
+**Update (2026-07-15):** the bar is gone from the chatting stage too, and the
+component is deleted — see
+[No identity bar during chat either](#no-identity-bar-during-chat-either).
+
 _Removed from
+[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._
+
+### No identity bar during chat either
+
+_2026-07-15_
+
+**Decision:** The chatting/ended stages no longer show the white identity
+strip (avatar initial + name + "Chatting with …") above the chatbox. The
+`StudentIdentityBar` component is deleted; the chatbox now stands alone on
+the student's screen. This supersedes the original prompt-8 requirement that
+the student's real name stay persistently visible while chatting.
+
+**Why:** The strip was too prominent for what it carried, and its stage text
+duplicated the chat header one line below it — the gradient header already
+says "You're Brutus 🔪 with Caesar's ghost 👻". Two adjacent bars announcing
+the same room read as clutter, especially on phones where vertical space is
+the scarcest resource in a chat.
+
+**Update (2026-07-15):** the real name came back in a much quieter form — a
+non-interactive badge in the world's top-left corner — see
+[Mid-chat, the student's name is a corner badge](#mid-chat-the-students-name-is-a-corner-badge).
+
+_Removed from [ChatStage](client/src/components/Student/ChatStage.tsx)._
+
+### Mid-chat, the student's name is a corner badge
+
+_2026-07-15_
+
+**Decision:** While a chat is on screen (chatting and just-ended stages), the
+student's name appears as a small badge in the top-left corner of the purple
+world — the exact spot the Chaverola brand pill vacates mid-chat (see
+[The brand home link disappears mid-chat and while hosting](#the-brand-home-link-disappears-mid-chat-and-while-hosting)).
+The badge is deliberately styled as **not a button**: a flat, translucent
+**dark grape** pill (translucent white washed out against the purple world),
+no shadow, no hover state, and it sits inside the corner bar's
+`pointer-events-none`, so taps pass through to the world. This contrasts
+with the solid-white pills up there (language switcher, brand pill), which
+are all clickable. It shows **just the name** — no avatar-initial disc,
+because students never upload a photo, so a disc with a letter promises an
+avatar that doesn't exist. The lobby is untouched: the brand pill still owns
+that corner, and the lobby heading ("You're in, {name}!") keeps confirming
+identity there.
+
+**Why:** After the in-card identity bar was removed as clutter, mid-chat was
+the one stage with no reassurance of whose session this is — which matters on
+shared classroom machines. The vacated corner gives the name a persistent
+home that costs the chatbox nothing, and mirrors the language pill on the
+other side. Product-owner call on the non-pill-like styling: the name is not
+clickable, so it must not look tappable.
+
+_Implemented in
+[StudentWorldLayout](client/src/components/layout/StudentWorldLayout.tsx) and
 [JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._
 
 ### No emoji bubble row in the waiting lobby
@@ -282,9 +338,8 @@ the student retype a code they're looking at would be pure friction. The
 notice tells them why they got bounced; rejoining stays possible because
 removal is sometimes a mix-up (and the teacher can always remove them again).
 
-_Implemented in [studentSession.ts](client/src/lib/studentSession.ts),
-[StudentIdentityBar](client/src/components/Student/StudentIdentityBar.tsx),
-and [JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._
+_Implemented in [studentSession.ts](client/src/lib/studentSession.ts) and
+[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._
 
 ---
 
@@ -1065,7 +1120,12 @@ memory-only, so there's no way back into it), and for a teacher it walks them
 away from an activity their class is actively using. On those screens no
 shortcut to the homepage should exist at all. The student's chat stage lives
 in page state rather than the route, so the page reports it to the layout
-through the router Outlet context (`setHomeLinkHidden`).
+through the router Outlet context (`setChatStudentName`).
+
+**Update (2026-07-15):** in the student world the vacated corner no longer
+sits empty — the student's name badge takes the brand pill's spot mid-chat
+(see
+[Mid-chat, the student's name is a corner badge](#mid-chat-the-students-name-is-a-corner-badge)).
 
 _Implemented in [AppLayout](client/src/components/layout/AppLayout.tsx),
 [StudentWorldLayout](client/src/components/layout/StudentWorldLayout.tsx),

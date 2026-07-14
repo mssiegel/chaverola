@@ -10,8 +10,3 @@ export function characterLabel({ character }: Participant): string {
     ? `${character.name} ${character.emoji}`
     : character.name;
 }
-
-/** Every peer's label joined for the chat header's "with …" line. */
-export function peerListLabel(peers: Participant[]): string {
-  return peers.map(characterLabel).join(", ");
-}

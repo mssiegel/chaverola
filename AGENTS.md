@@ -29,15 +29,18 @@ live countdown: a 1:1 timeout ends the chat with an end **reason** (reason-
 aware copy in `ChatEndedSection`), a group timeout drops the peer with a
 conversation notice instead of ending (see DECISIONS.md). Student identity
 is a sessionStorage-backed session (`client/src/lib/studentSession.ts`);
-`StudentIdentityBar` renders in the chatting/ended stages only (deliberately
-absent from the lobby — see DECISIONS.md). The mock activity behind code
+no stage shows an in-card identity bar — the lobby heading confirms the name,
+and mid-chat a non-interactive name badge sits in the world's top-left
+corner, where the brand pill hides (see DECISIONS.md). The mock activity behind code
 `1234` lives in `client/src/mockData/activityDemo.ts`, and the matched-chat
 scenarios it feeds live in `client/src/mockData/activityChatDemo.ts`. The join flow renders **navbar-free**
 inside `client/src/components/layout/StudentWorldLayout.tsx` — an immersive
 purple "world" with drifting hand-drawn doodles
 (`client/src/components/decor/`), a floating language pill, and a gradient
-`ChaverolaPill` (`client/src/components/brand/`) that links home — hidden
-while a chat is on screen, as is AppLayout's logo on the teacher host route
+`ChaverolaPill` (`client/src/components/brand/`) that links home — swapped
+for the student's name badge while a chat is on screen (the page reports the
+name via the Outlet context's `setChatStudentName`), and AppLayout's logo is
+likewise hidden on the teacher host route
 (see DECISIONS.md → "The brand home link disappears mid-chat and while
 hosting"); the route
 tree in `client/src/App.tsx` is split into two pathless layout groups
