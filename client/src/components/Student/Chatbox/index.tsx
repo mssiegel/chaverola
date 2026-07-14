@@ -3,37 +3,18 @@ import { LogOut } from "lucide-react";
 
 import { ChatFrame } from "@/components/chat/ChatFrame";
 import { ChatHeader } from "@/components/chat/ChatHeader";
+import { Conversation } from "@/components/chat/Conversation";
 import { EndChatConfirmationModal } from "@/components/chat/EndChatConfirmationModal";
+import { MessageComposer } from "@/components/chat/MessageComposer";
 import { characterLabel } from "@/lib/characterLabel";
 import { selfFirstCharacterColors } from "@/lib/characterColor";
-import type {
-  ChatEndReason,
-  ChatMessage,
-  Participant,
-  PeerConnectionState,
-} from "@/types/chat";
+import type { ChatRoomState } from "@/types/chat";
 
 import { ChatEndedSection } from "./ChatEndedSection";
-import { Conversation } from "./Conversation";
-import { MessageComposer } from "./MessageComposer";
 
 export interface ChatboxProps {
-  self: Participant;
-  /** Peers still in the room (a group may have dropped someone). */
-  peers: Participant[];
-  /** Everyone who was ever in the room — lines and colors outlive a drop. */
-  participants: Participant[];
-  messages: ChatMessage[];
-  typingPeerId: string | null;
-  peerState: PeerConnectionState;
-  offlinePeerId: string | null;
-  /** Seconds left in the offline peer's reconnect window (null: no window). */
-  reconnectSecondsLeft?: number | null;
-  isEnded: boolean;
-  /** Why the chat ended; drives the wrap-up copy. Null while it's going. */
-  endReason?: ChatEndReason | null;
-  /** Which peer ended it, when endReason is "peer". */
-  endedByPeerId?: string | null;
+  /** The room, exactly as the engine reports it. */
+  chat: ChatRoomState;
   /** Teacher's "reveal names" setting (mocked in the demo). */
   revealNames: boolean;
   onSend: (text: string) => void;
@@ -49,23 +30,14 @@ export interface ChatboxProps {
 }
 
 /**
- * The student chatbox shell. Presentational: it's driven entirely by props so
- * the same component can later be fed by a real data source. Follows the shared
- * layout: header → conversation → bottom section (message input, or the
- * chat-ended panel once the chat is over).
+ * The student chatbox shell. Presentational: it's driven entirely by props —
+ * the room state as one plain-data object (ChatRoomState) plus the actions
+ * its parent mediates — so the same component can later be fed by a real
+ * data source. Follows the shared layout: header → conversation → bottom
+ * section (message input, or the chat-ended panel once the chat is over).
  */
 export function Chatbox({
-  self,
-  peers,
-  participants,
-  messages,
-  typingPeerId,
-  peerState,
-  offlinePeerId,
-  reconnectSecondsLeft = null,
-  isEnded,
-  endReason = null,
-  endedByPeerId = null,
+  chat,
   revealNames,
   onSend,
   onEndChat,
@@ -73,6 +45,19 @@ export function Chatbox({
   endConfirmOpen,
   onEndConfirmOpenChange,
 }: ChatboxProps) {
+  const {
+    self,
+    peers,
+    participants,
+    messages,
+    typingPeerId,
+    peerState,
+    offlinePeerId,
+    reconnectSecondsLeft,
+    isEnded,
+    endReason,
+    endedByPeerId,
+  } = chat;
   const [internalConfirmOpen, setInternalConfirmOpen] = useState(false);
   const confirmOpen = endConfirmOpen ?? internalConfirmOpen;
   const setConfirmOpen = onEndConfirmOpenChange ?? setInternalConfirmOpen;

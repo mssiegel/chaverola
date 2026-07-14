@@ -63,6 +63,37 @@ export type PeerConnectionState =
   "connected" | "disconnected" | "reconnecting" | "reconnected";
 
 /**
+ * Everything a chat view needs to render a live room. This is the contract
+ * between a chat engine and the UI: the demo engine (useChatDemo) returns it
+ * today, and the real data source must satisfy it when it arrives — the
+ * views never depend on anything engine-specific.
+ */
+export interface ChatRoomState {
+  self: Participant;
+  /** Peers still in the room (a group may have dropped someone). */
+  peers: Participant[];
+  /** Everyone who was ever in the room — lines and colors outlive a drop. */
+  participants: Participant[];
+  messages: ChatMessage[];
+  typingPeerId: string | null;
+  peerState: PeerConnectionState;
+  offlinePeerId: string | null;
+  /** Seconds left in the offline peer's reconnect window (null: no window). */
+  reconnectSecondsLeft: number | null;
+  isEnded: boolean;
+  /** Why the chat ended; drives the wrap-up copy. Null while it's going. */
+  endReason: ChatEndReason | null;
+  /** Which peer ended it, when endReason is "peer". */
+  endedByPeerId: string | null;
+}
+
+/** What a participant can do to a live room. */
+export interface ChatRoomActions {
+  send: (text: string) => void;
+  endChat: (reason: ChatEndReason) => void;
+}
+
+/**
  * One chat as the teacher sees it while monitoring an activity: who's in it,
  * everything said so far, and whether it's still going.
  */

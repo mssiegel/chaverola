@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { XCircle } from "lucide-react";
 
 import { ChatDemoControls } from "@/components/demo/ChatDemoControls";
@@ -7,7 +6,7 @@ import { EventButton, SegmentButton } from "@/components/demo/DemoControls";
 import { DemoPageHeader } from "@/components/demo/DemoPageHeader";
 import { Chatbox } from "@/components/Student/Chatbox";
 import { useChatDemo } from "@/components/chat/useChatDemo";
-import { useLocalePath } from "@/lib/locale";
+import { useLocaleNavigate } from "@/lib/locale";
 import {
   DEMO_JOIN_CODE,
   studentChatScenarios,
@@ -25,11 +24,9 @@ export function StudentChatDemoPage() {
   const [revealNames, setRevealNames] = useState(true);
   const scenario = studentChatScenarios[scenarioKey];
   const chat = useChatDemo(scenario);
-  const navigate = useNavigate();
-  const localePath = useLocalePath();
+  const navigate = useLocaleNavigate();
 
-  const backToLobby = () =>
-    navigate(localePath(`/activity/join/${DEMO_JOIN_CODE}`));
+  const backToLobby = () => navigate(`/activity/join/${DEMO_JOIN_CODE}`);
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-6">
@@ -40,17 +37,7 @@ export function StudentChatDemoPage() {
 
       <div className="h-[min(72vh,660px)]">
         <Chatbox
-          self={chat.self}
-          peers={chat.peers}
-          participants={chat.participants}
-          messages={chat.messages}
-          typingPeerId={chat.typingPeerId}
-          peerState={chat.peerState}
-          offlinePeerId={chat.offlinePeerId}
-          reconnectSecondsLeft={chat.reconnectSecondsLeft}
-          isEnded={chat.isEnded}
-          endReason={chat.endReason}
-          endedByPeerId={chat.endedByPeerId}
+          chat={chat}
           revealNames={revealNames}
           onSend={chat.send}
           onEndChat={() => chat.endChat("student")}

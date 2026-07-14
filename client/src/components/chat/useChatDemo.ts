@@ -4,6 +4,8 @@ import { characterLabel } from "@/lib/characterLabel";
 import type {
   ChatEndReason,
   ChatMessage,
+  ChatRoomActions,
+  ChatRoomState,
   ChatScenario,
   ChatStatus,
   Participant,
@@ -12,12 +14,20 @@ import type {
 } from "@/types/chat";
 
 /**
- * Everything `useChatDemo` hands back — state plus actions. Exported so a
- * parent can own the hook and fan its chat out to more than one view (the
- * homepage feeds the same live chat to the student hero box and the teacher
- * preview card).
+ * Everything `useChatDemo` hands back: the shared room contract
+ * (ChatRoomState + ChatRoomActions from types/chat — everything the views
+ * are allowed to depend on) plus dev-only triggers for events a real
+ * backend will push. Exported so a parent can own the hook and fan its chat
+ * out to more than one view (the homepage feeds the same live chat to the
+ * student hero box and the teacher preview card).
  */
-export type ChatDemo = ReturnType<typeof useChatDemo>;
+export interface ChatDemo extends ChatRoomState, ChatRoomActions {
+  peerEndsChat: () => void;
+  disconnectPeer: () => void;
+  reconnectPeer: () => void;
+  skipReconnectWait: () => void;
+  nudgePeer: () => void;
+}
 
 /**
  * How long a disconnected peer has to come back before the room moves on:
@@ -50,7 +60,7 @@ function randomFrom<T>(items: readonly T[]): T {
  * reconnect window with a live countdown; if it runs out, a 1:1 chat ends
  * ("peer-timeout") while a group chat drops the peer and keeps going.
  */
-export function useChatDemo(scenario: ChatScenario) {
+export function useChatDemo(scenario: ChatScenario): ChatDemo {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [typingPeerId, setTypingPeerId] = useState<string | null>(null);
   const [peerState, setPeerState] = useState<PeerConnectionState>("connected");

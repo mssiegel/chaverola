@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { ArrowRight, Clapperboard, Drama, UserRound } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,7 @@ import {
   type SetupField,
   type SetupProblem,
 } from "@/lib/activitySetup";
-import { useLocalePath } from "@/lib/locale";
+import { useLocaleNavigate } from "@/lib/locale";
 import { charCount, clampChars, clampWords, countWords } from "@/lib/text";
 import { cn } from "@/lib/utils";
 import { mockGenerateJoinCode } from "@/mockData";
@@ -70,8 +69,7 @@ function toDraft(form: SetupFormState): ActivityDraft {
  * problem left scrolls to and highlights the first one instead of navigating.
  */
 export function ActivitySetupForm() {
-  const navigate = useNavigate();
-  const localePath = useLocalePath();
+  const navigate = useLocaleNavigate();
 
   const [form, setForm] = useState<SetupFormState>(() =>
     fromDraft(readActivityDraft())
@@ -159,7 +157,7 @@ export function ActivitySetupForm() {
     // with the same class, so the next round starts from this setup.
     const activity = buildHostedActivity(toDraft(form), mockGenerateJoinCode());
     saveHostedActivity(activity);
-    navigate(localePath(`/activity/host/${activity.joinCode}`));
+    navigate(`/activity/host/${activity.joinCode}`);
   };
 
   const hostNameError = problemFor("hostName");

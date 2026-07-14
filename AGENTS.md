@@ -133,20 +133,26 @@ There is no test runner configured yet.
   gradient (logo tile, ChaverolaPill, join button) is the `--brand-gradient-*` token
   pair; the SVG stops in `Logo.tsx`/`favicon.svg` are pinned mirrors of it.
 - **Chatbox** ([client/src/components/Student/Chatbox/](client/src/components/Student/Chatbox/)):
-  the shell (`index.tsx`) is **presentational** — driven entirely by props. The mock
-  "engine" ([client/src/components/chat/useChatDemo.ts](client/src/components/chat/useChatDemo.ts)
-  — under `chat/` because the homepage hero uses it too) simulates a live peer on
-  timers and is swapped for a real data source later. The same chatbox conventions
-  back the Teacher view.
+  the shell (`index.tsx`) is **presentational** — driven entirely by props: the room
+  as one `chat: ChatRoomState` object plus the action callbacks its parent mediates.
+  The engine contract lives in [client/src/types/chat.ts](client/src/types/chat.ts)
+  (`ChatRoomState` + `ChatRoomActions`); the mock "engine"
+  ([client/src/components/chat/useChatDemo.ts](client/src/components/chat/useChatDemo.ts)
+  — under `chat/` because the homepage hero uses it too) explicitly implements it
+  (`ChatDemo extends ChatRoomState, ChatRoomActions` plus dev-only triggers), so
+  swapping in a real data source later is a type-checked replacement, not a
+  re-plumbing. The same chatbox conventions back the Teacher view.
 - **Navbar ↔ homepage contract:** `HERO_JOIN_CTA_ID`
   ([client/src/lib/useHeroCtaPassed.ts](client/src/lib/useHeroCtaPassed.ts)) ties two
   files together — `HomePage` puts the id on the hero's Join CTA, and `AppLayout`
   watches that element to swap the mobile navbar mode.
 - **Shared chat pieces** ([client/src/components/chat/](client/src/components/chat/)):
   the card chrome (`ChatFrame` / `CHAT_FRAME_CLASS`), the gradient "You're X … with Y"
-  header (`ChatHeader`), the message-line renderer (`ConversationLines`), and the
-  end-chat confirmation modal are shared by the student chatbox, the homepage hero
-  chatbox, and the teacher chat cards
+  header (`ChatHeader`), the message-line renderer (`ConversationLines`), the
+  conversation feed (`Conversation`, with `PeerIsTyping` and `PeerReconnectBanner`),
+  the message input (`MessageComposer`, with `LazyEmojiPicker` /
+  `EmojiPickerPopover`), and the end-chat confirmation modal are shared by the
+  student chatbox, the homepage hero chatbox, and the teacher chat cards
   ([client/src/components/Teacher/ChatCard/](client/src/components/Teacher/ChatCard/)).
   Character display labels come from
   [`characterLabel` / `peerListLabel`](client/src/lib/characterLabel.ts).
@@ -182,11 +188,14 @@ There is no test runner configured yet.
   fourth occurrence.
 - **Routes are canonical** — do not invent new ones beyond those in the project brief (the
   temporary `/demo/*` routes are the exception and are clearly marked).
-- **Shared vs. role-specific chat components:** anything the student and teacher views
-  render identically lives in [client/src/components/chat/](client/src/components/chat/)
-  (shared chat types in [client/src/types/chat.ts](client/src/types/chat.ts), shared
-  helpers like `assignCharacterColors` in [client/src/lib/](client/src/lib/)); each
-  role's own chrome stays under `components/Student/` or `components/Teacher/`. This
+- **Shared vs. role-specific chat components:** anything more than one surface
+  renders identically lives in [client/src/components/chat/](client/src/components/chat/)
+  (shared chat types and the `ChatRoomState`/`ChatRoomActions` engine contract in
+  [client/src/types/chat.ts](client/src/types/chat.ts), shared helpers like
+  `assignCharacterColors` in [client/src/lib/](client/src/lib/)); each role's own
+  chrome stays under `components/Student/` or `components/Teacher/` —
+  `Student/Chatbox/` is down to the shell (`index.tsx`) and the student-only
+  `ChatEndedSection`, since the homepage hero shares the feed and composer. This
   layout is a current convention, not a commitment — if you see a clearly better
   structure, reorganize at any time, then update this bullet (and any stale paths
   elsewhere in this file) to match.

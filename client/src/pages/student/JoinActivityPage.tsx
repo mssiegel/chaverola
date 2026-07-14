@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { ArrowRight, Handshake, Users, UserX } from "lucide-react";
 
 import { DemoControlsPanel, EventButton } from "@/components/demo/DemoControls";
 import { ChatStage } from "@/components/Student/ChatStage";
 import { WaitingLobby } from "@/components/Student/WaitingLobby";
 import { Button } from "@/components/ui/button";
-import { useLocalePath } from "@/lib/locale";
+import { useLocaleNavigate } from "@/lib/locale";
 import { useStudentSession } from "@/lib/studentSession";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
@@ -51,8 +51,7 @@ const STUDENT_CARD_CLASS =
  */
 export function JoinActivityPage() {
   const { joinCode: joinCodeParam } = useParams();
-  const navigate = useNavigate();
-  const localePath = useLocalePath();
+  const navigate = useLocaleNavigate();
   const { session, signIn, signOut } = useStudentSession();
 
   // Set by the lobby's demo match triggers; a real backend pushes this later.
@@ -133,7 +132,7 @@ export function JoinActivityPage() {
       return;
     }
     setCodeNotFound(false);
-    navigate(localePath(`/activity/join/${code}`));
+    navigate(`/activity/join/${code}`);
   };
 
   // Mock event: the teacher kicks the student out of the activity. They're

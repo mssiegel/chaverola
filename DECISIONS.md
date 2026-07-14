@@ -310,7 +310,7 @@ those preventDefaults are load-bearing, not leftovers; "fixing" them makes
 the picker close after the first emoji or yank focus off the textarea.
 
 _Implemented in
-[MessageComposer](client/src/components/Student/Chatbox/MessageComposer.tsx),
+[MessageComposer](client/src/components/chat/MessageComposer.tsx),
 with the shared lazy loading in
 [LazyEmojiPicker](client/src/components/chat/LazyEmojiPicker.tsx)._
 
@@ -412,7 +412,7 @@ like the app didn't notice what happened.
 
 _Implemented in [useChatDemo](client/src/components/chat/useChatDemo.ts)
 (window + countdown), with the copy in
-[PeerReconnectBanner](client/src/components/Student/Chatbox/PeerReconnectBanner.tsx)
+[PeerReconnectBanner](client/src/components/chat/PeerReconnectBanner.tsx)
 and [ChatEndedSection](client/src/components/Student/Chatbox/ChatEndedSection.tsx)._
 
 ### A group chat drops a timed-out peer instead of ending

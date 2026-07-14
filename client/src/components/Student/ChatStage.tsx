@@ -70,17 +70,7 @@ export function ChatStage({
         />
         <div className="h-[min(70dvh,620px)]">
           <Chatbox
-            self={chat.self}
-            peers={chat.peers}
-            participants={chat.participants}
-            messages={chat.messages}
-            typingPeerId={chat.typingPeerId}
-            peerState={chat.peerState}
-            offlinePeerId={chat.offlinePeerId}
-            reconnectSecondsLeft={chat.reconnectSecondsLeft}
-            isEnded={chat.isEnded}
-            endReason={chat.endReason}
-            endedByPeerId={chat.endedByPeerId}
+            chat={chat}
             revealNames={revealNames}
             onSend={chat.send}
             onEndChat={() => chat.endChat("student")}

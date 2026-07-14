@@ -1,4 +1,4 @@
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 /**
  * Chaverola mirrors every route under an `/he` prefix (Hebrew variant). For now
@@ -44,4 +44,15 @@ export function useLocalePath(): (path: string) => string {
     if (normalized === "/") return prefix || "/";
     return `${prefix}${normalized}`;
   };
+}
+
+/**
+ * `useNavigate` that applies the active locale prefix, so programmatic
+ * navigation can't forget it. Use this instead of pairing `useNavigate`
+ * with `useLocalePath` by hand.
+ */
+export function useLocaleNavigate(): (path: string) => void {
+  const navigate = useNavigate();
+  const localePath = useLocalePath();
+  return (path: string) => navigate(localePath(path));
 }
