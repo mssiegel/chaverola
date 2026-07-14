@@ -1,14 +1,15 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { EmojiClickData } from "emoji-picker-react";
 import { SendHorizontal, Smile } from "lucide-react";
 
+import { LazyEmojiPicker } from "@/components/chat/LazyEmojiPicker";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { charCount, clampChars } from "@/lib/text";
 import { cn } from "@/lib/utils";
-
-// Code-split the (heavy) emoji picker — only loaded when opened.
-const EmojiPickerPopover = lazy(
-  () => import("@/components/chat/EmojiPickerPopover")
-);
 
 const MAX_CHARS = 75;
 const COUNTER_VISIBLE_AT = 60;
@@ -32,7 +33,6 @@ export function MessageComposer({
   const [value, setValue] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const pickerWrapRef = useRef<HTMLDivElement>(null);
 
   const count = charCount(value);
   const showCounter = count > COUNTER_VISIBLE_AT;
@@ -51,25 +51,6 @@ export function MessageComposer({
     el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`;
     el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
   }, [value]);
-
-  // Close the emoji picker on outside click / Escape.
-  useEffect(() => {
-    if (!pickerOpen) return;
-    const onPointerDown = (event: MouseEvent) => {
-      if (!pickerWrapRef.current?.contains(event.target as Node)) {
-        setPickerOpen(false);
-      }
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setPickerOpen(false);
-    };
-    document.addEventListener("mousedown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [pickerOpen]);
 
   const handleChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setValue(clampChars(event.target.value, MAX_CHARS));
@@ -122,36 +103,40 @@ export function MessageComposer({
         )}
 
         <div className="flex items-end gap-1.5 rounded-2xl border border-input bg-card px-1.5 py-1.5 shadow-sm transition-colors focus-within:border-brand-grape focus-within:ring-2 focus-within:ring-brand-grape/20">
-          <div className="relative" ref={pickerWrapRef}>
-            <button
-              type="button"
-              onClick={() => setPickerOpen((open) => !open)}
-              aria-label="Add emoji"
-              aria-expanded={pickerOpen}
-              className={cn(
-                "grid size-9 shrink-0 place-items-center self-end rounded-full transition-colors hover:bg-accent hover:text-foreground",
-                pickerOpen
-                  ? "bg-accent text-foreground"
-                  : "text-muted-foreground"
-              )}
+          {/* Controlled so handleSend can close the picker programmatically.
+              The three prevented Radix defaults keep today's focus behavior:
+              opening must not move focus into the picker's search box,
+              inserting (which refocuses the textarea) must not count as
+              focus-outside and dismiss the picker mid-multi-insert, and
+              closing must not yank focus back onto the smile button. */}
+          <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label="Add emoji"
+                className={cn(
+                  "grid size-9 shrink-0 place-items-center self-end rounded-full transition-colors hover:bg-accent hover:text-foreground",
+                  pickerOpen
+                    ? "bg-accent text-foreground"
+                    : "text-muted-foreground"
+                )}
+              >
+                <Smile className="size-5" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              side="top"
+              align="start"
+              sideOffset={8}
+              collisionPadding={8}
+              className="w-auto overflow-hidden p-0"
+              onOpenAutoFocus={(event) => event.preventDefault()}
+              onFocusOutside={(event) => event.preventDefault()}
+              onCloseAutoFocus={(event) => event.preventDefault()}
             >
-              <Smile className="size-5" />
-            </button>
-
-            {pickerOpen && (
-              <div className="absolute bottom-11 left-0 z-30 origin-bottom-left animate-in zoom-in-95 fade-in">
-                <Suspense
-                  fallback={
-                    <div className="grid h-[340px] w-[300px] place-items-center rounded-lg border border-border bg-card text-sm text-muted-foreground shadow-lg">
-                      Loading emojis…
-                    </div>
-                  }
-                >
-                  <EmojiPickerPopover onPick={insertEmoji} />
-                </Suspense>
-              </div>
-            )}
-          </div>
+              <LazyEmojiPicker onPick={insertEmoji} />
+            </PopoverContent>
+          </Popover>
 
           <textarea
             ref={textareaRef}

@@ -51,9 +51,12 @@ invalid tap scrolls to the first problem; a valid one saves a
 navigates to `/activity/host/:joinCode` with a fresh non-`1234` 4-digit code
 (`mockGenerateJoinCode`), where the still-placeholder host page will read it
 via `readHostedActivity` when it's built. The emoji picker now lives at
-`client/src/components/chat/EmojiPickerPopover.tsx` (shared by the student
-composer and the setup's emoji slots), and `ui/` gained switch, input, and
-textarea primitives. Layout-wise the page is a warm brand pass: sections open
+`client/src/components/chat/EmojiPickerPopover.tsx`, loaded through
+`client/src/components/chat/LazyEmojiPicker.tsx` (the shared lazy + Suspense
+fallback) and shared by the student composer and the setup's emoji slots —
+both surfaces render it inside the `ui/popover` primitive (the composer's
+prevented Radix focus defaults are a recorded decision; see DECISIONS.md).
+`ui/` gained switch, input, and textarea primitives. Layout-wise the page is a warm brand pass: sections open
 with accent icon chips (grape/coral/sky/mint via `FormSection`'s `accent`
 prop), character rows lead with a round emoji-avatar slot, from `lg` up a
 sticky `LobbyPreview` rail (a live miniature of `WaitingLobby`, Host button

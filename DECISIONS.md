@@ -290,6 +290,30 @@ and [JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._
 
 ## Chat behavior
 
+### The composer's emoji picker stays open across inserts
+
+_2026-07-14_
+
+**Decision:** In the message composer, picking an emoji inserts it at the
+caret and leaves the picker open, so a student can drop in several emojis
+without reopening it each time; focus never leaves the textarea. Escape,
+an outside tap, and sending the message all close it. The teacher setup's
+emoji slot is the opposite on purpose: a character has exactly one emoji,
+so picking closes the popover immediately.
+
+**Why:** Kids chain emojis — close-on-pick would turn "😀😀😀" into three
+round trips. Technically the picker is a non-modal Radix popover, and the
+insert flow refocuses the textarea, which Radix counts as focus leaving the
+popover and normally dismisses it. The composer therefore prevents the
+Radix defaults (`onOpenAutoFocus`, `onFocusOutside`, `onCloseAutoFocus`) —
+those preventDefaults are load-bearing, not leftovers; "fixing" them makes
+the picker close after the first emoji or yank focus off the textarea.
+
+_Implemented in
+[MessageComposer](client/src/components/Student/Chatbox/MessageComposer.tsx),
+with the shared lazy loading in
+[LazyEmojiPicker](client/src/components/chat/LazyEmojiPicker.tsx)._
+
 ### Every chat end explains itself
 
 _2026-07-14_

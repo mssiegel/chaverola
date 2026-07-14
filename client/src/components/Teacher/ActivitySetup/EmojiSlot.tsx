@@ -1,17 +1,13 @@
-import { lazy, Suspense, useState } from "react";
+import { useState } from "react";
 import { SmilePlus } from "lucide-react";
 
+import { LazyEmojiPicker } from "@/components/chat/LazyEmojiPicker";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-
-// Code-split the (heavy) emoji picker — only loaded when a slot is opened.
-const EmojiPickerPopover = lazy(
-  () => import("@/components/chat/EmojiPickerPopover")
-);
 
 interface EmojiSlotProps {
   emoji?: string;
@@ -59,20 +55,12 @@ export function EmojiSlot({ emoji, characterName, onChange }: EmojiSlotProps) {
         collisionPadding={8}
         className="w-auto overflow-hidden p-0"
       >
-        <Suspense
-          fallback={
-            <div className="grid h-[340px] w-[300px] place-items-center text-sm text-muted-foreground">
-              Loading emojis…
-            </div>
-          }
-        >
-          <EmojiPickerPopover
-            onPick={({ emoji: picked }) => {
-              onChange(picked);
-              setOpen(false);
-            }}
-          />
-        </Suspense>
+        <LazyEmojiPicker
+          onPick={({ emoji: picked }) => {
+            onChange(picked);
+            setOpen(false);
+          }}
+        />
         {emoji && (
           <button
             type="button"
