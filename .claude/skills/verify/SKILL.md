@@ -37,6 +37,24 @@ Useful, stable handles:
 - Hero chatbox composer: `getByPlaceholder(/Talk as the Moon/)`; press Enter
   to send. Conversation feed scroll region has class `.scroll-soft`.
 - Locale checks: `waitForURL` with exact URLs (`/he`, `/he/activity/join`).
+- Setup form (`/activity/create`): character inputs by placeholder
+  (`Caesar's ghost`, `Brutus`, …), host name is `#setup-host-name`. Two
+  "Host the Activity" buttons exist (desktop rail + mobile dock) — click the
+  visible one. Success = `waitForURL(/\/activity\/host\/\d{4}$/)`.
+- Host page (`/activity/host/1234`): the desktop pairing rail is the
+  `aside`; queue rows are `ul li button[aria-pressed]` (tap-to-select), each
+  row's remove control is `button[aria-label="Remove <name> from the
+activity"]`. Section headers are buttons whose `innerText` carries the
+  count pill (e.g. "Chats in progress 2"). All confirmations are one shared
+  dialog: scope to `getByRole("dialog")`, match the title with
+  `getByRole("heading")` (button labels repeat the title words), cancel is
+  "Never mind". Live-settings edits propagate ~1s after typing pauses
+  (assert on "Hosted by <new name>" in the header after ~1.6s).
+- Student join (`/activity/join`): code input accepts Enter; the name step
+  swaps in-place — wait for `getByPlaceholder("Your name")`, then click
+  "Join Activity"; lobby shows "Waiting for your match". Auto-match keeps
+  the host-page queue moving (~20s waits), so re-query rows right before
+  clicking and avoid exact queue-count assertions.
 
 ## Gotchas
 
