@@ -1,6 +1,6 @@
 import type { Participant } from "@/types/chat";
 
-import type { HostedChat, WaitingStudent } from "./useHostActivityDemo";
+import type { HostedChat, WaitingStudent } from "./hostWorld";
 
 /** The confirmations the host page can be waiting on. */
 export type PendingAction =

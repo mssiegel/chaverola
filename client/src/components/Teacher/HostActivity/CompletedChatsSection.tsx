@@ -6,7 +6,7 @@ import type { HostedActivity } from "@/types/activity";
 
 import { CollapsibleSection } from "./CollapsibleSection";
 import { EmptyState } from "./EmptyState";
-import type { HostedChat } from "./useHostActivityDemo";
+import type { HostedChat } from "./hostWorld";
 
 interface CompletedChatsSectionProps {
   chats: HostedChat[];

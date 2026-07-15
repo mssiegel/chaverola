@@ -5,7 +5,7 @@ import { formatWaitShort } from "@/lib/time";
 import { cn } from "@/lib/utils";
 
 import { EmptyState } from "./EmptyState";
-import type { WaitingStudent } from "./useHostActivityDemo";
+import type { WaitingStudent } from "./hostWorld";
 
 export interface PairingPanelProps {
   waiting: WaitingStudent[];

@@ -8,7 +8,7 @@ import type { Participant } from "@/types/chat";
 
 import { CollapsibleSection } from "./CollapsibleSection";
 import { EmptyState } from "./EmptyState";
-import type { HostedChat } from "./useHostActivityDemo";
+import type { HostedChat } from "./hostWorld";
 
 interface ChatsInProgressSectionProps {
   chats: HostedChat[];

@@ -1,0 +1,186 @@
+import { describe, expect, it } from "vitest";
+
+import { DEFAULT_ACTIVITY_SETTINGS } from "@/lib/activitySetup";
+import type { ActivitySettings, HostedActivity } from "@/types/activity";
+
+import {
+  AUTO_MATCH_GAP_SECONDS,
+  createChat,
+  findAutoMatchPair,
+  pairEveryoneIn,
+  tickWorld,
+  type HostWorld,
+  type WaitingStudent,
+} from "./hostWorld";
+
+function student(id: string, waitSeconds = 30): WaitingStudent {
+  return { id, realName: `Student ${id.toUpperCase()}`, waitSeconds };
+}
+
+function world(overrides: Partial<HostWorld>): HostWorld {
+  return {
+    queue: [],
+    chats: [],
+    wrappingUp: [],
+    lastPartners: {},
+    joinPool: [],
+    secondsUntilNextJoin: 99,
+    secondsUntilAutoMatch: 99,
+    leftoverStudentId: null,
+    rematchNotice: null,
+    ...overrides,
+  };
+}
+
+function activity(
+  characterCount: 2 | 3 | 4 = 2,
+  settings: Partial<ActivitySettings> = {}
+): HostedActivity {
+  return {
+    joinCode: "4321",
+    hostName: "Ms. Cohen",
+    characters: [
+      { id: "caesar", name: "Caesar's ghost" },
+      { id: "brutus", name: "Brutus" },
+      { id: "cleo", name: "Cleopatra" },
+      { id: "antony", name: "Marc Antony" },
+    ].slice(0, characterCount),
+    // Auto-match off by default so ticks stay inert unless a test opts in.
+    settings: { ...DEFAULT_ACTIVITY_SETTINGS, autoMatch: false, ...settings },
+  };
+}
+
+describe("createChat", () => {
+  it("seats the students, clears them from the queue, and remembers partners", () => {
+    const w = createChat(
+      world({
+        queue: [student("a"), student("b"), student("c")],
+        lastPartners: { a: ["z"] },
+      }),
+      ["a", "b"],
+      activity()
+    );
+    expect(w.queue.map((s) => s.id)).toEqual(["c"]);
+    expect(w.chats).toHaveLength(1);
+    expect(w.chats[0]!.participants.map((p) => p.id).sort()).toEqual([
+      "a",
+      "b",
+    ]);
+    // One round deep: the new room replaces a's previous partner memory.
+    expect(w.lastPartners.a).toEqual(["b"]);
+    expect(w.lastPartners.b).toEqual(["a"]);
+  });
+
+  it("starts the auto-end clock only when the setting is on", () => {
+    const queue = [student("a"), student("b")];
+    const on = createChat(world({ queue }), ["a", "b"], activity());
+    expect(on.chats[0]!.autoEndSecondsLeft).toBe(
+      DEFAULT_ACTIVITY_SETTINGS.autoEndMinutes * 60
+    );
+    const off = createChat(
+      world({ queue }),
+      ["a", "b"],
+      activity(2, { autoEndChats: false })
+    );
+    expect(off.chats[0]!.autoEndSecondsLeft).toBeNull();
+  });
+
+  it("does nothing for fewer than two seatable students", () => {
+    const w = world({ queue: [student("a")] });
+    expect(createChat(w, ["a"], activity())).toBe(w);
+  });
+});
+
+describe("findAutoMatchPair", () => {
+  it("skips fresh rematches and students who have not waited long enough", () => {
+    const pair = findAutoMatchPair(
+      [student("a", 30), student("b", 30), student("c", 30)],
+      20,
+      { a: ["b"], b: ["a"] }
+    );
+    expect(pair!.map((s) => s.id)).toEqual(["a", "c"]);
+
+    expect(
+      findAutoMatchPair([student("a", 30), student("b", 5)], 20, {})
+    ).toBeNull();
+  });
+});
+
+describe("pairEveryoneIn", () => {
+  it("pairs an even queue with no notice", () => {
+    const w = pairEveryoneIn(
+      world({ queue: ["a", "b", "c", "d"].map((id) => student(id)) }),
+      activity()
+    );
+    expect(w.chats).toHaveLength(2);
+    expect(w.queue).toHaveLength(0);
+    expect(w.rematchNotice).toBeNull();
+    expect(w.leftoverStudentId).toBeNull();
+  });
+
+  it("leaves the newest joiner first in line when the roster is two characters", () => {
+    const w = pairEveryoneIn(
+      world({ queue: ["a", "b", "c"].map((id) => student(id)) }),
+      activity(2)
+    );
+    expect(w.chats).toHaveLength(1);
+    expect(w.leftoverStudentId).toBe("c");
+    expect(w.queue.map((s) => s.id)).toEqual(["c"]);
+  });
+
+  it("seats the last three as a group when a 3rd character exists", () => {
+    const w = pairEveryoneIn(
+      world({ queue: ["a", "b", "c"].map((id) => student(id)) }),
+      activity(3)
+    );
+    expect(w.chats).toHaveLength(1);
+    expect(w.chats[0]!.participants).toHaveLength(3);
+    expect(w.leftoverStudentId).toBeNull();
+  });
+
+  it("calls out a forced rematch instead of blocking it", () => {
+    const queue = [student("a"), student("b")];
+    const lastPartners = { a: ["b"], b: ["a"] };
+    const warned = pairEveryoneIn(world({ queue, lastPartners }), activity());
+    expect(warned.chats).toHaveLength(1);
+    expect(warned.rematchNotice).toContain("Student A and Student B");
+
+    const quiet = pairEveryoneIn(
+      world({ queue, lastPartners }),
+      activity(2, { rematchWarning: false })
+    );
+    expect(quiet.rematchNotice).toBeNull();
+  });
+});
+
+describe("tickWorld", () => {
+  it("advances wait times and ends a chat whose clock hits zero with reason timer", () => {
+    const seeded = createChat(
+      world({ queue: [student("a", 10), student("b", 10), student("c", 10)] }),
+      ["a", "b"],
+      activity()
+    );
+    seeded.chats[0]!.autoEndSecondsLeft = 1;
+
+    const ticked = tickWorld(seeded, activity());
+    expect(ticked.queue.map((s) => s.waitSeconds)).toEqual([11]);
+    expect(ticked.chats[0]!.status).toBe("ended");
+    expect(ticked.chats[0]!.endReason).toBe("timer");
+    // The ended chat's students wrap up before rejoining the queue.
+    expect(ticked.wrappingUp.map((e) => e.student.id).sort()).toEqual([
+      "a",
+      "b",
+    ]);
+  });
+
+  it("auto-matches a waiting pair once the gap counts down", () => {
+    const w = world({
+      queue: [student("a", 30), student("b", 30)],
+      secondsUntilAutoMatch: 1,
+    });
+    const ticked = tickWorld(w, activity(2, { autoMatch: true }));
+    expect(ticked.chats).toHaveLength(1);
+    expect(ticked.queue).toHaveLength(0);
+    expect(ticked.secondsUntilAutoMatch).toBe(AUTO_MATCH_GAP_SECONDS);
+  });
+});

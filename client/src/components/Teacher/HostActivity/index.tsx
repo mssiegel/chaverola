@@ -11,13 +11,11 @@ import { CollapsibleSection, CountPill } from "./CollapsibleSection";
 import { CompletedChatsSection } from "./CompletedChatsSection";
 import { confirmCopy, type PendingAction } from "./confirmCopy";
 import { HostHeader } from "./HostHeader";
+import type { WaitingStudent } from "./hostWorld";
 import { JoiningInstructions } from "./JoiningInstructions";
 import { LiveSettingsPanel } from "./LiveSettingsPanel";
 import { PairingPanel } from "./PairingPanel";
-import {
-  useHostActivityDemo,
-  type WaitingStudent,
-} from "./useHostActivityDemo";
+import { useHostActivityDemo } from "./useHostActivityDemo";
 
 interface HostActivityDashboardProps {
   activity: HostedActivity;

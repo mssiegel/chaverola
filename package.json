@@ -13,6 +13,7 @@
     "preview": "pnpm --filter client preview",
     "typecheck": "pnpm --filter client typecheck",
     "lint": "pnpm --filter client lint",
+    "test": "pnpm --filter client test",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
