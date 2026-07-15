@@ -71,11 +71,11 @@ export function HowItWorksSection() {
           <li aria-hidden className="hidden text-brand-grape sm:block">
             ·
           </li>
-          <li>No student accounts, just the code and a name</li>
+          <li>No student accounts</li>
           <li aria-hidden className="hidden text-brand-grape sm:block">
             ·
           </li>
-          <li>Works on anything with a browser, Chromebooks included</li>
+          <li>Works on anything with a browser</li>
         </ul>
       </div>
     </section>

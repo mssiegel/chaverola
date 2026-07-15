@@ -1182,12 +1182,12 @@ _Implemented in [HomePage](client/src/pages/HomePage.tsx)._
 _2026-07-15_
 
 **Decision:** The microcopy under the how-it-works Host CTA is a one-row
-facts list: "Free to use · No student accounts, just the code and a name ·
-Works on anything with a browser, Chromebooks included" (stacked without the
-dots on phones). It replaces "There's nothing to print and nothing to
-install." The claims are founder-approved facts — free for teachers, students
-enter a code and a name with no accounts or emails, any device with a
-browser. Don't add pricing tiers or soften "free" without a new founder call.
+facts list: "Free to use · No student accounts · Works on anything with a
+browser" (stacked without the dots on phones). It replaces "There's nothing
+to print and nothing to install." The claims are founder-approved facts —
+free for teachers, students enter a code and a name with no accounts or
+emails, any device with a browser. Don't add pricing tiers or soften "free"
+without a new founder call.
 
 **Why:** Founder call (2026-07-15). Cost, student accounts, and devices are
 the first practical questions teachers check before trying a classroom tool,
