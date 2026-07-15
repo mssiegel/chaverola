@@ -20,24 +20,21 @@ interface ChatDemoControlsProps {
   onWorld?: boolean;
   revealNames: boolean;
   onRevealNamesChange: (value: boolean) => void;
-  /** Rendered above the reveal-names toggle (e.g. a scenario picker). */
-  header?: ReactNode;
-  /** Extra EventButtons after the shared six (pass them the same onWorld). */
+  /** Extra EventButtons after the built-in ones (pass them the same onWorld). */
   extraEvents?: ReactNode;
 }
 
 /**
  * The dev-only trigger panel for a student-seat chat: the mock events a real
  * backend will push later (connection drops, a peer or the clock ending the
- * chat) plus the mocked "reveal names" setting. Shared by the join flow's
- * chatting stage and `/demo/student-chat`; each adds its own extras.
+ * chat) plus the mocked "reveal names" setting. Used by the join flow's
+ * chatting stage, which adds its own extras.
  */
 export function ChatDemoControls({
   chat,
   onWorld = false,
   revealNames,
   onRevealNamesChange,
-  header,
   extraEvents,
 }: ChatDemoControlsProps) {
   const peerConnected = chat.peerState === "connected";
@@ -45,8 +42,6 @@ export function ChatDemoControls({
   return (
     <DemoControlsPanel onWorld={onWorld}>
       <div className="space-y-4">
-        {header}
-
         <label className="flex cursor-pointer items-center justify-between gap-3">
           <span
             className={cn(

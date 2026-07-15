@@ -6,10 +6,11 @@ This file is the canonical source of guidance for all AI agents (Claude Code, Cu
 
 Scaffolding is in place: a pnpm-workspaces monorepo with a working `client/` app
 (React 19 + TypeScript + Vite + Tailwind v4 + ShadCN) and an empty `server/`. The
-first feature — the **student chatbox** — is built as a working, mock-driven demo at
-`/demo/student-chat` and is wired into the real student flow (see below). The
-**teacher chat cards** follow the same pattern at `/demo/teacher-chat` and get wired
-into `/activity/host/:joinCode` later. The **navbar** (logo, language switcher,
+first feature — the **student chatbox** — is a working, mock-driven chat wired
+into the real student flow (see below). The **teacher chat cards** follow the
+same pattern inside the live activity page at `/activity/host/:joinCode`
+(there are no separate demo routes; every surface lives in its real flow,
+mock-driven until the backend arrives). The **navbar** (logo, language switcher,
 Join CTA) and the **full homepage** at `/` are in place: a hero with a live
 sample chatbox reusing the student chat pieces, a teacher's-view section that
 mirrors the same live chat through the real `ChatCard`, a
@@ -201,13 +202,11 @@ There is no test runner configured yet.
   customized: our `ui/badge.tsx` IS the rounded "eyebrow pill", not the stock ShadCN
   badge styling.
 - **Dev-only demo chrome** lives in `client/src/components/demo/`
-  (`DemoControlsPanel`, `SegmentButton`, `EventButton`, `DemoToggle`,
-  `DemoPageHeader`, and `ChatDemoControls` — the student-seat trigger panel
-  shared by the join flow's chatting stage and `/demo/student-chat`, with
-  `header`/`extraEvents` slots for each surface's extras) — used by the
-  `/demo/*` pages and the join-flow lobby panel, and by the teacher host page
-  when it gets wired. The `onWorld` prop switches to the white/glass theme for
-  the purple student world.
+  (`DemoControlsPanel`, `EventButton`, `DemoToggle`, and `ChatDemoControls` —
+  the student-seat trigger panel used by the join flow's chatting stage, with
+  an `extraEvents` slot for its extras) — the panels also appear in the
+  join-flow lobby and on the teacher host page. The `onWorld` prop switches to
+  the white/glass theme for the purple student world.
 - **Accepted duplication** (deliberate — don't extract): the sticky-note captions on
   the homepage, the two numbered-step renderers (HomePage vs HowItWorksSection emit
   different markup), the page-section wrapper strings, the page-H1 strings, the
@@ -215,8 +214,7 @@ There is no test runner configured yet.
   seed-message id-stamping idiom in the two demo engines. Two or three short
   repetitions read cheaper than a component boundary; revisit any of these at a
   fourth occurrence.
-- **Routes are canonical** — do not invent new ones beyond those in the project brief (the
-  temporary `/demo/*` routes are the exception and are clearly marked).
+- **Routes are canonical** — do not invent new ones beyond those in the project brief.
 - **Shared vs. role-specific chat components:** anything more than one surface
   renders identically lives in [client/src/components/chat/](client/src/components/chat/)
   (shared chat types and the `ChatRoomState`/`ChatRoomActions` engine contract in
@@ -234,7 +232,8 @@ There is no test runner configured yet.
   renames misbehave in git on Windows, and TypeScript's casing checks already catch
   wrong-case imports.
 - **Hooks have no dedicated directory:** a hook lives next to the components it
-  drives (e.g. `components/chat/useChatDemo.ts`, `pages/demo/useTeacherChatsDemo.ts`);
+  drives (e.g. `components/chat/useChatDemo.ts`,
+  `components/Teacher/HostActivity/useHostActivityDemo.ts`);
   generic cross-cutting hooks live in `lib/` (`usePageTitle` — it prepends the
   "Chaverola | " brand prefix itself, callers pass just the page name —
   `useHeroCtaPassed`, and the hooks inside `locale.ts` / `studentSession.ts`).

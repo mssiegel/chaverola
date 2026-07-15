@@ -1594,6 +1594,33 @@ _Implemented in [usePageTitle](client/src/lib/usePageTitle.ts)._
 
 ---
 
+## Routes & app structure
+
+### The temporary `/demo/*` routes are gone — every surface lives in its real flow
+
+_2026-07-15_
+
+**Decision:** The temporary demo routes `/demo/student-chat` and
+`/demo/teacher-chat` are removed, along with everything only they used: their
+pages, the `useTeacherChatsDemo` drip engine, the `studentChatDemo` /
+`teacherChatDemo` scenario data, the `MonitoredChat` / `TeacherChatScenario`
+types, and the demo-only chrome (`DemoPageHeader`, `SegmentButton`). The
+student chatbox is exercised through the real join flow (`/activity/join`,
+code `1234`) and the teacher chat cards through the real live activity page
+(`/activity/host/1234`). Older entries in this file that mention
+`/demo/student-chat` describe behavior that now lives at those real routes.
+
+**Why:** The demo routes existed to build the chatbox and chat cards before
+their real pages did. Both are now wired into the real flows, so the demo
+routes had become a second, diverging path to the same components — extra
+code to keep in sync and a misleading entry point. The dev-only "Demo
+controls" panels stay, inside the real flows: the routes were duplication,
+not the testability.
+
+_Routes live in [App.tsx](client/src/App.tsx)._
+
+---
+
 ## Superseded
 
 Replaced decisions, kept for history. Don't apply these; each date line links

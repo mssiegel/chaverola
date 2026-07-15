@@ -48,32 +48,6 @@ export function DemoControlsPanel({
   );
 }
 
-/** One option of a segmented control (e.g. the scenario picker). */
-export function SegmentButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors",
-        active
-          ? "bg-card text-foreground shadow-sm"
-          : "text-muted-foreground hover:text-foreground"
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
 /** A "trigger this mock event" button. */
 export function EventButton({
   onClick,

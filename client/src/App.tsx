@@ -4,8 +4,6 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { StudentWorldLayout } from "@/components/layout/StudentWorldLayout";
 import { HomePage } from "@/pages/HomePage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
-import { StudentChatDemoPage } from "@/pages/demo/StudentChatDemoPage";
-import { TeacherChatDemoPage } from "@/pages/demo/TeacherChatDemoPage";
 import { JoinActivityPage } from "@/pages/student/JoinActivityPage";
 import { CreateActivityPage } from "@/pages/teacher/CreateActivityPage";
 import { HostActivityPage } from "@/pages/teacher/HostActivityPage";
@@ -24,9 +22,6 @@ function LocalizedRoutes() {
         <Route index element={<HomePage />} />
         <Route path="activity/create" element={<CreateActivityPage />} />
         <Route path="activity/host/:joinCode" element={<HostActivityPage />} />
-        {/* Temporary demo routes — wired into the real flows in later prompts. */}
-        <Route path="demo/student-chat" element={<StudentChatDemoPage />} />
-        <Route path="demo/teacher-chat" element={<TeacherChatDemoPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
       <Route element={<StudentWorldLayout />}>
