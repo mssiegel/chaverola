@@ -14,7 +14,8 @@ entry wins until the product owner says otherwise.
 **Add an entry** whenever a decision is made about how the product should
 behave, especially when the reasoning isn't obvious from the code. Add it at
 the **top of the matching section** (entries are newest-first within each
-section; add a new `##` section when none fits). Record the decision and its
+section; add a new `##` section when none fits), and add its line to
+[Contents](#contents) in the same change. Record the decision and its
 reasoning; keep implementation detail in the code, keep the _why_ here. Use
 this template:
 
@@ -37,6 +38,96 @@ to the [Superseded](#superseded) section at the bottom, change its date line to
 the new entry. If only part of it is replaced, leave it in place with a note on
 the affected part. Link related entries by title anchor, never by "above" /
 "below" — entries move.
+
+---
+
+## Contents
+
+- [Student join flow & lobby](#student-join-flow--lobby)
+  - [Back during a live chat asks before ending it](#back-during-a-live-chat-asks-before-ending-it)
+  - [One URL for the whole student journey](#one-url-for-the-whole-student-journey)
+  - [Landing on code entry signs the student out](#landing-on-code-entry-signs-the-student-out)
+  - [Lobby waiting dots are mint, not grape](#lobby-waiting-dots-are-mint-not-grape)
+  - [The lobby shows no identity bar](#the-lobby-shows-no-identity-bar)
+  - [No identity bar during chat either](#no-identity-bar-during-chat-either)
+  - [Mid-chat, the student's name is a corner badge](#mid-chat-the-students-name-is-a-corner-badge)
+  - [No emoji bubble row in the waiting lobby](#no-emoji-bubble-row-in-the-waiting-lobby)
+  - [The student join flow lives in its own navbar-free "world"](#the-student-join-flow-lives-in-its-own-navbar-free-world)
+  - [Background doodles are deterministic, and freeze (not hide) under reduced motion](#background-doodles-are-deterministic-and-freeze-not-hide-under-reduced-motion)
+  - [No "use a different code" escape on the name step](#no-use-a-different-code-escape-on-the-name-step)
+  - [One page serves both join routes; a wrong code never changes the URL](#one-page-serves-both-join-routes-a-wrong-code-never-changes-the-url)
+  - [Student sign-in lives in the tab, and removal sends you to the name step](#student-sign-in-lives-in-the-tab-and-removal-sends-you-to-the-name-step)
+- [Chat behavior](#chat-behavior)
+  - [The composer's emoji picker stays open across inserts](#the-composers-emoji-picker-stays-open-across-inserts)
+  - [Every chat end explains itself](#every-chat-end-explains-itself)
+  - [The chat header summarizes the room, and tapping it shows everyone](#the-chat-header-summarizes-the-room-and-tapping-it-shows-everyone)
+  - [A disconnected peer gets 2 minutes to come back, and the student watches the clock](#a-disconnected-peer-gets-2-minutes-to-come-back-and-the-student-watches-the-clock)
+  - [A group chat drops a timed-out peer instead of ending](#a-group-chat-drops-a-timed-out-peer-instead-of-ending)
+  - [Ending a chat ends it for everyone in the room](#ending-a-chat-ends-it-for-everyone-in-the-room)
+  - [End of chat requires a tap to return to the lobby](#end-of-chat-requires-a-tap-to-return-to-the-lobby)
+  - [Character-name colors](#character-name-colors)
+- [Characters & rosters](#characters--rosters)
+  - [A character's emoji is optional, and labels simply drop it](#a-characters-emoji-is-optional-and-labels-simply-drop-it)
+- [Teacher activity setup](#teacher-activity-setup)
+  - [Setup is one scrolling form, and Host the Activity is never disabled](#setup-is-one-scrolling-form-and-host-the-activity-is-never-disabled)
+  - [The setup draft lives in the tab, and hosting doesn't clear it](#the-setup-draft-lives-in-the-tab-and-hosting-doesnt-clear-it)
+  - [An abandoned character row never blocks hosting; a duplicate name does](#an-abandoned-character-row-never-blocks-hosting-a-duplicate-name-does)
+  - [Hard caps with quiet counters: 30-character names, 20-word scene](#hard-caps-with-quiet-counters-30-character-names-20-word-scene)
+  - [Settings ship on, and a toggle's sub-control disables instead of hiding](#settings-ship-on-and-a-toggles-sub-control-disables-instead-of-hiding)
+  - [The setup form's submit is solid grape](#the-setup-forms-submit-is-solid-grape)
+  - [Wide screens get a live student-lobby preview beside the form](#wide-screens-get-a-live-student-lobby-preview-beside-the-form)
+  - [On phones, Host the Activity docks to the bottom edge](#on-phones-host-the-activity-docks-to-the-bottom-edge)
+  - [Character rows lead with the emoji avatar](#character-rows-lead-with-the-emoji-avatar)
+  - [Setup sections each carry one brand accent; settings stays the quiet one](#setup-sections-each-carry-one-brand-accent-settings-stays-the-quiet-one)
+- [Teacher live activity page](#teacher-live-activity-page)
+  - [The host page is never projected — it's the teacher's private control room](#the-host-page-is-never-projected--its-the-teachers-private-control-room)
+  - [Host page layout: stacked sections on phones, a sticky pairing rail on desktop](#host-page-layout-stacked-sections-on-phones-a-sticky-pairing-rail-on-desktop)
+  - [The waiting count is the hero stat, and it never leaves the screen](#the-waiting-count-is-the-hero-stat-and-it-never-leaves-the-screen)
+  - [Pairing is tap-to-select, and characters are dealt randomly](#pairing-is-tap-to-select-and-characters-are-dealt-randomly)
+  - [Pair everyone avoids fresh rematches, and seats the odd one out when it can](#pair-everyone-avoids-fresh-rematches-and-seats-the-odd-one-out-when-it-can)
+  - [The rematch warning remembers one round, and never blocks](#the-rematch-warning-remembers-one-round-and-never-blocks)
+  - [Removing a student mid-chat is a quiet exit](#removing-a-student-mid-chat-is-a-quiet-exit)
+  - [Every chat runs its own auto-end clock, and students watch it tick](#every-chat-runs-its-own-auto-end-clock-and-students-watch-it-tick)
+  - [Auto-end edits: new minutes wait for new chats; the toggle acts immediately](#auto-end-edits-new-minutes-wait-for-new-chats-the-toggle-acts-immediately)
+  - [Live edits propagate after a 1-second pause, and invalid states never do](#live-edits-propagate-after-a-1-second-pause-and-invalid-states-never-do)
+  - [No reveal-names control in Chats in progress](#no-reveal-names-control-in-chats-in-progress)
+  - [An unknown host code redirects to the demo activity](#an-unknown-host-code-redirects-to-the-demo-activity)
+  - [The copyable student link carries the current origin, and is never printed](#the-copyable-student-link-carries-the-current-origin-and-is-never-printed)
+- [Teacher monitoring view](#teacher-monitoring-view)
+  - [Teacher chat cards: collapsed to the last 5 lines, End chat asks first](#teacher-chat-cards-collapsed-to-the-last-5-lines-end-chat-asks-first)
+  - [Teacher view: character colors follow participant order](#teacher-view-character-colors-follow-participant-order)
+- [Homepage & hero](#homepage--hero)
+  - [On phones the live chat comes before the setup steps](#on-phones-the-live-chat-comes-before-the-setup-steps)
+  - [The how-it-works footer answers cost, accounts, and devices](#the-how-it-works-footer-answers-cost-accounts-and-devices)
+  - [The teacher bullets say the safety part out loud](#the-teacher-bullets-say-the-safety-part-out-loud)
+  - [The homepage has no footer, and the demo-links line is gone](#the-homepage-has-no-footer-and-the-demo-links-line-is-gone)
+  - [The hero demo goes quiet after two Armstrong lines](#the-hero-demo-goes-quiet-after-two-armstrong-lines)
+  - [Demo students have short names, and the teacher is never one of them](#demo-students-have-short-names-and-the-teacher-is-never-one-of-them)
+  - [Solid grape is reserved for Join; both Host buttons are outline](#solid-grape-is-reserved-for-join-both-host-buttons-are-outline)
+  - [The teacher section stays light, and never points at "this card"](#the-teacher-section-stays-light-and-never-points-at-this-card)
+  - [The teacher pitch sells in-character talk, not a guessing game](#the-teacher-pitch-sells-in-character-talk-not-a-guessing-game)
+  - [Hero CTAs sit right under the pitch at every width](#hero-ctas-sit-right-under-the-pitch-at-every-width)
+  - [The teacher preview mirrors the hero chat live](#the-teacher-preview-mirrors-the-hero-chat-live)
+  - [No testimonials on the homepage](#no-testimonials-on-the-homepage)
+  - [Founder photo loads from `/founder-moshe.jpg` with a marked placeholder fallback](#founder-photo-loads-from-founder-moshejpg-with-a-marked-placeholder-fallback)
+  - [The hero looks hand-made and never mentions AI](#the-hero-looks-hand-made-and-never-mentions-ai)
+  - [The hero chatbox is the product running live, not a mockup](#the-hero-chatbox-is-the-product-running-live-not-a-mockup)
+- [Navbar](#navbar)
+  - [The brand home link disappears mid-chat and while hosting](#the-brand-home-link-disappears-mid-chat-and-while-hosting)
+  - [The navbar Join CTA appears only on the homepage](#the-navbar-join-cta-appears-only-on-the-homepage)
+  - [Mobile navbar swaps the wordmark for "Join Activity" on scroll](#mobile-navbar-swaps-the-wordmark-for-join-activity-on-scroll)
+  - [The navbar has one CTA: Join an Activity](#the-navbar-has-one-cta-join-an-activity)
+  - [Navbar: CTA label shortens on phones; language switcher swaps in place](#navbar-cta-label-shortens-on-phones-language-switcher-swaps-in-place)
+- [Branding & page titles](#branding--page-titles)
+  - [Page titles read "&lt;Page&gt; | Chaverola", page name first](#page-titles-read-ltpagegt--chaverola-page-name-first)
+- [Routes & app structure](#routes--app-structure)
+  - [The temporary `/demo/*` routes are gone — every surface lives in its real flow](#the-temporary-demo-routes-are-gone--every-surface-lives-in-its-real-flow)
+- [Process & tooling](#process--tooling)
+  - [Testing stays small while the app is UI-only: logic tests, no DOM](#testing-stays-small-while-the-app-is-ui-only-logic-tests-no-dom)
+  - [The Fable prompt series document was deleted, not archived](#the-fable-prompt-series-document-was-deleted-not-archived)
+  - [DECISIONS.md stays one file, with a linked table of contents](#decisionsmd-stays-one-file-with-a-linked-table-of-contents)
+- [Superseded](#superseded)
+  - [Hero CTAs sit above the fold on phones](#hero-ctas-sit-above-the-fold-on-phones)
 
 ---
 
@@ -1618,6 +1709,57 @@ controls" panels stay, inside the real flows: the routes were duplication,
 not the testability.
 
 _Routes live in [App.tsx](client/src/App.tsx)._
+
+---
+
+## Process & tooling
+
+### Testing stays small while the app is UI-only: logic tests, no DOM
+
+_2026-07-15_
+
+**Decision:** Vitest runs the unit tests (`pnpm test`) in a plain node
+environment against the pure logic layer only — the setup validators and
+caps (`lib/activitySetup.ts`), the live-edit rules (`lib/hostActivity.ts`),
+the host page's world model (`hostWorld.ts`), and the character-color order
+rule. No jsdom, no component or snapshot tests, and the suite stays small on
+purpose.
+
+**Why:** Product-owner call: this is an MVP and shipping speed wins. The
+logic rules (rematch memory, clamps, id stability) are where regressions are
+silent; component markup still churns with every design pass and would make
+every change fight a wall of snapshots. Revisit the policy when `server/`
+becomes real — the engine contract swap is exactly when these tests earn
+their keep.
+
+_Config in [vitest.config.ts](client/vitest.config.ts)._
+
+### The Fable prompt series document was deleted, not archived
+
+_2026-07-15_
+
+**Decision:** `chaverola-fable-prompts.md` (the staged build prompts) was
+deleted once the build it drove was complete. Recover it from git history if
+it's ever needed (`git log --diff-filter=D -- chaverola-fable-prompts.md`).
+
+**Why:** Product-owner call. It embedded a verbatim copy of the project
+brief, and two copies drift; every product rule it introduced was recorded
+in this file as it was implemented, and the brief itself lives in
+[Shared_Project_Context.md](Shared_Project_Context.md). The repo's living
+docs are the source of truth, not the prompts that produced them.
+
+### DECISIONS.md stays one file, with a linked table of contents
+
+_2026-07-15_
+
+**Decision:** Keep appending entries to this single file. The Contents
+section at the top links every rule; when you add, move, or retitle an
+entry, update its Contents line in the same change.
+
+**Why:** Product-owner call, chosen over splitting into per-area files. One
+file stays trivially greppable, and the many "see DECISIONS.md → ..."
+pointers in code comments and AGENTS.md keep working. At 1,600+ lines the
+table of contents restores scannability without breaking any of that.
 
 ---
 

@@ -8,6 +8,13 @@ The goal is to keep every project organized in the same way, making it easier fo
 
 This is a starting template, not a strict rulebook. Every project is different, and documents may be added, removed, merged, or reordered as needed.
 
+> **Status in this repo:** the numbered flow below is aspirational until the
+> backend (`server/`) becomes real. While the project is UI-only, the living
+> docs are [README.md](README.md),
+> [Shared_Project_Context.md](Shared_Project_Context.md) (the brief),
+> [AGENTS.md](AGENTS.md), and [DECISIONS.md](DECISIONS.md) — don't scaffold
+> the numbered documents yet.
+
 The documentation should generally move from **business concepts** to **technical implementation**.
 
 ---

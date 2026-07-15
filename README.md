@@ -56,11 +56,13 @@ now). Routes are canonical: don't invent new ones beyond the project brief's tab
 | `pnpm preview`      | Preview the production build             |
 | `pnpm typecheck`    | Type-check the client                    |
 | `pnpm lint`         | Lint the client with ESLint              |
+| `pnpm test`         | Run the unit tests (Vitest)              |
 | `pnpm format`       | Format the whole repo with Prettier      |
 | `pnpm format:check` | Check formatting without writing         |
 
-There is no test runner yet — see the Commands section of
-[AGENTS.md](AGENTS.md).
+The test suite is deliberately small while the app is UI-only: pure-logic
+tests over the validators and the host page's world model, no DOM. See
+DECISIONS.md → "Testing stays small while the app is UI-only".
 
 ## Documentation
 

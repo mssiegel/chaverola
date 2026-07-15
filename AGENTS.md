@@ -4,96 +4,39 @@ This file is the canonical source of guidance for all AI agents (Claude Code, Cu
 
 ## Status
 
-Scaffolding is in place: a pnpm-workspaces monorepo with a working `client/` app
-(React 19 + TypeScript + Vite + Tailwind v4 + ShadCN) and an empty `server/`. The
-first feature — the **student chatbox** — is a working, mock-driven chat wired
-into the real student flow (see below). The **teacher chat cards** follow the
-same pattern inside the live activity page at `/activity/host/:joinCode`
-(there are no separate demo routes; every surface lives in its real flow,
-mock-driven until the backend arrives). The **navbar** (logo, language switcher,
-Join CTA) and the **full homepage** at `/` are in place: a hero with a live
-sample chatbox reusing the student chat pieces, a teacher's-view section that
-mirrors the same live chat through the real `ChatCard`, a
-how-it-works-for-teachers section, and the founder's note (headshot at
-`client/public/founder-moshe.jpg`, with a marked placeholder fallback if the
-file ever goes missing). The **full student flow** is real: one page
-(`client/src/pages/student/JoinActivityPage.tsx`) serves both
-`/activity/join` and `/activity/join/:joinCode`, carrying the student through
-code entry → name entry → lobby → chatting → chat ended on that one route
-(mock match triggers in the lobby's demo panel start a 1:1 or group-of-3
-chat; `client/src/components/Student/ChatStage.tsx` owns the chatting/ended
-stages, keyed per match). Landing back on code entry signs the student out,
-and browser back during a live chat opens the end-chat confirmation via
-`client/src/lib/useBackGuard.ts` (see DECISIONS.md for both). The demo chat
-engine (`useChatDemo`) also owns the 2-minute peer-reconnect window with its
-live countdown: a 1:1 timeout ends the chat with an end **reason** (reason-
-aware copy in `ChatEndedSection`), a group timeout drops the peer with a
-conversation notice instead of ending (see DECISIONS.md). Student identity
-is a sessionStorage-backed session (`client/src/lib/studentSession.ts`);
-no stage shows an in-card identity bar — the lobby heading confirms the name,
-and mid-chat a non-interactive name badge sits in the world's top-left
-corner, where the brand pill hides (see DECISIONS.md). The mock activity behind code
-`1234` lives in `client/src/mockData/activityDemo.ts`, and the matched-chat
-scenarios it feeds live in `client/src/mockData/activityChatDemo.ts`. The join flow renders **navbar-free**
-inside `client/src/components/layout/StudentWorldLayout.tsx` — an immersive
-purple "world" with drifting hand-drawn doodles
-(`client/src/components/decor/`), a floating language pill, and a gradient
-`ChaverolaPill` (`client/src/components/brand/`) that links home — swapped
-for the student's name badge while a chat is on screen (the page reports the
-name via the Outlet context's `setChatStudentName`), and AppLayout's logo is
-likewise hidden on the teacher host route
-(see DECISIONS.md → "The brand home link disappears mid-chat and while
-hosting"); the route
-tree in `client/src/App.tsx` is split into two pathless layout groups
-(AppLayout vs. StudentWorldLayout) per locale. See DECISIONS.md.
-The **teacher setup page** at `/activity/create` is real: one scrolling
-form (`client/src/components/Teacher/ActivitySetup/` — 2–4 character rows
-with optional emoji slots, hosted-by, optional email, 20-word scene, four
-recommended-on toggles with steppers), with the caps, sessionStorage draft,
-validation, and hosted-activity hand-off in
-`client/src/lib/activitySetup.ts` (char/word clamps in
-`client/src/lib/text.ts`). "Host the Activity" is never disabled — an
-invalid tap scrolls to the first problem; a valid one saves a
-`HostedActivity` under the `chaverola.hostedActivity` sessionStorage key and
-navigates to `/activity/host/:joinCode` with a fresh non-`1234` 4-digit code
-(`mockGenerateJoinCode`).
-The **teacher live activity page** at `/activity/host/:joinCode` is real
-(`client/src/components/Teacher/HostActivity/`): a header hero stat (the
-waiting count, condensing into a fixed bar on scroll), then minimizable
-sections on one shared `CollapsibleSection` — joining instructions (pin +
-copy-link that copies a current-origin join URL), a live settings panel
-that reuses the ActivitySetup field components with 1s-debounced
-last-valid-wins propagation (`client/src/lib/hostActivity.ts` holds the
-stable-character-id draft model), the pairing queue (tap-to-select, Pair
-everyone with rematch avoidance, per-chip removal), and the
-in-progress/completed chat card grids. On `lg`+ the pairing queue is a
-sticky left rail. The page-level mock engine is
-`useHostActivityDemo` (same directory): queue/joins/auto-match/per-chat
-auto-end clocks/chatter drip/quiet-exit removals, seeded from
-`client/src/mockData/hostActivityDemo.ts`; `/activity/host/1234` hosts the
-Rome demo (no teacher email, on purpose), other codes read the
-sessionStorage stash or redirect to `1234`. The chat-engine contract gained
-a per-chat auto-end countdown (`ChatRoomState.autoEndSecondsLeft`, ticked
-by `useChatDemo`, reason `"timer"` at zero) rendered by
-`client/src/components/chat/AutoEndCountdown.tsx` in the student chat
-header (final-minute emphasis; the End pill compresses below `sm`) and on
-teacher chat cards, which now also take per-participant remove and
-inactive-member props. See DECISIONS.md → "Teacher live activity page" for
-the rules (no-projection, layout, tap-to-pair, quiet exit, clock edits,
-redirect). The emoji picker now lives at
-`client/src/components/chat/EmojiPickerPopover.tsx`, loaded through
-`client/src/components/chat/LazyEmojiPicker.tsx` (the shared lazy + Suspense
-fallback) and shared by the student composer and the setup's emoji slots —
-both surfaces render it inside the `ui/popover` primitive (the composer's
-prevented Radix focus defaults are a recorded decision; see DECISIONS.md).
-`ui/` gained switch, input, and textarea primitives. Layout-wise the page is a warm brand pass: sections open
-with accent icon chips (grape/coral/sky/mint via `FormSection`'s `accent`
-prop), character rows lead with a round emoji-avatar slot, from `lg` up a
-sticky `LobbyPreview` rail (a live miniature of `WaitingLobby`, Host button
-beneath) sits beside the form — the grid must NOT get `items-start` or the
-sticky rail loses its track — and below `lg` the Host button docks to a fixed
-bottom bar (the page carries `pb-36` for clearance). See DECISIONS.md →
-"Teacher activity setup".
+Every UI surface is built, mock-driven, and lives in its real flow (no demo
+routes); `server/` is still an empty placeholder. The map:
+
+| Surface               | Route                        | Where it lives                                                                                                                                                                     |
+| --------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Homepage              | `/`                          | `client/src/pages/HomePage.tsx` + `components/home/` — the hero chatbox and the teacher-view `ChatCard` mirror one live `useChatDemo` chat; founder's note with photo fallback     |
+| Student join flow     | `/activity/join[/:joinCode]` | `client/src/pages/student/JoinActivityPage.tsx` — code → name → lobby → chatting → ended, all on one URL; `components/Student/ChatStage.tsx` owns the chat stages, keyed per match |
+| Teacher setup         | `/activity/create`           | `client/src/components/Teacher/ActivitySetup/` — form UI; the caps, draft persistence, validation, and hand-off live in `client/src/lib/activitySetup.ts`                          |
+| Teacher live activity | `/activity/host/:joinCode`   | `client/src/components/Teacher/HostActivity/` — engine `useHostActivityDemo.ts` + pure world model `hostWorld.ts`; live-edit draft model in `client/src/lib/hostActivity.ts`       |
+| Not found             | `*`                          | `client/src/pages/NotFoundPage.tsx`                                                                                                                                                |
+
+Load-bearing flow facts (the reasoning for each is in DECISIONS.md):
+
+- The demo activity behind join code `1234` seeds everything
+  (`client/src/mockData/`); `/activity/host/1234` hosts the Rome demo (no
+  teacher email, on purpose), other codes read the sessionStorage stash or
+  redirect to `1234`.
+- The student flow renders navbar-free inside `StudentWorldLayout` (purple
+  world, drifting doodles, brand pill that swaps for the student's name badge
+  mid-chat); everything else sits under `AppLayout`, whose logo also hides on
+  the host route. Student identity is a sessionStorage session
+  (`lib/studentSession.ts`); landing back on code entry signs the student
+  out, and browser back during a live chat asks first (`lib/useBackGuard.ts`).
+- The chat-engine contract (`ChatRoomState`/`ChatRoomActions`) carries the
+  2-minute peer-reconnect window and the per-chat auto-end clock (reason
+  `"timer"` at zero, rendered by `chat/AutoEndCountdown.tsx` in the student
+  header and on teacher chat cards). A 1:1 reconnect timeout ends the chat;
+  a group timeout drops the peer with a notice instead.
+- The setup form and the host page's live settings panel share their field
+  components and validation; live edits propagate on a 1-second pause,
+  last-valid-wins, with stable character ids (`lib/hostActivity.ts`).
+- Setup-page layout gotcha: the form grid must NOT get `items-start`, or the
+  sticky `LobbyPreview` rail loses its track (there's a code comment on it).
 
 ## Project Brief
 
@@ -137,13 +80,15 @@ Run from the repo root:
 - **Typecheck:** `pnpm typecheck` — `tsc -b` (client)
 - **Lint:** `pnpm lint` — ESLint 9 flat config (`client/eslint.config.js`), including
   the React Hooks + React Compiler lints
+- **Test:** `pnpm test` — Vitest (`client/vitest.config.ts`), plain node
+  environment over the pure logic layer only. The suite is deliberately
+  small while the app is UI-only; see DECISIONS.md → "Testing stays small
+  while the app is UI-only" before adding tests.
 - **Preview:** `pnpm preview` — serve the production build
 - **Format:** `pnpm format` / `pnpm format:check` — Prettier over the whole repo.
   `prettier-plugin-tailwindcss` sorts Tailwind classes (including inside `cn()`/
   `cva()` calls) into canonical order — never hand-order class strings; run
   `pnpm format` and let it decide.
-
-There is no test runner configured yet.
 
 ## Architecture
 
@@ -181,11 +126,22 @@ There is no test runner configured yet.
   header (`ChatHeader`), the message-line renderer (`ConversationLines`), the
   conversation feed (`Conversation`, with `PeerIsTyping` and `PeerReconnectBanner`),
   the message input (`MessageComposer`, with `LazyEmojiPicker` /
-  `EmojiPickerPopover`), and the end-chat confirmation modal are shared by the
-  student chatbox, the homepage hero chatbox, and the teacher chat cards
+  `EmojiPickerPopover` — also used by the setup form's emoji slots, always
+  inside the `ui/popover` primitive), and the end-chat confirmation modal are
+  shared by the student chatbox, the homepage hero chatbox, and the teacher
+  chat cards
   ([client/src/components/Teacher/ChatCard/](client/src/components/Teacher/ChatCard/)).
   Character display labels come from
   [`characterLabel` / `peerListLabel`](client/src/lib/characterLabel.ts).
+  Every confirmation step renders through
+  [`ui/confirm-dialog`](client/src/components/ui/confirm-dialog.tsx) —
+  `EndChatConfirmationModal` is a thin wrapper over it, and the host page's
+  remove/end-all confirmations use it directly (copy in
+  `Teacher/HostActivity/confirmCopy.ts`).
+- **Demo-engine helpers** live in [client/src/lib/random.ts](client/src/lib/random.ts)
+  (`nextId`, `randInt`, `randomFrom`, `shuffled`) — both engines import them;
+  don't re-declare per-engine copies. The reserved notice sender id
+  (`NOTICE_SENDER_ID`) lives in [client/src/types/chat.ts](client/src/types/chat.ts).
 - **Mock data** lives only in [client/src/mockData/](client/src/mockData/). The demo join
   code `1234` always works.
 
@@ -233,13 +189,24 @@ There is no test runner configured yet.
   wrong-case imports.
 - **Hooks have no dedicated directory:** a hook lives next to the components it
   drives (e.g. `components/chat/useChatDemo.ts`,
-  `components/Teacher/HostActivity/useHostActivityDemo.ts`);
+  `components/Teacher/HostActivity/useHostActivityDemo.ts` — whose pure
+  simulation rules live beside it in `hostWorld.ts`);
   generic cross-cutting hooks live in `lib/` (`usePageTitle` — it prepends the
   "Chaverola | " brand prefix itself, callers pass just the page name —
-  `useHeroCtaPassed`, and the hooks inside `locale.ts` / `studentSession.ts`).
+  `useHeroCtaPassed`, `useBackGuard`, `useLatestRef` — the
+  ref-mirrors-latest-value idiom for timer callbacks; don't hand-roll it —
+  `useSecondCountdown`, and the hooks inside `locale.ts` / `studentSession.ts`).
   All per-tab persistence goes through the sessionStorage helpers in
-  `lib/storage.ts` (`readSessionJson`/`writeSessionJson`/`removeSessionItem`)
+  `lib/storage.ts` (`readSessionJson`/`writeSessionJson`/`removeSessionItem`,
+  plus the `isRecord`/`hasString` guards for the validate callbacks)
   — don't hand-roll try/catch JSON storage access.
+- **Dependency policy:** stay lean while the app is UI-only. Deliberately not
+  added (evaluated 2026-07-15): `zod` (the storage validators are a few lines
+  on shared guards), `react-hook-form` (the setup form is built and its UX
+  rules are recorded), i18n libraries (no Hebrew text yet — extraction comes
+  with the translation pass), `xstate` and debounce utilities (not enough
+  repetition to buy a dependency). Revisit `zod` and a data-fetching layer
+  when `server/` becomes real.
 - **`index.tsx` means folder-as-component** (`Student/Chatbox/`, `Teacher/ChatCard/`):
   one component whose private sub-parts share the folder. The only barrel file is
   `mockData/index.ts` — don't add new barrels.

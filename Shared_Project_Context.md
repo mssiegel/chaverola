@@ -42,20 +42,8 @@ You may take **loose** inspiration from Frempco.com, but do **not** copy it.
   - `client/` — the app (a workspace package)
   - `server/` — empty for now except a `.gitkeep`
 
-### Prettier (`.prettierrc` at the root)
-
-```json
-{
-  "useTabs": false,
-  "tabWidth": 2,
-  "printWidth": 80,
-  "singleQuote": false,
-  "trailingComma": "es5",
-  "semi": true,
-  "arrowParens": "always"
-}
-```
-
+- Prettier config lives at [`.prettierrc`](.prettierrc) in the repo root — that
+  file is the single source of truth for formatting.
 - Code must be **clean, well structured, and loosely coupled.** Reuse components, apply
   DRY where sensible, and define a **default color theme (design tokens / CSS variables)**
   used across the app.
