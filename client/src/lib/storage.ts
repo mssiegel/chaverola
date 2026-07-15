@@ -39,3 +39,19 @@ export function removeSessionItem(key: string): void {
     // Nothing to clean up if storage is unavailable.
   }
 }
+
+// Tiny guards for the `validate` callbacks above, so each stored shape can
+// duck-type itself in a line or two instead of a ladder of typeof checks.
+
+/** True when `value` is an object we can safely index into. */
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/** True when `record[key]` is a string. */
+export function hasString(
+  record: Record<string, unknown>,
+  key: string
+): boolean {
+  return typeof record[key] === "string";
+}

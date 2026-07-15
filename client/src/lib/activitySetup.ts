@@ -1,7 +1,12 @@
 import type { ActivitySettings, HostedActivity } from "@/types/activity";
 import type { Character } from "@/types/chat";
 
-import { readSessionJson, writeSessionJson } from "./storage";
+import {
+  hasString,
+  isRecord,
+  readSessionJson,
+  writeSessionJson,
+} from "./storage";
 import { clampChars, clampWords } from "./text";
 
 /*
@@ -314,14 +319,21 @@ export function readHostedActivity(
   const stashed = readSessionJson(
     HOSTED_ACTIVITY_KEY,
     (parsed): HostedActivity | null => {
+      // A stash that fails any of this reads as absent, and the host page
+      // falls back to its demo-activity redirect instead of crashing the
+      // engine on a half-formed activity.
       if (
-        typeof parsed === "object" &&
-        parsed !== null &&
-        (parsed as HostedActivity).joinCode === joinCode &&
-        typeof (parsed as HostedActivity).hostName === "string" &&
-        Array.isArray((parsed as HostedActivity).characters)
+        isRecord(parsed) &&
+        parsed.joinCode === joinCode &&
+        hasString(parsed, "hostName") &&
+        Array.isArray(parsed.characters) &&
+        parsed.characters.every(
+          (c: unknown) =>
+            isRecord(c) && hasString(c, "id") && hasString(c, "name")
+        ) &&
+        isRecord(parsed.settings)
       ) {
-        return parsed as HostedActivity;
+        return parsed as unknown as HostedActivity;
       }
       return null;
     }

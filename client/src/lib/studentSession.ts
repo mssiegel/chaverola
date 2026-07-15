@@ -1,6 +1,8 @@
 import { useState } from "react";
 
 import {
+  hasString,
+  isRecord,
   readSessionJson,
   removeSessionItem,
   writeSessionJson,
@@ -23,12 +25,11 @@ const STORAGE_KEY = "chaverola.studentSession";
 /** Anything that isn't a well-formed session reads as signed out. */
 function asStudentSession(parsed: unknown): StudentSession | null {
   if (
-    typeof parsed === "object" &&
-    parsed !== null &&
-    typeof (parsed as StudentSession).name === "string" &&
-    typeof (parsed as StudentSession).joinCode === "string"
+    isRecord(parsed) &&
+    hasString(parsed, "name") &&
+    hasString(parsed, "joinCode")
   ) {
-    return parsed as StudentSession;
+    return parsed as unknown as StudentSession;
   }
   return null;
 }
