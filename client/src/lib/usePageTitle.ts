@@ -4,13 +4,13 @@ import { useEffect } from "react";
 const BRAND = "Chaverola";
 
 /**
- * Sets `document.title` to "Chaverola | <title>" for the current page and
+ * Sets `document.title` to "<title> | Chaverola" for the current page and
  * restores the bare brand on unmount, so routes that don't set their own
  * title fall back cleanly. Callers pass just the page's own name.
  */
 export function usePageTitle(title: string) {
   useEffect(() => {
-    document.title = `${BRAND} | ${title}`;
+    document.title = `${title} | ${BRAND}`;
     return () => {
       document.title = BRAND;
     };
