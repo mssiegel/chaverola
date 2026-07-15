@@ -1157,6 +1157,82 @@ _Assignment happens in [ChatCard](client/src/components/Teacher/ChatCard/index.t
 
 ## Homepage & hero
 
+### On phones the live chat comes before the setup steps
+
+_2026-07-15_
+
+**Decision:** The hero section is three grid items — pitch + CTAs, the live
+chat block (caption, chatbox, sticky note), and the "Setup takes about a
+minute" steps — so phones read pitch → CTAs → live chat → setup steps, while
+desktop looks exactly as before (the chat spans both rows of the right
+column; pitch and steps stack in the left one). This does not touch
+[Hero CTAs sit right under the pitch at every width](#hero-ctas-sit-right-under-the-pitch-at-every-width):
+the buttons still sit directly under the pitch everywhere — only the steps
+moved below the chat on phones.
+
+**Why:** Founder call (2026-07-15, picking from a proposed improvement list).
+The live chatbox is the single most convincing thing on the page, and on a
+phone it sat below the pitch, both buttons, and the steps — a full scroll
+before the proof. Now the chat header lands near the first fold.
+
+_Implemented in [HomePage](client/src/pages/HomePage.tsx)._
+
+### The how-it-works footer answers cost, accounts, and devices
+
+_2026-07-15_
+
+**Decision:** The microcopy under the how-it-works Host CTA is a one-row
+facts list: "Free to use · No student accounts, just the code and a name ·
+Works on anything with a browser, Chromebooks included" (stacked without the
+dots on phones). It replaces "There's nothing to print and nothing to
+install." The claims are founder-approved facts — free for teachers, students
+enter a code and a name with no accounts or emails, any device with a
+browser. Don't add pricing tiers or soften "free" without a new founder call.
+
+**Why:** Founder call (2026-07-15). Cost, student accounts, and devices are
+the first practical questions teachers check before trying a classroom tool,
+and the page answered none of them. One compact row removes that hesitation
+without adding a section (a longer FAQ was considered and rejected — the page
+should stay short).
+
+_Implemented in
+[HowItWorksSection](client/src/components/home/HowItWorksSection.tsx)._
+
+### The teacher bullets say the safety part out loud
+
+_2026-07-15_
+
+**Decision:** The first teacher-view bullet states the reassurance plainly:
+students only see each other's characters, nobody is anonymous to the
+teacher, and anyone who gets out of line is identifiable. It replaced "Only
+you see the names. Students talk to each other in character until you reveal
+who was who." — the reveal is still covered by the hero paragraph and
+how-it-works step 4.
+
+**Why:** Founder call (2026-07-15). A middle/high school teacher's first
+worry about anonymous chat is misbehavior. The page showed the answer (real
+names on every message, live) but never said it as a safety fact, so the
+bullet now carries it. Keeps the section at three bullets per
+[The teacher section stays light](#the-teacher-section-stays-light-and-never-points-at-this-card).
+
+_Implemented in
+[TeacherViewSection](client/src/components/home/TeacherViewSection.tsx)._
+
+### The homepage has no footer, and the demo-links line is gone
+
+_2026-07-15_
+
+**Decision:** The page ends with the founder's note. The temporary "Poking
+around? Peek at the…" demo-links line was removed, and no footer replaces it.
+The `/demo/*` routes still exist and are reachable by URL (they're listed in
+the README).
+
+**Why:** Founder call (2026-07-15): remove the bare demo-links line, and
+"don't add a footer at all." A footer was proposed for credibility and
+declined — the founder's note with the contact email already closes the page.
+
+_Implemented in [HomePage](client/src/pages/HomePage.tsx)._
+
 ### The hero demo goes quiet after two Armstrong lines
 
 _2026-07-12_

@@ -62,9 +62,21 @@ export function HowItWorksSection() {
             Host an Activity
           </LocaleLink>
         </Button>
-        <p className="text-sm text-muted-foreground">
-          There's nothing to print and nothing to install.
-        </p>
+        {/* The practical facts teachers check before trying a tool. The
+            claims (free, no student accounts, any browser) are founder-
+            approved — see DECISIONS.md → "The how-it-works footer answers
+            cost, accounts, and devices". */}
+        <ul className="flex flex-col items-center gap-1 text-center text-sm text-muted-foreground sm:flex-row sm:gap-2.5">
+          <li>Free to use</li>
+          <li aria-hidden className="hidden text-brand-grape sm:block">
+            ·
+          </li>
+          <li>No student accounts, just the code and a name</li>
+          <li aria-hidden className="hidden text-brand-grape sm:block">
+            ·
+          </li>
+          <li>Works on anything with a browser, Chromebooks included</li>
+        </ul>
       </div>
     </section>
   );

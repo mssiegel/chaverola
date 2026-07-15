@@ -36,9 +36,16 @@ export function HomePage() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <section className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-10 px-4 pt-6 pb-6 sm:pt-14 lg:grid-cols-2 lg:gap-14 lg:pt-16 lg:pb-12">
+      {/* Three grid items so the phone order can differ from desktop's: on
+          phones it reads pitch → CTAs → live chat → setup steps (the chat is
+          the proof, so it comes before the fold if possible); on lg the chat
+          spans both rows of the right column and the pitch + steps stack in
+          the left one, hugging each other via self-end/self-start. See
+          DECISIONS.md → "On phones the live chat comes before the setup
+          steps". */}
+      <section className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-10 px-4 pt-6 pb-6 sm:pt-14 lg:grid-cols-2 lg:gap-x-14 lg:gap-y-6 lg:pt-16 lg:pb-12">
         {/* Pitch */}
-        <div className="flex animate-in flex-col items-start gap-5 duration-700 fade-in slide-in-from-bottom-4 motion-reduce:animate-none sm:gap-6">
+        <div className="flex animate-in flex-col items-start gap-5 duration-700 fade-in slide-in-from-bottom-4 motion-reduce:animate-none sm:gap-6 lg:self-end">
           <SectionEyebrow>A classroom activity for teachers</SectionEyebrow>
 
           <h1 className="text-4xl leading-[1.12] font-bold tracking-tight text-balance text-foreground sm:text-5xl xl:text-6xl">
@@ -72,27 +79,12 @@ export function HomePage() {
               </LocaleLink>
             </Button>
           </div>
-
-          <div className="space-y-2.5">
-            <p className="text-sm font-semibold text-foreground/80">
-              Setup takes about a minute:
-            </p>
-            <ol className="space-y-2 text-[15px] text-foreground/90">
-              <HowStep n={1}>
-                Create an activity and pick your characters.
-              </HowStep>
-              <HowStep n={2}>Put the join code on the board.</HowStep>
-              <HowStep n={3}>
-                Students chat. You watch, then reveal who was who.
-              </HowStep>
-            </ol>
-          </div>
         </div>
 
         {/* Live sample chat. "the Moon" / "Neil" in this copy must match
             mockData/heroChatDemo.ts — renaming there means updating this
             copy too (with a humanizer pass). */}
-        <div className="flex animate-in flex-col gap-3 duration-700 fade-in slide-in-from-bottom-6 motion-reduce:animate-none">
+        <div className="flex animate-in flex-col gap-3 duration-700 fade-in slide-in-from-bottom-6 motion-reduce:animate-none lg:col-start-2 lg:row-span-2 lg:row-start-1">
           <p className="text-center text-sm font-semibold text-brand-grape">
             This is the student side, live. Go ahead, type as the Moon.
           </p>
@@ -101,6 +93,22 @@ export function HomePage() {
             🤫 In a real round, the Moon and Neil are both your students. Only
             you know who's playing who, until the reveal at the end.
           </div>
+        </div>
+
+        {/* Setup steps */}
+        <div className="animate-in space-y-2.5 duration-700 fade-in slide-in-from-bottom-4 motion-reduce:animate-none lg:col-start-1 lg:self-start">
+          <p className="text-sm font-semibold text-foreground/80">
+            Setup takes about a minute:
+          </p>
+          <ol className="space-y-2 text-[15px] text-foreground/90">
+            <HowStep n={1}>
+              Create an activity and pick your characters.
+            </HowStep>
+            <HowStep n={2}>Put the join code on the board.</HowStep>
+            <HowStep n={3}>
+              Students chat. You watch, then reveal who was who.
+            </HowStep>
+          </ol>
         </div>
       </section>
 
@@ -112,15 +120,6 @@ export function HomePage() {
       <HowItWorksSection />
 
       <FounderNote />
-
-      {/* Temporary demo shortcuts — keep every corner reachable. */}
-      <div className="mx-auto w-full max-w-6xl px-4 pb-8 text-sm text-muted-foreground">
-        Poking around? Peek at the{" "}
-        <DemoTextLink to="/demo/student-chat">student chatbox</DemoTextLink> or
-        the{" "}
-        <DemoTextLink to="/demo/teacher-chat">teacher chat cards</DemoTextLink>{" "}
-        demo.
-      </div>
     </div>
   );
 }
@@ -131,16 +130,5 @@ function HowStep({ n, children }: { n: number; children: ReactNode }) {
       <span className="w-5 shrink-0 font-bold text-brand-grape">{n}.</span>
       <span>{children}</span>
     </li>
-  );
-}
-
-function DemoTextLink({ to, children }: { to: string; children: ReactNode }) {
-  return (
-    <LocaleLink
-      to={to}
-      className="font-semibold text-brand-grape underline-offset-2 hover:underline"
-    >
-      {children}
-    </LocaleLink>
   );
 }

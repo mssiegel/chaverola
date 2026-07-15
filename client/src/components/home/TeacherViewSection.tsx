@@ -56,8 +56,8 @@ export function TeacherViewSection({
 
           <ul className="max-w-lg list-disc space-y-2.5 pl-5 text-[15px] text-foreground/90 marker:text-brand-grape">
             <li>
-              Only you see the names. Students talk to each other in character
-              until you reveal who was who.
+              Students only see each other's characters. Nobody is anonymous to
+              you, so if anyone gets out of line, you'll know exactly who.
             </li>
             <li>
               Every chat in your activity gets its own live card, so you can
