@@ -824,6 +824,295 @@ _Implemented in
 (accent map) and
 [CreateActivityPage](client/src/pages/teacher/CreateActivityPage.tsx) (glow)._
 
+## Teacher live activity page
+
+### The host page is never projected — it's the teacher's private control room
+
+_2026-07-15_
+
+**Decision:** `/activity/host/:joinCode` is designed on the assumption that
+**no student ever sees it**. Unlike Kahoot, the teacher never projects or
+shares this screen; anything students need (the pin, instructions) the
+teacher relays out loud or writes on the board. The joining-instructions
+copy says this in the UI itself ("this screen stays with you").
+
+**Why:** The page shows who's waiting and who's paired with whom. A student
+who can see the queue knows exactly who they're about to be matched with —
+and the who-am-I-chatting-with mystery is the whole game. Don't add
+"present mode", full-screen pin views, or anything else that invites
+projecting it.
+
+_Implemented across
+[HostActivityDashboard](client/src/components/Teacher/HostActivity/index.tsx);
+the in-UI wording lives in
+[JoiningInstructions](client/src/components/Teacher/HostActivity/JoiningInstructions.tsx)._
+
+### Host page layout: stacked sections on phones, a sticky pairing rail on desktop
+
+_2026-07-15_
+
+**Decision:** On phones the page is stacked minimizable sections in a fixed
+order — joining instructions, edit settings, pair your students, chats in
+progress, completed chats — all built on one shared collapsible component.
+Settings starts **collapsed** (it's already filled in from setup); every
+other section starts open. Collapsed sections carry a useful subtext (the
+waiting count, the add-your-email nudge). On `lg` and up, "Pair your
+students" becomes a fixed-width **sticky left rail** (20rem) with the chats
+sections owning the rest, while instructions and settings stay full-width
+above the split. The rail is deliberately not balanced against the chats
+column and never disappears at zero waiting.
+
+**Why:** Watching the queue refill and monitoring chats are the teacher's
+two core mid-round jobs — side by side beats scrolling between them. The
+rail is a persistent queue (full at round start, empty mid-round, refilling
+as chats end); hiding it at zero would make its reappearance feel like a
+layout glitch. Settings collapses because it begins in a known-good state;
+the other sections are where the action is.
+
+_Implemented in
+[HostActivityDashboard](client/src/components/Teacher/HostActivity/index.tsx)
+on [CollapsibleSection](client/src/components/Teacher/HostActivity/CollapsibleSection.tsx)._
+
+### The waiting count is the hero stat, and it never leaves the screen
+
+_2026-07-15_
+
+**Decision:** The count of students waiting to chat renders poster-sized in
+the page header, re-animating on every change; when it scrolls out of view
+it condenses into a slim bar fixed under the navbar (count + pin). The page
+has no "Activity in Progress" status label. (Product-owner pick,
+2026-07-15, over a static header stat and over a floating HUD pill.)
+
+**Why:** A teacher glancing from across a classroom must catch the number
+instantly, and it must visibly react when it changes — students sitting
+unmatched is the one thing this page exists to prevent. The condensed bar
+keeps the number on screen while the teacher is deep in the chat cards. A
+status label was dropped because it states the obvious; the live count
+already says the activity is running.
+
+_Implemented in
+[HostHeader](client/src/components/Teacher/HostActivity/HostHeader.tsx)._
+
+### Pairing is tap-to-select, and characters are dealt randomly
+
+_2026-07-15_
+
+**Decision:** Waiting students render as rows in **join order** — new
+joiners append at the bottom, each with a subtle wait time. Tapping selects;
+with two selected the start-chat action activates, and a 3rd/4th can be
+selected only when the roster has that many characters. There is **no
+character-assignment step**: a chat of N uses the roster's first N
+characters (the promise the setup form makes about characters 3 and 4), and
+who gets which is random — the teacher sees who got whom on the chat card.
+Each row's remove control is separate from the select target.
+
+**Why:** Join order means the longest-waiting students sit on top and the
+list never reshuffles under the teacher's cursor. Assigning characters by
+hand would turn every pairing into a form; random assignment keeps pairing
+one gesture, and the roleplay doesn't care who plays whom. Keeping remove
+(✕) out of the select target means the two taps can never collide.
+
+_Implemented in
+[PairingPanel](client/src/components/Teacher/HostActivity/PairingPanel.tsx)
+and `assignCharacters` in
+[useHostActivityDemo](client/src/components/Teacher/HostActivity/useHostActivityDemo.ts)._
+
+### Pair everyone avoids fresh rematches, and seats the odd one out when it can
+
+_2026-07-15_
+
+**Decision:** "Pair everyone 1:1" pairs the whole queue in join order, but
+**shuffles around fresh rematches**: previous-round partners get someone new
+whenever the math allows, and only when no valid arrangement remains does a
+pair repeat — that forced pair is named in a dismissible notice instead of
+silently rematched (product-owner call, 2026-07-15, over pair-blindly-and-warn).
+Odd count: with 3+ characters the last three students form a group of 3 so
+nobody sits out; with only 2 characters the newest joiner stays behind,
+highlighted as "first in line".
+
+**Why:** A bulk action should be at least as smart as the teacher doing it
+by hand — pairing the same two kids twice in a row when a swap was
+available reads as a bug. The newest joiner (not the longest-waiting) is
+the one left over because wait time is the queue's fairness currency.
+
+_Implemented in `pairEveryone` in
+[useHostActivityDemo](client/src/components/Teacher/HostActivity/useHostActivityDemo.ts)._
+
+### The rematch warning remembers one round, and never blocks
+
+_2026-07-15_
+
+**Decision:** The rematch warning (setting #3) fires the moment a selected
+combo contains students **whose previous chat was with each other** — the
+memory is one round deep, not the whole activity. It's a heads-up only:
+pairing anyway stays one tap. Auto-match (setting #4) uses the same
+one-round memory to skip fresh rematches on its own.
+
+**Why:** Chaverola runs several rounds with the same class, so "these two
+already met once tonight" stops being interesting after a round — a
+whole-activity memory would eventually flag every possible pair. Never
+blocking keeps the teacher in charge: sometimes a rematch is exactly the
+point (continuing a scene).
+
+_Implemented in
+[useHostActivityDemo](client/src/components/Teacher/HostActivity/useHostActivityDemo.ts)
+(`lastPartners`), rendered by
+[PairingPanel](client/src/components/Teacher/HostActivity/PairingPanel.tsx)._
+
+### Removing a student mid-chat is a quiet exit
+
+_2026-07-15_
+
+**Decision:** Each live chat card carries a per-participant remove control
+(with a confirmation modal). Removal is **never announced to students as a
+removal**, so classmates can't tell it from a dropped connection: in a
+group chat a neutral notice appears ("{character} left the chat", composed
+via `characterLabel`) and the chat continues — the removed student's lines
+and colors persist, mirroring the group disconnect-drop rule; in a 1:1 the
+peer's chat ends with the existing 🎓 teacher copy. The removed student
+lands on the name step signed out, exactly like a lobby removal.
+
+**Why:** Teachers remove students for behavior, and broadcasting "so-and-so
+was removed by the teacher" turns discipline into a class spectacle — the
+neutral exit protects the removed student and keeps the room's energy
+intact. A student being inappropriate mid-chat shouldn't be unstoppable
+just because the chat already started.
+
+_Implemented in `removeFromChat` in
+[useHostActivityDemo](client/src/components/Teacher/HostActivity/useHostActivityDemo.ts);
+the control lives in
+[ChatCardHeader](client/src/components/Teacher/ChatCard/ChatCardHeader.tsx)._
+
+### Every chat runs its own auto-end clock, and students watch it tick
+
+_2026-07-15_
+
+**Decision:** The auto-end timer is **per chat**: it starts when the chat
+starts, counting down the activity's auto-end minutes, and ends the chat
+with reason `"timer"` (⏰ "Time's up!") at zero. The countdown is part of
+the chat-engine contract (`ChatRoomState.autoEndSecondsLeft`, ticked by
+`useChatDemo`). Students see a quiet m:ss clock in the chat header that
+shifts to amber and pulses in the final 60 seconds; on narrow widths the
+End chat pill compresses to icon + "End" so the clock fits. Teacher chat
+cards show the same per-chat remaining time. Demo panels get a staged
+fast-forward (first press → the finale, second press → the expiry).
+
+**Why:** Before this, the ⏰ ended screen was the first students heard of a
+time limit — a scene deserves a wrap-up, not a trap door. Per-chat (rather
+than per-round) clocks mean a chat started late still gets its full time;
+when the teacher pairs everyone at once the chats naturally end together
+anyway, and "End all chats" is the round-closer for everyone-done-now.
+
+_Implemented in [useChatDemo](client/src/components/chat/useChatDemo.ts) and
+[useHostActivityDemo](client/src/components/Teacher/HostActivity/useHostActivityDemo.ts),
+rendered by
+[AutoEndCountdown](client/src/components/chat/AutoEndCountdown.tsx)._
+
+### Auto-end edits: new minutes wait for new chats; the toggle acts immediately
+
+_2026-07-15_
+
+**Decision:** Changing the auto-end **minutes** mid-round affects only
+chats started after the change — running chats keep the clock they started
+with. Flipping the auto-end **toggle** is different (product-owner call,
+2026-07-15): turning it off clears the clocks on running chats right away,
+and turning it on starts a fresh full clock on running chats.
+
+**Why:** A shortened duration must never instantly kill a live chat
+mid-sentence — that's why minutes changes wait for the next round. The
+toggle is the teacher's blunt instrument: "off" means "stop rushing them"
+and should grant relief now, "on" means "these chats need an ending" and a
+fresh clock is the only fair one to give them.
+
+_Implemented in the settings-change effect in
+[useHostActivityDemo](client/src/components/Teacher/HostActivity/useHostActivityDemo.ts)._
+
+### Live edits propagate after a 1-second pause, and invalid states never do
+
+_2026-07-15_
+
+**Decision:** The host page's settings panel reuses the setup form's field
+components and validation, and every valid edit applies **everywhere at
+once** — roster rows, pairing, in-progress chat cards, student surfaces —
+re-labeling by stable character id. Propagation is **debounced 1 second**
+(the input updates per keystroke; the change spreads when the teacher
+pauses). An invalid in-between state — a name cleared to empty, a
+duplicate, a bad email — shows the setup form's inline error while the
+**last valid value stays in effect**. The remove control on rows 3–4 is
+disabled with a hint while a live chat uses that character; a completed
+removal stops future pairings from offering the character immediately. The
+panel says in-UI that changes reach everyone instantly and that between
+rounds is the natural time to switch characters or scene.
+
+**Why:** The whole class shares one character set and one scene — that's
+what lets a teacher rename the cast between rounds without restarting. The
+debounce keeps half-typed names from flashing across live chat cards;
+last-valid-wins means students can never see a blank or duplicate label,
+even while the teacher is mid-edit.
+
+_Implemented in
+[LiveSettingsPanel](client/src/components/Teacher/HostActivity/LiveSettingsPanel.tsx)
+with the draft model in [hostActivity](client/src/lib/hostActivity.ts)._
+
+### No reveal-names control in Chats in progress
+
+_2026-07-15_
+
+**Decision:** The "Chats in progress" section has **no** reveal-names
+toggle. The only reveal control is setting #1 ("Reveal names when a chat
+ends") in the settings panel. A mid-chat "reveal now" action was considered
+and rejected (product-owner call, 2026-07-15).
+
+**Why:** The prompt originally placed a reveal toggle inside the chats
+section, on the thought that teachers might want to reveal names mid-chat —
+the owner concluded teachers won't ever do that mid-chat, and a second
+toggle mirroring the same setting would just invite confusion about whether
+they're different things.
+
+_The section header in
+[ChatsInProgressSection](client/src/components/Teacher/HostActivity/ChatsInProgressSection.tsx)
+deliberately has count + End-all only._
+
+### An unknown host code redirects to the demo activity
+
+_2026-07-15_
+
+**Decision:** `/activity/host/1234` always hosts the Rome demo activity —
+the same one the student side mocks, seeded with no teacher email so the
+settings section's add-your-email nudge stays exercised. A teacher arriving
+from the create flow gets their just-hosted activity from the
+`chaverola.hostedActivity` stash (refresh keeps it; live edits write back
+to the stash — but only for the stashed code, never for the Rome demo, so
+playing with the demo can't clobber a real activity). Any other code with
+no matching stash **redirects to `/activity/host/1234`**.
+
+**Why:** The pin on screen, the URL, and the copyable student link must
+always agree — and the pin must actually work on `/activity/join`. Showing
+a dead activity page for a stale link (an old code opened in a new tab)
+would put a pin on screen that rejects every student who types it.
+
+_Implemented in
+[HostActivityPage](client/src/pages/teacher/HostActivityPage.tsx)._
+
+### The copyable student link carries the current origin, and is never printed
+
+_2026-07-15_
+
+**Decision:** The joining instructions include styled link-text ("Copy the
+student join link") that copies `<current origin>/activity/join/:joinCode`
+to the clipboard with a brief "Copied!" confirmation. The raw URL is never
+rendered in the UI. The spoken instructions keep saying www.chaverola.com.
+(Product-owner call, 2026-07-15, over copying the literal branded URL.)
+
+**Why:** Nothing on these pages may be a dead end — a copied link must
+open the real join page wherever the app is running (localhost today, the
+real domain once deployed; `window.location.origin` does the right thing in
+both worlds). Printing the raw URL would tempt teachers to read it out,
+when the pin is the classroom-friendly way in.
+
+_Implemented in
+[JoiningInstructions](client/src/components/Teacher/HostActivity/JoiningInstructions.tsx)._
+
 ## Teacher monitoring view
 
 ### Teacher chat cards: collapsed to the last 5 lines, End chat asks first

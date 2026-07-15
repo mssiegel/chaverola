@@ -1,0 +1,274 @@
+import { useState } from "react";
+import { Timer, UserPlus, UsersRound } from "lucide-react";
+
+import { DemoControlsPanel, EventButton } from "@/components/demo/DemoControls";
+import { ACCENT_CHIP } from "@/components/Teacher/ActivitySetup/FormSection";
+import { cn } from "@/lib/utils";
+import type { HostedActivity } from "@/types/activity";
+import type { Participant } from "@/types/chat";
+
+import { ChatsInProgressSection } from "./ChatsInProgressSection";
+import { CollapsibleSection } from "./CollapsibleSection";
+import { CompletedChatsSection } from "./CompletedChatsSection";
+import { ConfirmActionModal } from "./ConfirmActionModal";
+import { HostHeader } from "./HostHeader";
+import { JoiningInstructions } from "./JoiningInstructions";
+import { LiveSettingsPanel } from "./LiveSettingsPanel";
+import { PairingPanel } from "./PairingPanel";
+import {
+  useHostActivityDemo,
+  type HostedChat,
+  type WaitingStudent,
+} from "./useHostActivityDemo";
+
+/** The confirmations this page can be waiting on. */
+type PendingAction =
+  | { kind: "remove-from-queue"; student: WaitingStudent }
+  | { kind: "remove-from-chat"; chat: HostedChat; participant: Participant }
+  | { kind: "end-all" };
+
+interface HostActivityDashboardProps {
+  activity: HostedActivity;
+  onActivityChange: (activity: HostedActivity) => void;
+}
+
+/**
+ * The teacher's private control room for a running activity. Never projected
+ * or shared with the class — if students saw the queue and the pairings, the
+ * who-am-I-chatting-with mystery would be over (see DECISIONS.md → the
+ * no-projection principle). On phones it's stacked minimizable sections; on
+ * desktop the pairing queue becomes a sticky left rail beside the chats, so
+ * the teacher's two mid-round jobs sit side by side.
+ */
+export function HostActivityDashboard({
+  activity,
+  onActivityChange,
+}: HostActivityDashboardProps) {
+  const demo = useHostActivityDemo(activity);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(
+    null
+  );
+
+  // Selection is derived against the live queue: a student who got matched
+  // away or removed simply falls out of it.
+  const validSelectedIds = selectedIds.filter((id) =>
+    demo.waiting.some((s) => s.id === id)
+  );
+  const maxGroupSize = Math.min(4, activity.characters.length);
+
+  const toggleSelect = (studentId: string) => {
+    setSelectedIds(
+      validSelectedIds.includes(studentId)
+        ? validSelectedIds.filter((id) => id !== studentId)
+        : validSelectedIds.length < maxGroupSize
+          ? [...validSelectedIds, studentId]
+          : validSelectedIds
+    );
+  };
+
+  // Setting #3: the rematch heads-up fires the moment a selected combo
+  // repeats the previous round — and never blocks anything.
+  let rematchWarning: string | null = null;
+  if (activity.settings.rematchWarning) {
+    const selected = validSelectedIds
+      .map((id) => demo.waiting.find((s) => s.id === id))
+      .filter((s): s is WaitingStudent => s !== undefined);
+    outer: for (let i = 0; i < selected.length; i++) {
+      for (let j = i + 1; j < selected.length; j++) {
+        const a = selected[i]!;
+        const b = selected[j]!;
+        if (demo.wereLastPartners(a.id, b.id)) {
+          rematchWarning = `${a.realName} and ${b.realName} just chatted with each other. You can still pair them, this is only a heads-up.`;
+          break outer;
+        }
+      }
+    }
+  }
+
+  const startSelectedChat = () => {
+    if (validSelectedIds.length < 2) return;
+    demo.startChat(validSelectedIds);
+    setSelectedIds([]);
+  };
+
+  const confirmPendingAction = () => {
+    if (!pendingAction) return;
+    if (pendingAction.kind === "remove-from-queue") {
+      demo.removeFromQueue(pendingAction.student.id);
+    } else if (pendingAction.kind === "remove-from-chat") {
+      demo.removeFromChat(pendingAction.chat.id, pendingAction.participant.id);
+    } else {
+      demo.endAllChats();
+    }
+    setPendingAction(null);
+  };
+
+  const pairingPanel = (
+    <PairingPanel
+      waiting={demo.waiting}
+      selectedIds={validSelectedIds}
+      onToggleSelect={toggleSelect}
+      maxGroupSize={maxGroupSize}
+      onStartChat={startSelectedChat}
+      onPairEveryone={demo.pairEveryone}
+      onRequestRemove={(student) =>
+        setPendingAction({ kind: "remove-from-queue", student })
+      }
+      rematchWarning={rematchWarning}
+      rematchNotice={demo.rematchNotice}
+      onDismissRematchNotice={demo.dismissRematchNotice}
+      leftoverStudentId={demo.leftoverStudentId}
+      autoMatchOn={activity.settings.autoMatch}
+      autoMatchSeconds={activity.settings.autoMatchSeconds}
+    />
+  );
+
+  const waitingHint =
+    demo.waiting.length === 0
+      ? "Everyone's chatting. The queue refills as chats end"
+      : `${demo.waiting.length} students waiting`;
+
+  return (
+    <div className="flex flex-col gap-5">
+      <HostHeader activity={activity} waitingCount={demo.waiting.length} />
+
+      <JoiningInstructions joinCode={activity.joinCode} />
+
+      <LiveSettingsPanel
+        activity={activity}
+        characterIdsInUse={demo.characterIdsInUse}
+        onActivityChange={onActivityChange}
+      />
+
+      {/* Desktop: the pairing queue is a sticky rail beside the chats — the
+          teacher watches the lobby refill while monitoring chats. It never
+          disappears at zero; students come back to it. */}
+      <div className="lg:grid lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start lg:gap-6">
+        <aside className="hidden lg:block">
+          <div className="scroll-soft sticky top-24 max-h-[calc(100dvh-7rem)] overflow-y-auto rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-3">
+              <span
+                aria-hidden
+                className={cn(
+                  "grid size-9 shrink-0 place-items-center rounded-xl",
+                  ACCENT_CHIP.grape
+                )}
+              >
+                <UsersRound className="size-4.5" />
+              </span>
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+                Pair your students
+                <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-bold text-secondary-foreground tabular-nums">
+                  {demo.waiting.length}
+                </span>
+              </h2>
+            </div>
+            {pairingPanel}
+          </div>
+        </aside>
+
+        <div className="lg:hidden">
+          <CollapsibleSection
+            title="Pair your students"
+            icon={UsersRound}
+            accent="grape"
+            count={demo.waiting.length}
+            collapsedHint={waitingHint}
+          >
+            {pairingPanel}
+          </CollapsibleSection>
+        </div>
+
+        <div className="mt-5 flex flex-col gap-5 lg:mt-0">
+          <ChatsInProgressSection
+            chats={demo.chatsInProgress}
+            activity={activity}
+            studentsChattingCount={demo.studentsChattingCount}
+            waitingCount={demo.waiting.length}
+            onEndChat={demo.endChat}
+            onRequestEndAll={() => setPendingAction({ kind: "end-all" })}
+            onRequestRemoveParticipant={(chat, participant) =>
+              setPendingAction({ kind: "remove-from-chat", chat, participant })
+            }
+            onPairEveryone={demo.pairEveryone}
+          />
+
+          <CompletedChatsSection
+            chats={demo.completedChats}
+            activity={activity}
+          />
+        </div>
+      </div>
+
+      {/* Dev-only triggers for what a real classroom would do on its own. */}
+      <DemoControlsPanel>
+        <div className="grid grid-cols-2 gap-2 sm:max-w-md">
+          <EventButton
+            onClick={demo.triggerJoin}
+            disabled={!demo.canTriggerJoin}
+            icon={<UserPlus className="size-4" />}
+          >
+            A student joins
+          </EventButton>
+          <EventButton
+            onClick={demo.fastForwardClocks}
+            disabled={
+              !demo.chatsInProgress.some((c) => c.autoEndSecondsLeft !== null)
+            }
+            icon={<Timer className="size-4" />}
+          >
+            Fast-forward clocks
+          </EventButton>
+        </div>
+      </DemoControlsPanel>
+
+      <ConfirmActionModal
+        open={pendingAction !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingAction(null);
+        }}
+        onConfirm={confirmPendingAction}
+        {...confirmCopy(pendingAction)}
+      />
+    </div>
+  );
+}
+
+/** The confirmation copy per action — each names what actually happens. */
+function confirmCopy(action: PendingAction | null): {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  cancelLabel: string;
+} {
+  if (action?.kind === "remove-from-queue") {
+    return {
+      title: `Remove ${action.student.realName}?`,
+      description:
+        "They'll be signed out and sent back to the join screen, with a note that you removed them. They can sign in again, with a better name if that was the problem.",
+      confirmLabel: "Remove them",
+      cancelLabel: "Never mind",
+    };
+  }
+  if (action?.kind === "remove-from-chat") {
+    const groupChat =
+      action.chat.participants.length - action.chat.inactiveStudentIds.length >
+      2;
+    return {
+      title: `Remove ${action.participant.realName} from their chat?`,
+      description: groupChat
+        ? "They'll be signed out and sent back to the join screen. The rest of the group keeps chatting, and classmates only see that the character left, not that you removed anyone."
+        : "They'll be signed out and sent back to the join screen, and their partner's chat ends. Nobody is told it was a removal.",
+      confirmLabel: "Remove them",
+      cancelLabel: "Never mind",
+    };
+  }
+  return {
+    title: "End all chats?",
+    description:
+      "Every active chat will end right now for everyone in it. Students will see the chat is over and can head back to the lobby for another round.",
+    confirmLabel: "End all chats",
+    cancelLabel: "Let them keep chatting",
+  };
+}

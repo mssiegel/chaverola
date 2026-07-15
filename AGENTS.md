@@ -55,8 +55,31 @@ validation, and hosted-activity hand-off in
 invalid tap scrolls to the first problem; a valid one saves a
 `HostedActivity` under the `chaverola.hostedActivity` sessionStorage key and
 navigates to `/activity/host/:joinCode` with a fresh non-`1234` 4-digit code
-(`mockGenerateJoinCode`), where the still-placeholder host page will read it
-via `readHostedActivity` when it's built. The emoji picker now lives at
+(`mockGenerateJoinCode`).
+The **teacher live activity page** at `/activity/host/:joinCode` is real
+(`client/src/components/Teacher/HostActivity/`): a header hero stat (the
+waiting count, condensing into a fixed bar on scroll), then minimizable
+sections on one shared `CollapsibleSection` — joining instructions (pin +
+copy-link that copies a current-origin join URL), a live settings panel
+that reuses the ActivitySetup field components with 1s-debounced
+last-valid-wins propagation (`client/src/lib/hostActivity.ts` holds the
+stable-character-id draft model), the pairing queue (tap-to-select, Pair
+everyone with rematch avoidance, per-chip removal), and the
+in-progress/completed chat card grids. On `lg`+ the pairing queue is a
+sticky left rail. The page-level mock engine is
+`useHostActivityDemo` (same directory): queue/joins/auto-match/per-chat
+auto-end clocks/chatter drip/quiet-exit removals, seeded from
+`client/src/mockData/hostActivityDemo.ts`; `/activity/host/1234` hosts the
+Rome demo (no teacher email, on purpose), other codes read the
+sessionStorage stash or redirect to `1234`. The chat-engine contract gained
+a per-chat auto-end countdown (`ChatRoomState.autoEndSecondsLeft`, ticked
+by `useChatDemo`, reason `"timer"` at zero) rendered by
+`client/src/components/chat/AutoEndCountdown.tsx` in the student chat
+header (final-minute emphasis; the End pill compresses below `sm`) and on
+teacher chat cards, which now also take per-participant remove and
+inactive-member props. See DECISIONS.md → "Teacher live activity page" for
+the rules (no-projection, layout, tap-to-pair, quiet exit, clock edits,
+redirect). The emoji picker now lives at
 `client/src/components/chat/EmojiPickerPopover.tsx`, loaded through
 `client/src/components/chat/LazyEmojiPicker.tsx` (the shared lazy + Suspense
 fallback) and shared by the student composer and the setup's emoji slots —

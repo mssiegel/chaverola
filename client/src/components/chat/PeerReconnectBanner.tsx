@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Loader2, Wifi, WifiOff } from "lucide-react";
 
 import { RECONNECT_WINDOW_SECONDS } from "@/components/chat/useChatDemo";
+import { formatSecondsAsClock } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import type { PeerConnectionState } from "@/types/chat";
 
@@ -14,13 +15,6 @@ interface PeerReconnectBannerProps {
    * reconnect window is running. Shown as a live m:ss countdown.
    */
   reconnectSecondsLeft?: number | null;
-}
-
-/** 103 → "1:43". */
-function formatSecondsLeft(totalSeconds: number): string {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 /**
@@ -53,7 +47,7 @@ export function PeerReconnectBanner({
                 readers hear the announcement once, not sixty times a minute. */}
             <span aria-hidden>
               <span className="tabular-nums">
-                {formatSecondsLeft(reconnectSecondsLeft)}
+                {formatSecondsAsClock(reconnectSecondsLeft)}
               </span>
               {" to come back"}
             </span>

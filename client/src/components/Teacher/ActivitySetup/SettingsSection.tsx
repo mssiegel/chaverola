@@ -19,6 +19,11 @@ import { NumberStepper } from "./NumberStepper";
 interface SettingsSectionProps {
   settings: ActivitySettings;
   onChange: (changes: Partial<ActivitySettings>) => void;
+  /**
+   * Renders just the setting rows without the FormSection card — the host
+   * page's live panel provides its own section chrome around them.
+   */
+  bare?: boolean;
 }
 
 /**
@@ -27,7 +32,77 @@ interface SettingsSectionProps {
  * off — the teacher can see what turning it on will do, and nothing jumps
  * around. All of it stays editable while the activity runs.
  */
-export function SettingsSection({ settings, onChange }: SettingsSectionProps) {
+export function SettingsSection({
+  settings,
+  onChange,
+  bare,
+}: SettingsSectionProps) {
+  const rows = (
+    <div className="divide-y divide-border/70">
+      <SettingRow
+        id="setting-reveal-names"
+        icon={Eye}
+        title="Reveal names when a chat ends"
+        description="Chats are anonymous while they run. When one ends, the students in it find out who they were really talking to."
+        checked={settings.revealNames}
+        onCheckedChange={(revealNames) => onChange({ revealNames })}
+      />
+
+      <SettingRow
+        id="setting-auto-end"
+        icon={Timer}
+        title="End chats on a timer"
+        description="Every chat wraps up on its own after the time you pick."
+        checked={settings.autoEndChats}
+        onCheckedChange={(autoEndChats) => onChange({ autoEndChats })}
+      >
+        <SubControl label="End chats after" muted={!settings.autoEndChats}>
+          <NumberStepper
+            value={settings.autoEndMinutes}
+            bounds={AUTO_END_MINUTES}
+            disabled={!settings.autoEndChats}
+            format={(v) => (v === 1 ? "1 minute" : `${v} minutes`)}
+            decreaseLabel="One minute less"
+            increaseLabel="One minute more"
+            onChange={(autoEndMinutes) => onChange({ autoEndMinutes })}
+          />
+        </SubControl>
+      </SettingRow>
+
+      <SettingRow
+        id="setting-rematch-warning"
+        icon={Repeat2}
+        title="Warn before a rematch"
+        description="You get a heads-up when a pairing would put the same students together again."
+        checked={settings.rematchWarning}
+        onCheckedChange={(rematchWarning) => onChange({ rematchWarning })}
+      />
+
+      <SettingRow
+        id="setting-auto-match"
+        icon={Zap}
+        title="Match students 1:1 automatically"
+        description="Once two students have each waited long enough, they get paired up on their own. Nobody lands right back with their last partner."
+        checked={settings.autoMatch}
+        onCheckedChange={(autoMatch) => onChange({ autoMatch })}
+      >
+        <SubControl label="Students wait" muted={!settings.autoMatch}>
+          <NumberStepper
+            value={settings.autoMatchSeconds}
+            bounds={AUTO_MATCH_SECONDS}
+            disabled={!settings.autoMatch}
+            format={(v) => `${v} seconds`}
+            decreaseLabel="Five seconds less"
+            increaseLabel="Five seconds more"
+            onChange={(autoMatchSeconds) => onChange({ autoMatchSeconds })}
+          />
+        </SubControl>
+      </SettingRow>
+    </div>
+  );
+
+  if (bare) return rows;
+
   return (
     <FormSection
       quiet
@@ -36,67 +111,7 @@ export function SettingsSection({ settings, onChange }: SettingsSectionProps) {
       accent="mint"
       hint="These start out the way we recommend. You can change any of them while the activity runs."
     >
-      <div className="divide-y divide-border/70">
-        <SettingRow
-          id="setting-reveal-names"
-          icon={Eye}
-          title="Reveal names when a chat ends"
-          description="Chats are anonymous while they run. When one ends, the students in it find out who they were really talking to."
-          checked={settings.revealNames}
-          onCheckedChange={(revealNames) => onChange({ revealNames })}
-        />
-
-        <SettingRow
-          id="setting-auto-end"
-          icon={Timer}
-          title="End chats on a timer"
-          description="Every chat wraps up on its own after the time you pick."
-          checked={settings.autoEndChats}
-          onCheckedChange={(autoEndChats) => onChange({ autoEndChats })}
-        >
-          <SubControl label="End chats after" muted={!settings.autoEndChats}>
-            <NumberStepper
-              value={settings.autoEndMinutes}
-              bounds={AUTO_END_MINUTES}
-              disabled={!settings.autoEndChats}
-              format={(v) => (v === 1 ? "1 minute" : `${v} minutes`)}
-              decreaseLabel="One minute less"
-              increaseLabel="One minute more"
-              onChange={(autoEndMinutes) => onChange({ autoEndMinutes })}
-            />
-          </SubControl>
-        </SettingRow>
-
-        <SettingRow
-          id="setting-rematch-warning"
-          icon={Repeat2}
-          title="Warn before a rematch"
-          description="You get a heads-up when a pairing would put the same students together again."
-          checked={settings.rematchWarning}
-          onCheckedChange={(rematchWarning) => onChange({ rematchWarning })}
-        />
-
-        <SettingRow
-          id="setting-auto-match"
-          icon={Zap}
-          title="Match students 1:1 automatically"
-          description="Once two students have each waited long enough, they get paired up on their own. Nobody lands right back with their last partner."
-          checked={settings.autoMatch}
-          onCheckedChange={(autoMatch) => onChange({ autoMatch })}
-        >
-          <SubControl label="Students wait" muted={!settings.autoMatch}>
-            <NumberStepper
-              value={settings.autoMatchSeconds}
-              bounds={AUTO_MATCH_SECONDS}
-              disabled={!settings.autoMatch}
-              format={(v) => `${v} seconds`}
-              decreaseLabel="Five seconds less"
-              increaseLabel="Five seconds more"
-              onChange={(autoMatchSeconds) => onChange({ autoMatchSeconds })}
-            />
-          </SubControl>
-        </SettingRow>
-      </div>
+      {rows}
     </FormSection>
   );
 }

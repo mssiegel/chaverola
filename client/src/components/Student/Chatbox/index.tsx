@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { LogOut } from "lucide-react";
 
+import { AutoEndCountdown } from "@/components/chat/AutoEndCountdown";
 import { ChatFrame } from "@/components/chat/ChatFrame";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { Conversation } from "@/components/chat/Conversation";
@@ -54,6 +55,7 @@ export function Chatbox({
     peerState,
     offlinePeerId,
     reconnectSecondsLeft,
+    autoEndSecondsLeft,
     isEnded,
     endReason,
     endedByPeerId,
@@ -84,14 +86,25 @@ export function Chatbox({
         characterColors={characterColors}
         actions={
           !isEnded && (
-            <button
-              type="button"
-              onClick={() => setConfirmOpen(true)}
-              className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/25 active:scale-[0.98]"
-            >
-              <LogOut className="size-4" />
-              <span>End chat</span>
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              {autoEndSecondsLeft !== null && (
+                <AutoEndCountdown secondsLeft={autoEndSecondsLeft} onDark />
+              )}
+              {/* On narrow widths the pill compresses to icon + "End" so the
+                  clock fits without crowding the header. */}
+              <button
+                type="button"
+                onClick={() => setConfirmOpen(true)}
+                aria-label="End chat"
+                className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/25 active:scale-[0.98]"
+              >
+                <LogOut className="size-4" />
+                <span className="max-sm:hidden">End chat</span>
+                <span aria-hidden className="sm:hidden">
+                  End
+                </span>
+              </button>
+            </div>
           )
         }
       />

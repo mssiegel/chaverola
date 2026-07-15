@@ -26,7 +26,17 @@ export interface ChatDemo extends ChatRoomState, ChatRoomActions {
   disconnectPeer: () => void;
   reconnectPeer: () => void;
   skipReconnectWait: () => void;
+  skipAutoEndWait: () => void;
   nudgePeer: () => void;
+}
+
+export interface ChatDemoOptions {
+  /**
+   * The activity's auto-end clock for this chat, in seconds. Omit (or pass
+   * null) for no clock — the homepage hero chat must never time out under a
+   * visitor mid-read.
+   */
+  autoEndSeconds?: number | null;
 }
 
 /**
@@ -37,6 +47,15 @@ export const RECONNECT_WINDOW_SECONDS = 120;
 
 /** Where "skip the wait" jumps the countdown to, so the timeout is testable. */
 const SKIP_WAIT_SECONDS = 3;
+
+/**
+ * The auto-end fast-forward is staged: the first press jumps just above the
+ * final minute (to show the clock's finale state), a second press jumps to
+ * the last few seconds (to show the expiry itself). Shared with the host
+ * page's engine so both fast-forwards behave the same.
+ */
+export const SKIP_AUTO_END_TO_FINALE_SECONDS = 63;
+export const SKIP_AUTO_END_TO_EXPIRY_SECONDS = 5;
 
 /** Sender id for conversation notices that nobody actually "sent". */
 const NOTICE_SENDER_ID = "system";
@@ -60,7 +79,11 @@ function randomFrom<T>(items: readonly T[]): T {
  * reconnect window with a live countdown; if it runs out, a 1:1 chat ends
  * ("peer-timeout") while a group chat drops the peer and keeps going.
  */
-export function useChatDemo(scenario: ChatScenario): ChatDemo {
+export function useChatDemo(
+  scenario: ChatScenario,
+  options?: ChatDemoOptions
+): ChatDemo {
+  const autoEndSeconds = options?.autoEndSeconds ?? null;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [typingPeerId, setTypingPeerId] = useState<string | null>(null);
   const [peerState, setPeerState] = useState<PeerConnectionState>("connected");
@@ -77,6 +100,10 @@ export function useChatDemo(scenario: ChatScenario): ChatDemo {
   const [reconnectSecondsLeft, setReconnectSecondsLeft] = useState<
     number | null
   >(null);
+  /** The chat's own auto-end clock; null when the activity's timer is off. */
+  const [autoEndSecondsLeft, setAutoEndSecondsLeft] = useState<number | null>(
+    autoEndSeconds
+  );
 
   // Refs so timer callbacks always read the latest state. Synced in an effect
   // (not during render) so the React Compiler can optimize this hook — timers
@@ -147,6 +174,7 @@ export function useChatDemo(scenario: ChatScenario): ChatDemo {
     setEndedByPeerId(null);
     setDroppedPeerIds(new Set());
     setReconnectSecondsLeft(null);
+    setAutoEndSecondsLeft(autoEndSeconds);
     statusRef.current = "active";
     peerStateRef.current = "connected";
     droppedPeerIdsRef.current = new Set();
@@ -253,6 +281,19 @@ export function useChatDemo(scenario: ChatScenario): ChatDemo {
     );
   };
 
+  /**
+   * Dev-only: fast-forward the auto-end clock. First press lands just above
+   * the final minute (the finale state), pressing again lands on the expiry.
+   */
+  const skipAutoEndWait = () => {
+    setAutoEndSecondsLeft((s) => {
+      if (s === null) return s;
+      return s > SKIP_AUTO_END_TO_FINALE_SECONDS
+        ? SKIP_AUTO_END_TO_FINALE_SECONDS
+        : Math.min(s, SKIP_AUTO_END_TO_EXPIRY_SECONDS);
+    });
+  };
+
   const nudgePeer = () => {
     if (
       statusRef.current !== "active" ||
@@ -330,6 +371,23 @@ export function useChatDemo(scenario: ChatScenario): ChatDemo {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reconnectSecondsLeft, status, offlinePeerId, droppedPeerIds, scenario]);
 
+  // The activity's per-chat auto-end clock. Ticks once a second while the
+  // chat is live; at zero the chat ends for everyone with reason "timer"
+  // (the ⏰ "Time's up!" wrap-up copy). See DECISIONS.md.
+  useEffect(() => {
+    if (autoEndSecondsLeft === null || status !== "active") return;
+    if (autoEndSecondsLeft > 0) {
+      const handle = setTimeout(
+        () => setAutoEndSecondsLeft((s) => (s === null ? null : s - 1)),
+        1000
+      );
+      return () => clearTimeout(handle);
+    }
+    endChat("timer");
+    // The compiler keeps endChat referentially stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoEndSecondsLeft, status]);
+
   /** Everyone still in the room (a group may have dropped someone). */
   const activePeers = scenario.peers.filter((p) => !droppedPeerIds.has(p.id));
   /** Everyone who was ever in the room — message lines and colors need them. */
@@ -344,6 +402,7 @@ export function useChatDemo(scenario: ChatScenario): ChatDemo {
     peerState,
     offlinePeerId,
     reconnectSecondsLeft,
+    autoEndSecondsLeft,
     isEnded: status === "ended",
     endReason,
     endedByPeerId,
@@ -353,6 +412,7 @@ export function useChatDemo(scenario: ChatScenario): ChatDemo {
     disconnectPeer,
     reconnectPeer,
     skipReconnectWait,
+    skipAutoEndWait,
     nudgePeer,
   };
 }

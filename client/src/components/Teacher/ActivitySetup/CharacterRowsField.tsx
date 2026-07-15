@@ -34,6 +34,13 @@ interface CharacterRowsFieldProps {
   onRemove: (id: string) => void;
   problemFor: (field: SetupField) => string | undefined;
   registerField: (field: SetupField) => (el: HTMLElement | null) => void;
+  /**
+   * Live host page only: why a removable row can't be removed right now
+   * (e.g. its character is in a live chat). A returned string disables the
+   * remove button and shows as a short hint under the row; null/undefined
+   * keeps the row removable. Only called for rows 3–4.
+   */
+  removeGuard?: (row: CharacterRowState) => string | null | undefined;
 }
 
 /**
@@ -50,12 +57,15 @@ export function CharacterRowsField({
   onRemove,
   problemFor,
   registerField,
+  removeGuard,
 }: CharacterRowsFieldProps) {
   return (
     <div className="flex flex-col gap-3">
       {rows.map((row, index) => {
         const error = problemFor(`character-${index}`);
         const count = charCount(row.name);
+        const removable = index >= MIN_CHARACTERS;
+        const guardMessage = removable ? removeGuard?.(row) : undefined;
         return (
           <div key={row.id} className="flex items-start gap-3">
             <EmojiSlot
@@ -78,10 +88,14 @@ export function CharacterRowsField({
                 aria-invalid={error ? true : undefined}
                 className="h-12"
               />
-              {(error || count >= NAME_COUNTER_FROM) && (
+              {(error || guardMessage || count >= NAME_COUNTER_FROM) && (
                 <div className="mt-1.5 flex items-baseline justify-between gap-3">
                   {error ? (
                     <FieldError message={error} />
+                  ) : guardMessage ? (
+                    <p className="text-xs text-muted-foreground">
+                      {guardMessage}
+                    </p>
                   ) : (
                     <span aria-hidden />
                   )}
@@ -94,12 +108,13 @@ export function CharacterRowsField({
               )}
             </div>
 
-            {index >= MIN_CHARACTERS ? (
+            {removable ? (
               <button
                 type="button"
                 onClick={() => onRemove(row.id)}
+                disabled={Boolean(guardMessage)}
                 aria-label={`Remove character ${index + 1}`}
-                className="mt-2 grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                className="mt-2 grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-35"
               >
                 <X className="size-4" />
               </button>

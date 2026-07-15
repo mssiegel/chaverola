@@ -30,7 +30,7 @@ import {
   CharacterRowsField,
   type CharacterRowState,
 } from "./CharacterRowsField";
-import { FieldError, LimitCounter } from "./FieldFeedback";
+import { FieldError, FieldLabelRow, LimitCounter } from "./FieldFeedback";
 import { FormSection } from "./FormSection";
 import { LobbyPreview } from "./LobbyPreview";
 import { SettingsSection } from "./SettingsSection";
@@ -321,34 +321,5 @@ function HostCta({ hintClassName }: { hintClassName: string }) {
         Your join code shows up on the next screen.
       </p>
     </>
-  );
-}
-
-function FieldLabelRow({
-  htmlFor,
-  label,
-  optional,
-  children,
-}: {
-  htmlFor: string;
-  label: string;
-  optional?: boolean;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div className="mb-1.5 flex items-baseline justify-between gap-2">
-      <label
-        htmlFor={htmlFor}
-        className="text-sm font-semibold text-foreground"
-      >
-        {label}
-        {optional && (
-          <span className="ml-1.5 font-normal text-muted-foreground">
-            (optional)
-          </span>
-        )}
-      </label>
-      {children}
-    </div>
   );
 }

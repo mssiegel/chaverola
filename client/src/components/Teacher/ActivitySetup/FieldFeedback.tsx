@@ -1,6 +1,39 @@
 import { cn } from "@/lib/utils";
 
 /**
+ * A field's label line with an optional right-aligned slot (usually the
+ * LimitCounter). Shared by the setup form and the host page's live panel.
+ */
+export function FieldLabelRow({
+  htmlFor,
+  label,
+  optional,
+  children,
+}: {
+  htmlFor: string;
+  label: string;
+  optional?: boolean;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-1.5 flex items-baseline justify-between gap-2">
+      <label
+        htmlFor={htmlFor}
+        className="text-sm font-semibold text-foreground"
+      >
+        {label}
+        {optional && (
+          <span className="ml-1.5 font-normal text-muted-foreground">
+            (optional)
+          </span>
+        )}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+/**
  * Inline problem text under a field. Rendered only after the teacher taps
  * Host with something missing or invalid — never while they're still typing.
  */

@@ -21,6 +21,15 @@ export interface ChatCardProps {
   isEnded: boolean;
   /** Omit to hide the End chat button (e.g. the homepage preview card). */
   onEndChat?: () => void;
+  /** Seconds left on the chat's auto-end clock (null/omitted: no clock). */
+  autoEndSecondsLeft?: number | null;
+  /**
+   * Participants who left the room mid-chat (removed by the teacher). Their
+   * lines and colors persist; the header just mutes them.
+   */
+  inactiveParticipantIds?: ReadonlySet<string>;
+  /** When set, each active participant row gets a remove control (live only). */
+  onRemoveParticipant?: (participant: Participant) => void;
 }
 
 /**
@@ -35,6 +44,9 @@ export function ChatCard({
   messages,
   isEnded,
   onEndChat,
+  autoEndSecondsLeft = null,
+  inactiveParticipantIds,
+  onRemoveParticipant,
 }: ChatCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -87,6 +99,9 @@ export function ChatCard({
         participants={participants}
         characterColors={characterColors}
         isEnded={isEnded}
+        autoEndSecondsLeft={autoEndSecondsLeft}
+        inactiveParticipantIds={inactiveParticipantIds}
+        onRemoveParticipant={onRemoveParticipant}
       />
 
       {/* Conversation */}

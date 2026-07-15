@@ -80,6 +80,12 @@ export interface ChatRoomState {
   offlinePeerId: string | null;
   /** Seconds left in the offline peer's reconnect window (null: no window). */
   reconnectSecondsLeft: number | null;
+  /**
+   * Seconds left on this chat's auto-end clock (null: auto-end is off). The
+   * clock is per chat — it starts when the chat starts — and the engine ends
+   * the chat with reason "timer" when it hits zero.
+   */
+  autoEndSecondsLeft: number | null;
   isEnded: boolean;
   /** Why the chat ended; drives the wrap-up copy. Null while it's going. */
   endReason: ChatEndReason | null;

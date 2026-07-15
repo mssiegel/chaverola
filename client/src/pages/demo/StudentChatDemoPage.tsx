@@ -6,6 +6,7 @@ import { EventButton, SegmentButton } from "@/components/demo/DemoControls";
 import { DemoPageHeader } from "@/components/demo/DemoPageHeader";
 import { Chatbox } from "@/components/Student/Chatbox";
 import { useChatDemo } from "@/components/chat/useChatDemo";
+import { DEFAULT_ACTIVITY_SETTINGS } from "@/lib/activitySetup";
 import { useLocaleNavigate } from "@/lib/locale";
 import {
   DEMO_JOIN_CODE,
@@ -23,7 +24,11 @@ export function StudentChatDemoPage() {
   const [scenarioKey, setScenarioKey] = useState<StudentChatScenarioKey>("duo");
   const [revealNames, setRevealNames] = useState(true);
   const scenario = studentChatScenarios[scenarioKey];
-  const chat = useChatDemo(scenario);
+  // The demo runs the recommended activity settings, clock included, so the
+  // countdown and its finale are testable here too.
+  const chat = useChatDemo(scenario, {
+    autoEndSeconds: DEFAULT_ACTIVITY_SETTINGS.autoEndMinutes * 60,
+  });
   const navigate = useLocaleNavigate();
 
   const backToLobby = () => navigate(`/activity/join/${DEMO_JOIN_CODE}`);

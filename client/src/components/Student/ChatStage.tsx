@@ -5,6 +5,7 @@ import { useChatDemo } from "@/components/chat/useChatDemo";
 import { ChatDemoControls } from "@/components/demo/ChatDemoControls";
 import { EventButton } from "@/components/demo/DemoControls";
 import { Chatbox } from "@/components/Student/Chatbox";
+import { DEFAULT_ACTIVITY_SETTINGS } from "@/lib/activitySetup";
 import { useBackGuard } from "@/lib/useBackGuard";
 import {
   activityChatScenarios,
@@ -40,7 +41,12 @@ export function ChatStage({
     const base = activityChatScenarios[scenarioKey];
     return { ...base, self: { ...base.self, realName: studentName } };
   });
-  const chat = useChatDemo(scenario);
+  // The demo activity runs the recommended settings, so this chat carries the
+  // default auto-end clock (both tabs stay independently mocked — there's no
+  // cross-tab sync with a teacher's live settings).
+  const chat = useChatDemo(scenario, {
+    autoEndSeconds: DEFAULT_ACTIVITY_SETTINGS.autoEndMinutes * 60,
+  });
 
   // Mock of the teacher's activity-level "reveal names" setting, until the
   // teacher host page owns it for real.

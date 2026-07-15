@@ -7,8 +7,9 @@ import { cn } from "@/lib/utils";
  * Each section owns one brand accent (grape, coral, sky, mint) so the form
  * reads as a friendly sequence of stops rather than a wall of white boxes.
  * The accent only tints the small icon chip — the cards themselves stay calm.
+ * Exported for the host page's sections, which carry the same idiom.
  */
-const ACCENT_CHIP: Record<SectionAccent, string> = {
+export const ACCENT_CHIP: Record<SectionAccent, string> = {
   grape: "bg-brand-grape-soft text-brand-grape-strong",
   coral: "bg-brand-coral/15 text-brand-coral",
   sky: "bg-brand-sky/15 text-brand-sky",

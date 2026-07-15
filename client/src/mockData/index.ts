@@ -6,5 +6,6 @@
 export * from "./activityChatDemo";
 export * from "./activityDemo";
 export * from "./heroChatDemo";
+export * from "./hostActivityDemo";
 export * from "./studentChatDemo";
 export * from "./teacherChatDemo";

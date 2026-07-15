@@ -3,6 +3,7 @@ import {
   FastForward,
   LogOut,
   MessageCirclePlus,
+  Timer,
   Unplug,
   Wifi,
   WifiOff,
@@ -115,6 +116,16 @@ export function ChatDemoControls({
               icon={<Unplug className="size-4" />}
             >
               You drop (2 min pass)
+            </EventButton>
+            {/* Staged: first press jumps to the clock's final-minute state,
+                a second press jumps to the expiry itself. */}
+            <EventButton
+              onWorld={onWorld}
+              onClick={chat.skipAutoEndWait}
+              disabled={chat.autoEndSecondsLeft === null || chat.isEnded}
+              icon={<Timer className="size-4" />}
+            >
+              Fast-forward clock
             </EventButton>
             {extraEvents}
           </div>
