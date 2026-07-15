@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
 import { characterLabel } from "@/lib/characterLabel";
+import { nextId, randomFrom } from "@/lib/random";
+import { useLatestRef } from "@/lib/useLatestRef";
+import { useSecondCountdown } from "@/lib/useSecondCountdown";
+import { NOTICE_SENDER_ID } from "@/types/chat";
 import type {
   ChatEndReason,
   ChatMessage,
@@ -57,20 +61,6 @@ const SKIP_WAIT_SECONDS = 3;
 export const SKIP_AUTO_END_TO_FINALE_SECONDS = 63;
 export const SKIP_AUTO_END_TO_EXPIRY_SECONDS = 5;
 
-/** Sender id for conversation notices that nobody actually "sent". */
-const NOTICE_SENDER_ID = "system";
-
-let idCounter = 0;
-function nextId(prefix: string): string {
-  idCounter += 1;
-  return `${prefix}-${idCounter}`;
-}
-
-function randomFrom<T>(items: readonly T[]): T {
-  // Callers always pass non-empty arrays, and the index is < items.length.
-  return items[Math.floor(Math.random() * items.length)]!;
-}
-
 /**
  * The demo chat "engine". With no backend, this simulates a live room: the
  * peer(s) send scripted opening lines, keep chatting with ambient banter, react
@@ -96,26 +86,53 @@ export function useChatDemo(
   const [droppedPeerIds, setDroppedPeerIds] = useState<ReadonlySet<string>>(
     () => new Set()
   );
-  /** Countdown (seconds) of the reconnect window; null when nobody is out. */
-  const [reconnectSecondsLeft, setReconnectSecondsLeft] = useState<
-    number | null
-  >(null);
-  /** The chat's own auto-end clock; null when the activity's timer is off. */
-  const [autoEndSecondsLeft, setAutoEndSecondsLeft] = useState<number | null>(
-    autoEndSeconds
+
+  // Refs so timer callbacks always read the latest state; some spots also
+  // write them eagerly so a same-tick timer can't act on a stale value.
+  const statusRef = useLatestRef(status);
+  const peerStateRef = useLatestRef(peerState);
+  const droppedPeerIdsRef = useLatestRef(droppedPeerIds);
+
+  // The reconnect window's clock. At zero the room moves on — a 1:1 chat
+  // ends (nobody is left to talk to), a group chat drops the peer with a
+  // notice and keeps going. Dropping is NOT ending: see DECISIONS.md →
+  // "A group chat drops a timed-out peer instead of ending".
+  const [reconnectSecondsLeft, setReconnectSecondsLeft] = useSecondCountdown(
+    null,
+    status === "active",
+    () => {
+      const offline = scenario.peers.find((p) => p.id === offlinePeerId);
+      const remaining = scenario.peers.filter(
+        (p) => !droppedPeerIds.has(p.id) && p.id !== offlinePeerId
+      );
+      if (!offline || remaining.length === 0) {
+        endChat("peer-timeout");
+        return;
+      }
+      setDroppedPeerIds((prev) => new Set(prev).add(offline.id));
+      droppedPeerIdsRef.current = new Set(droppedPeerIds).add(offline.id);
+      setPeerState("connected");
+      setOfflinePeerId(null);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: nextId("m"),
+          senderId: NOTICE_SENDER_ID,
+          kind: "notice",
+          text: `${characterLabel(offline)} couldn't get back in and left the chat`,
+        },
+      ]);
+    }
   );
 
-  // Refs so timer callbacks always read the latest state. Synced in an effect
-  // (not during render) so the React Compiler can optimize this hook — timers
-  // fire asynchronously, after the commit, so the refs are current by then.
-  const statusRef = useRef(status);
-  const peerStateRef = useRef(peerState);
-  const droppedPeerIdsRef = useRef(droppedPeerIds);
-  useEffect(() => {
-    statusRef.current = status;
-    peerStateRef.current = peerState;
-    droppedPeerIdsRef.current = droppedPeerIds;
-  });
+  // The activity's per-chat auto-end clock. At zero the chat ends for
+  // everyone with reason "timer" (the ⏰ "Time's up!" wrap-up copy). See
+  // DECISIONS.md. (endChat is declared below; the callback only runs later.)
+  const [autoEndSecondsLeft, setAutoEndSecondsLeft] = useSecondCountdown(
+    autoEndSeconds,
+    status === "active",
+    () => endChat("timer")
+  );
 
   const timers = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -328,65 +345,6 @@ export function useChatDemo(
     setEndedByPeerId(ender.id);
     endChat("peer");
   };
-
-  // The reconnect window's clock. Ticks once a second; at zero the room moves
-  // on — a 1:1 chat ends (nobody is left to talk to), a group chat drops the
-  // peer with a notice and keeps going. Dropping is NOT ending: see
-  // DECISIONS.md → "A group chat drops a timed-out peer instead of ending".
-  useEffect(() => {
-    if (reconnectSecondsLeft === null || status !== "active") return;
-    if (reconnectSecondsLeft > 0) {
-      const handle = setTimeout(
-        () => setReconnectSecondsLeft((s) => (s === null ? null : s - 1)),
-        1000
-      );
-      return () => clearTimeout(handle);
-    }
-
-    // Window expired.
-    setReconnectSecondsLeft(null);
-    const offline = scenario.peers.find((p) => p.id === offlinePeerId);
-    const remaining = scenario.peers.filter(
-      (p) => !droppedPeerIds.has(p.id) && p.id !== offlinePeerId
-    );
-    if (!offline || remaining.length === 0) {
-      endChat("peer-timeout");
-      return;
-    }
-    setDroppedPeerIds((prev) => new Set(prev).add(offline.id));
-    droppedPeerIdsRef.current = new Set(droppedPeerIds).add(offline.id);
-    setPeerState("connected");
-    setOfflinePeerId(null);
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: nextId("m"),
-        senderId: NOTICE_SENDER_ID,
-        kind: "notice",
-        text: `${characterLabel(offline)} couldn't get back in and left the chat`,
-      },
-    ]);
-    // The countdown itself is the only real dependency; the rest is read once
-    // at expiry, and the compiler keeps endChat referentially stable.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reconnectSecondsLeft, status, offlinePeerId, droppedPeerIds, scenario]);
-
-  // The activity's per-chat auto-end clock. Ticks once a second while the
-  // chat is live; at zero the chat ends for everyone with reason "timer"
-  // (the ⏰ "Time's up!" wrap-up copy). See DECISIONS.md.
-  useEffect(() => {
-    if (autoEndSecondsLeft === null || status !== "active") return;
-    if (autoEndSecondsLeft > 0) {
-      const handle = setTimeout(
-        () => setAutoEndSecondsLeft((s) => (s === null ? null : s - 1)),
-        1000
-      );
-      return () => clearTimeout(handle);
-    }
-    endChat("timer");
-    // The compiler keeps endChat referentially stable.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoEndSecondsLeft, status]);
 
   /** Everyone still in the room (a group may have dropped someone). */
   const activePeers = scenario.peers.filter((p) => !droppedPeerIds.has(p.id));

@@ -2,37 +2,30 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Clapperboard, Drama, UserRound } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   buildHostedActivity,
-  MAX_CHARACTERS,
-  NAME_COUNTER_FROM,
-  NAME_MAX_CHARS,
   readActivityDraft,
   saveActivityDraft,
   saveHostedActivity,
-  SCENE_COUNTER_FROM,
-  SCENE_MAX_WORDS,
   validateActivityDraft,
   type ActivityDraft,
-  type CharacterDraft,
+  type ActivityDraftFields,
   type SetupField,
   type SetupProblem,
 } from "@/lib/activitySetup";
 import { useLocaleNavigate } from "@/lib/locale";
-import { charCount, clampChars, clampWords, countWords } from "@/lib/text";
 import { cn } from "@/lib/utils";
 import { mockGenerateJoinCode } from "@/mockData";
-import type { ActivitySettings } from "@/types/activity";
 
+import { AboutYouFields } from "./AboutYouFields";
 import {
   CharacterRowsField,
   type CharacterRowState,
 } from "./CharacterRowsField";
-import { FieldError, FieldLabelRow, LimitCounter } from "./FieldFeedback";
+import { makeDraftPatches } from "./draftPatches";
 import { FormSection } from "./FormSection";
 import { LobbyPreview } from "./LobbyPreview";
+import { SceneField } from "./SceneField";
 import { SettingsSection } from "./SettingsSection";
 
 // Same id-stamping idiom as the demo engines: rows need stable React keys,
@@ -40,7 +33,7 @@ import { SettingsSection } from "./SettingsSection";
 let rowSeq = 0;
 const nextRowId = () => `character-row-${++rowSeq}`;
 
-interface SetupFormState extends Omit<ActivityDraft, "characters"> {
+interface SetupFormState extends ActivityDraftFields {
   characters: CharacterRowState[];
 }
 
@@ -112,32 +105,8 @@ export function ActivitySetupForm() {
     el.focus({ preventScroll: true });
   };
 
-  const patch = (changes: Partial<SetupFormState>) =>
-    setForm((prev) => ({ ...prev, ...changes }));
-
-  const patchSettings = (changes: Partial<ActivitySettings>) =>
-    setForm((prev) => ({
-      ...prev,
-      settings: { ...prev.settings, ...changes },
-    }));
-
-  const updateCharacter = (id: string, changes: Partial<CharacterDraft>) =>
-    setForm((prev) => ({
-      ...prev,
-      characters: prev.characters.map((row) =>
-        row.id === id ? { ...row, ...changes } : row
-      ),
-    }));
-
-  const addCharacter = () =>
-    setForm((prev) =>
-      prev.characters.length >= MAX_CHARACTERS
-        ? prev
-        : {
-            ...prev,
-            characters: [...prev.characters, { id: nextRowId(), name: "" }],
-          }
-    );
+  const { patch, patchSettings, updateCharacter, addCharacter } =
+    makeDraftPatches(setForm, nextRowId);
 
   const removeCharacter = (id: string) =>
     setForm((prev) => ({
@@ -162,7 +131,6 @@ export function ActivitySetupForm() {
 
   const hostNameError = problemFor("hostName");
   const emailError = problemFor("teacherEmail");
-  const sceneWords = countWords(form.scene);
 
   return (
     <form noValidate onSubmit={handleSubmit}>
@@ -187,66 +155,22 @@ export function ActivitySetupForm() {
           </FormSection>
 
           <FormSection title="About you" icon={UserRound} accent="coral">
-            <div className="flex flex-col gap-5">
-              <div>
-                <FieldLabelRow htmlFor="setup-host-name" label="Your name">
-                  <LimitCounter
-                    count={charCount(form.hostName)}
-                    max={NAME_MAX_CHARS}
-                    showFrom={NAME_COUNTER_FROM}
-                  />
-                </FieldLabelRow>
-                <Input
-                  id="setup-host-name"
-                  ref={registerField("hostName")}
-                  value={form.hostName}
-                  onChange={(event) =>
-                    patch({
-                      hostName: clampChars(event.target.value, NAME_MAX_CHARS),
-                    })
-                  }
-                  placeholder="Ms. Cohen"
-                  aria-invalid={hostNameError ? true : undefined}
-                />
-                {hostNameError ? (
-                  <FieldError message={hostNameError} className="mt-1.5" />
-                ) : (
-                  <p className="mt-1.5 text-sm text-muted-foreground">
-                    Students see “Hosted by {form.hostName.trim() || "…"}” in
-                    the lobby.
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <FieldLabelRow
-                  htmlFor="setup-teacher-email"
-                  label="Your email"
-                  optional
-                />
-                <Input
-                  id="setup-teacher-email"
-                  type="email"
-                  inputMode="email"
-                  autoComplete="email"
-                  ref={registerField("teacherEmail")}
-                  value={form.teacherEmail}
-                  onChange={(event) =>
-                    patch({ teacherEmail: event.target.value })
-                  }
-                  placeholder="you@school.org"
-                  aria-invalid={emailError ? true : undefined}
-                />
-                {emailError ? (
-                  <FieldError message={emailError} className="mt-1.5" />
-                ) : (
-                  <p className="mt-1.5 text-sm text-muted-foreground">
-                    We'll email you every chat from the activity once it wraps
-                    up.
-                  </p>
-                )}
-              </div>
-            </div>
+            <AboutYouFields
+              hostName={form.hostName}
+              teacherEmail={form.teacherEmail}
+              onPatch={patch}
+              hostNameError={hostNameError}
+              emailError={emailError}
+              idPrefix="setup-host"
+              namePlaceholder="Ms. Cohen"
+              nameHint={
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  Students see “Hosted by {form.hostName.trim() || "…"}” in the
+                  lobby.
+                </p>
+              }
+              registerField={registerField}
+            />
           </FormSection>
 
           <FormSection
@@ -256,27 +180,10 @@ export function ActivitySetupForm() {
             optional
             hint="One or two lines about where and when the chat happens. Students read it in the lobby while they wait."
           >
-            <Textarea
-              rows={2}
+            <SceneField
               value={form.scene}
-              onChange={(event) =>
-                patch({
-                  scene: clampWords(event.target.value, SCENE_MAX_WORDS),
-                })
-              }
-              aria-label="Scene"
-              placeholder="Rome, 44 BC, the night before the Ides of March…"
+              onChange={(scene) => patch({ scene })}
             />
-            {sceneWords >= SCENE_COUNTER_FROM && (
-              <div className="mt-1.5 flex justify-end">
-                <LimitCounter
-                  count={sceneWords}
-                  max={SCENE_MAX_WORDS}
-                  showFrom={SCENE_COUNTER_FROM}
-                  unit="words"
-                />
-              </div>
-            )}
           </FormSection>
 
           <SettingsSection settings={form.settings} onChange={patchSettings} />

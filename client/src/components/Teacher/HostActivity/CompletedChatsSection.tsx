@@ -5,6 +5,7 @@ import { withCurrentCharacters } from "@/lib/hostActivity";
 import type { HostedActivity } from "@/types/activity";
 
 import { CollapsibleSection } from "./CollapsibleSection";
+import { EmptyState } from "./EmptyState";
 import type { HostedChat } from "./useHostActivityDemo";
 
 interface CompletedChatsSectionProps {
@@ -33,10 +34,12 @@ export function CompletedChatsSection({
       }
     >
       {chats.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-border bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground">
-          Nothing here yet. Chats stick around after they end, so you can always
-          look back at what was said.
-        </p>
+        <EmptyState className="py-6">
+          <p className="text-sm text-muted-foreground">
+            Nothing here yet. Chats stick around after they end, so you can
+            always look back at what was said.
+          </p>
+        </EmptyState>
       ) : (
         <div className="grid items-start gap-4 md:grid-cols-2">
           {chats.map((chat) => (

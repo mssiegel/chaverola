@@ -1,14 +1,6 @@
 import { LogOut } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface EndChatConfirmationModalProps {
   open: boolean;
@@ -32,22 +24,19 @@ export function EndChatConfirmationModal({
   cancelLabel,
 }: EndChatConfirmationModalProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>End this chat?</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {cancelLabel}
-          </Button>
-          <Button variant="destructive" onClick={onConfirm}>
-            <LogOut className="size-4" />
-            End chat
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ConfirmDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      onConfirm={onConfirm}
+      title="End this chat?"
+      description={description}
+      cancelLabel={cancelLabel}
+      confirmLabel={
+        <>
+          <LogOut className="size-4" />
+          End chat
+        </>
+      }
+    />
   );
 }

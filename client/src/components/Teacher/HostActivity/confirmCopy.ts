@@ -1,0 +1,47 @@
+import type { Participant } from "@/types/chat";
+
+import type { HostedChat, WaitingStudent } from "./useHostActivityDemo";
+
+/** The confirmations the host page can be waiting on. */
+export type PendingAction =
+  | { kind: "remove-from-queue"; student: WaitingStudent }
+  | { kind: "remove-from-chat"; chat: HostedChat; participant: Participant }
+  | { kind: "end-all" };
+
+/** The confirmation copy per action — each names what actually happens. */
+export function confirmCopy(action: PendingAction | null): {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  cancelLabel: string;
+} {
+  if (action?.kind === "remove-from-queue") {
+    return {
+      title: `Remove ${action.student.realName}?`,
+      description:
+        "They'll be signed out and sent back to the join screen, with a note that you removed them. They can sign in again, with a better name if that was the problem.",
+      confirmLabel: "Remove them",
+      cancelLabel: "Never mind",
+    };
+  }
+  if (action?.kind === "remove-from-chat") {
+    const groupChat =
+      action.chat.participants.length - action.chat.inactiveStudentIds.length >
+      2;
+    return {
+      title: `Remove ${action.participant.realName} from their chat?`,
+      description: groupChat
+        ? "They'll be signed out and sent back to the join screen. The rest of the group keeps chatting, and classmates only see that the character left, not that you removed anyone."
+        : "They'll be signed out and sent back to the join screen, and their partner's chat ends. Nobody is told it was a removal.",
+      confirmLabel: "Remove them",
+      cancelLabel: "Never mind",
+    };
+  }
+  return {
+    title: "End all chats?",
+    description:
+      "Every active chat will end right now for everyone in it. Students will see the chat is over and can head back to the lobby for another round.",
+    confirmLabel: "End all chats",
+    cancelLabel: "Let them keep chatting",
+  };
+}

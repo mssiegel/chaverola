@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -8,22 +10,23 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-interface ConfirmActionModalProps {
+interface ConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
   title: string;
   description: string;
-  confirmLabel: string;
+  /** May include an icon next to the text (e.g. the End chat log-out icon). */
+  confirmLabel: ReactNode;
   cancelLabel: string;
 }
 
 /**
- * The host page's confirmation step for actions that hit real students —
- * removing someone (from the queue or mid-chat) and ending every chat at
- * once. Per-chat ends keep using the chat card's own EndChatConfirmationModal.
+ * The app's one confirmation dialog: outline "never mind" + destructive
+ * confirm. Every confirm step (ending a chat, removing a student, ending
+ * every chat at once) renders through this so they all read the same.
  */
-export function ConfirmActionModal({
+export function ConfirmDialog({
   open,
   onOpenChange,
   onConfirm,
@@ -31,7 +34,7 @@ export function ConfirmActionModal({
   description,
   confirmLabel,
   cancelLabel,
-}: ConfirmActionModalProps) {
+}: ConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>

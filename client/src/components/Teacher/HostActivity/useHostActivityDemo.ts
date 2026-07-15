@@ -6,12 +6,15 @@ import {
 } from "@/components/chat/useChatDemo";
 import { characterLabel } from "@/lib/characterLabel";
 import { withCurrentCharacters } from "@/lib/hostActivity";
+import { nextId, randInt, randomFrom, shuffled } from "@/lib/random";
+import { useLatestRef } from "@/lib/useLatestRef";
 import {
   HOST_CHATTER_LINES,
   HOST_SEED_CHATS,
   HOST_STUDENT_NAMES,
 } from "@/mockData";
 import type { HostedActivity } from "@/types/activity";
+import { NOTICE_SENDER_ID } from "@/types/chat";
 import type {
   ChatEndReason,
   ChatMessage,
@@ -30,9 +33,6 @@ import type {
   clock ChatRoomState carries on the student side.
 */
 
-/** Sender id for conversation notices nobody actually "sent". */
-const NOTICE_SENDER_ID = "system";
-
 /** How long a new joiner takes to show up after the previous one. */
 const JOIN_GAP_MIN_SECONDS = 7;
 const JOIN_GAP_MAX_SECONDS = 15;
@@ -45,26 +45,6 @@ const RETURN_MAX_SECONDS = 10;
 const AUTO_MATCH_GAP_SECONDS = 3;
 
 const DRIP_INTERVAL_MS = 4200;
-
-let idSeq = 0;
-function nextId(prefix: string): string {
-  idSeq += 1;
-  return `${prefix}-${idSeq}`;
-}
-
-function randInt(min: number, max: number): number {
-  return min + Math.floor(Math.random() * (max - min + 1));
-}
-
-function shuffled<T>(items: readonly T[]): T[] {
-  const result = [...items];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    // Both indexes are within bounds by construction.
-    [result[i], result[j]] = [result[j]!, result[i]!];
-  }
-  return result;
-}
 
 export interface WaitingStudent {
   id: string;
@@ -425,13 +405,10 @@ export function useHostActivityDemo(
   const [world, setWorld] = useState<HostWorld>(() => seedWorld(activity));
 
   // Refs so timers and actions always read the freshest state — same idiom
-  // as useChatDemo. `commit` updates the ref eagerly so two actions in one
+  // as useChatDemo. `commit` updates worldRef eagerly so two actions in one
   // tick can't stomp each other.
   const worldRef = useRef(world);
-  const activityRef = useRef(activity);
-  useEffect(() => {
-    activityRef.current = activity;
-  });
+  const activityRef = useLatestRef(activity);
   const commit = (next: HostWorld) => {
     worldRef.current = next;
     setWorld(next);
@@ -443,7 +420,7 @@ export function useHostActivityDemo(
       commit(tickWorld(worldRef.current, activityRef.current));
     }, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activityRef]);
 
   // The chatter drip keeps live chats moving. Fresh chats speak first so a
   // new pairing never sits silent while an older chat hogs the dice.
@@ -456,16 +433,13 @@ export function useHostActivityDemo(
       if (live.length === 0) return;
       const fresh = live.filter((c) => c.messages.length < 2);
       const pool = fresh.length > 0 ? fresh : live;
-      const target = pool[randInt(0, pool.length - 1)]!;
+      const target = randomFrom(pool);
       const members = activeChatMembers(target);
       const lastSenderId =
         target.messages[target.messages.length - 1]?.senderId;
       const speakers = members.filter((m) => m.id !== lastSenderId);
-      const speaker = (speakers.length > 0 ? speakers : members)[
-        randInt(0, (speakers.length > 0 ? speakers : members).length - 1)
-      ]!;
-      const text =
-        HOST_CHATTER_LINES[randInt(0, HOST_CHATTER_LINES.length - 1)]!;
+      const speaker = randomFrom(speakers.length > 0 ? speakers : members);
+      const text = randomFrom(HOST_CHATTER_LINES);
       commit({
         ...w,
         chats: w.chats.map((c) =>

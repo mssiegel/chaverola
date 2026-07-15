@@ -1,9 +1,10 @@
-import type { ActivitySettings, HostedActivity } from "@/types/activity";
+import type { HostedActivity } from "@/types/activity";
 import type { Character, Participant } from "@/types/chat";
 
 import {
   validateActivityDraft,
   type ActivityDraft,
+  type ActivityDraftFields,
   type SetupProblem,
 } from "./activitySetup";
 
@@ -18,20 +19,15 @@ import {
   readability). See DECISIONS.md → "Teacher live activity page".
 */
 
-/** One character row of the live panel: a draft with its permanent id. */
-export interface LiveCharacterRow {
-  id: string;
-  name: string;
-  emoji?: string;
-}
+/**
+ * One character row of the live panel: shaped like a Character, but the
+ * name may be empty or invalid mid-edit — only a valid commit makes it one.
+ */
+export type LiveCharacterRow = Character;
 
 /** The live panel's whole draft — possibly invalid mid-edit. */
-export interface LiveActivityDraft {
+export interface LiveActivityDraft extends ActivityDraftFields {
   characters: LiveCharacterRow[];
-  hostName: string;
-  teacherEmail: string;
-  scene: string;
-  settings: ActivitySettings;
 }
 
 let liveCharacterSeq = 0;

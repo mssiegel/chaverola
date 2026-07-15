@@ -1,4 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
+
+import { useLatestRef } from "./useLatestRef";
 
 /**
  * Intercepts browser back while `active`: the pop is swallowed by re-pushing
@@ -15,10 +17,7 @@ import { useEffect, useRef } from "react";
  * dev, adding one more swallowed back; harmless, dev-only.)
  */
 export function useBackGuard(active: boolean, onBack: () => void) {
-  const onBackRef = useRef(onBack);
-  useEffect(() => {
-    onBackRef.current = onBack;
-  });
+  const onBackRef = useLatestRef(onBack);
 
   useEffect(() => {
     if (!active) return;
@@ -31,5 +30,5 @@ export function useBackGuard(active: boolean, onBack: () => void) {
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [active]);
+  }, [active, onBackRef]);
 }

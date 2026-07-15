@@ -54,18 +54,19 @@ export const DEFAULT_ACTIVITY_SETTINGS: ActivitySettings = {
 };
 
 /** One character row as drafted — may be empty or half-filled while typing. */
-export interface CharacterDraft {
-  name: string;
-  emoji?: string;
-}
+export type CharacterDraft = Omit<Character, "id">;
 
-/** The whole setup form, exactly as typed so far. */
-export interface ActivityDraft {
-  characters: CharacterDraft[];
+/** The non-character fields every activity draft carries (setup and live). */
+export interface ActivityDraftFields {
   hostName: string;
   teacherEmail: string;
   scene: string;
   settings: ActivitySettings;
+}
+
+/** The whole setup form, exactly as typed so far. */
+export interface ActivityDraft extends ActivityDraftFields {
+  characters: CharacterDraft[];
 }
 
 export function defaultActivityDraft(): ActivityDraft {

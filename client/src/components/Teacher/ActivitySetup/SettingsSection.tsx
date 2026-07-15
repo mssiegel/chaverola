@@ -13,7 +13,7 @@ import { AUTO_END_MINUTES, AUTO_MATCH_SECONDS } from "@/lib/activitySetup";
 import { cn } from "@/lib/utils";
 import type { ActivitySettings } from "@/types/activity";
 
-import { FormSection } from "./FormSection";
+import { AccentIconChip, FormSection } from "./FormSection";
 import { NumberStepper } from "./NumberStepper";
 
 interface SettingsSectionProps {
@@ -138,12 +138,7 @@ function SettingRow({
       {/* Title row only; the description hangs below so the icon chip and
           switch never squeeze it into a sliver on phones. */}
       <div className="flex items-center gap-3">
-        <span
-          aria-hidden
-          className="grid size-9 shrink-0 place-items-center rounded-xl border border-border/70 bg-card text-muted-foreground"
-        >
-          <Icon className="size-4.5" />
-        </span>
+        <AccentIconChip accent="neutral" icon={Icon} />
         <label
           htmlFor={id}
           className="min-w-0 flex-1 cursor-pointer font-medium text-foreground"

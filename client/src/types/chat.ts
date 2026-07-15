@@ -25,9 +25,15 @@ export interface Participant {
   realName: string;
 }
 
+/**
+ * The reserved sender id for conversation notices nobody actually "sent"
+ * (e.g. "X left the chat"). Never a participant id.
+ */
+export const NOTICE_SENDER_ID = "system";
+
 export interface ChatMessage {
   id: string;
-  /** Participant id of the sender (a reserved non-participant id for notices). */
+  /** Participant id of the sender (NOTICE_SENDER_ID for notices). */
   senderId: string;
   text: string;
   /**

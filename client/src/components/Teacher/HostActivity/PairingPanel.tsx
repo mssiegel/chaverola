@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { formatWaitShort } from "@/lib/time";
 import { cn } from "@/lib/utils";
 
+import { EmptyState } from "./EmptyState";
 import type { WaitingStudent } from "./useHostActivityDemo";
 
 export interface PairingPanelProps {
@@ -54,7 +55,7 @@ export function PairingPanel({
   return (
     <div className="flex flex-col gap-4">
       {waiting.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border bg-muted/40 px-4 py-8 text-center">
+        <EmptyState className="py-8">
           <p className="text-2xl" aria-hidden>
             🎉
           </p>
@@ -64,7 +65,7 @@ export function PairingPanel({
           <p className="mt-1 text-sm text-muted-foreground">
             Students come back here once their chats end.
           </p>
-        </div>
+        </EmptyState>
       ) : (
         <>
           <div className="flex flex-col gap-2">

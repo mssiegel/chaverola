@@ -2,30 +2,22 @@ import { useState } from "react";
 import { Timer, UserPlus, UsersRound } from "lucide-react";
 
 import { DemoControlsPanel, EventButton } from "@/components/demo/DemoControls";
-import { ACCENT_CHIP } from "@/components/Teacher/ActivitySetup/FormSection";
-import { cn } from "@/lib/utils";
+import { AccentIconChip } from "@/components/Teacher/ActivitySetup/FormSection";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { HostedActivity } from "@/types/activity";
-import type { Participant } from "@/types/chat";
 
 import { ChatsInProgressSection } from "./ChatsInProgressSection";
-import { CollapsibleSection } from "./CollapsibleSection";
+import { CollapsibleSection, CountPill } from "./CollapsibleSection";
 import { CompletedChatsSection } from "./CompletedChatsSection";
-import { ConfirmActionModal } from "./ConfirmActionModal";
+import { confirmCopy, type PendingAction } from "./confirmCopy";
 import { HostHeader } from "./HostHeader";
 import { JoiningInstructions } from "./JoiningInstructions";
 import { LiveSettingsPanel } from "./LiveSettingsPanel";
 import { PairingPanel } from "./PairingPanel";
 import {
   useHostActivityDemo,
-  type HostedChat,
   type WaitingStudent,
 } from "./useHostActivityDemo";
-
-/** The confirmations this page can be waiting on. */
-type PendingAction =
-  | { kind: "remove-from-queue"; student: WaitingStudent }
-  | { kind: "remove-from-chat"; chat: HostedChat; participant: Participant }
-  | { kind: "end-all" };
 
 interface HostActivityDashboardProps {
   activity: HostedActivity;
@@ -148,20 +140,10 @@ export function HostActivityDashboard({
         <aside className="hidden lg:block">
           <div className="scroll-soft sticky top-24 max-h-[calc(100dvh-7rem)] overflow-y-auto rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div className="mb-4 flex items-center gap-3">
-              <span
-                aria-hidden
-                className={cn(
-                  "grid size-9 shrink-0 place-items-center rounded-xl",
-                  ACCENT_CHIP.grape
-                )}
-              >
-                <UsersRound className="size-4.5" />
-              </span>
+              <AccentIconChip accent="grape" icon={UsersRound} />
               <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
                 Pair your students
-                <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-bold text-secondary-foreground tabular-nums">
-                  {demo.waiting.length}
-                </span>
+                <CountPill count={demo.waiting.length} />
               </h2>
             </div>
             {pairingPanel}
@@ -223,7 +205,7 @@ export function HostActivityDashboard({
         </div>
       </DemoControlsPanel>
 
-      <ConfirmActionModal
+      <ConfirmDialog
         open={pendingAction !== null}
         onOpenChange={(open) => {
           if (!open) setPendingAction(null);
@@ -233,42 +215,4 @@ export function HostActivityDashboard({
       />
     </div>
   );
-}
-
-/** The confirmation copy per action — each names what actually happens. */
-function confirmCopy(action: PendingAction | null): {
-  title: string;
-  description: string;
-  confirmLabel: string;
-  cancelLabel: string;
-} {
-  if (action?.kind === "remove-from-queue") {
-    return {
-      title: `Remove ${action.student.realName}?`,
-      description:
-        "They'll be signed out and sent back to the join screen, with a note that you removed them. They can sign in again, with a better name if that was the problem.",
-      confirmLabel: "Remove them",
-      cancelLabel: "Never mind",
-    };
-  }
-  if (action?.kind === "remove-from-chat") {
-    const groupChat =
-      action.chat.participants.length - action.chat.inactiveStudentIds.length >
-      2;
-    return {
-      title: `Remove ${action.participant.realName} from their chat?`,
-      description: groupChat
-        ? "They'll be signed out and sent back to the join screen. The rest of the group keeps chatting, and classmates only see that the character left, not that you removed anyone."
-        : "They'll be signed out and sent back to the join screen, and their partner's chat ends. Nobody is told it was a removal.",
-      confirmLabel: "Remove them",
-      cancelLabel: "Never mind",
-    };
-  }
-  return {
-    title: "End all chats?",
-    description:
-      "Every active chat will end right now for everyone in it. Students will see the chat is over and can head back to the lobby for another round.",
-    confirmLabel: "End all chats",
-    cancelLabel: "Let them keep chatting",
-  };
 }

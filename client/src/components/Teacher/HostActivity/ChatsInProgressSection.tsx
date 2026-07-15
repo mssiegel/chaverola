@@ -7,6 +7,7 @@ import type { HostedActivity } from "@/types/activity";
 import type { Participant } from "@/types/chat";
 
 import { CollapsibleSection } from "./CollapsibleSection";
+import { EmptyState } from "./EmptyState";
 import type { HostedChat } from "./useHostActivityDemo";
 
 interface ChatsInProgressSectionProps {
@@ -52,7 +53,7 @@ export function ChatsInProgressSection({
       }
     >
       {chats.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border bg-muted/40 px-4 py-8 text-center">
+        <EmptyState className="py-8">
           <p className="font-semibold text-foreground">No chats yet</p>
           <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
             Pair two students in the queue, or start the whole round in one tap.
@@ -66,7 +67,7 @@ export function ChatsInProgressSection({
             <UsersRound aria-hidden />
             Pair everyone 1:1
           </Button>
-        </div>
+        </EmptyState>
       ) : (
         <>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">

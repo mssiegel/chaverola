@@ -2,10 +2,19 @@ import { useId, useState, type ReactNode } from "react";
 import { ChevronDown, type LucideIcon } from "lucide-react";
 
 import {
-  ACCENT_CHIP,
+  AccentIconChip,
   type SectionAccent,
 } from "@/components/Teacher/ActivitySetup/FormSection";
 import { cn } from "@/lib/utils";
+
+/** The little count badge after a section title (e.g. chats in progress). */
+export function CountPill({ count }: { count: number }) {
+  return (
+    <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-bold text-secondary-foreground tabular-nums">
+      {count}
+    </span>
+  );
+}
 
 interface CollapsibleSectionProps {
   title: string;
@@ -49,23 +58,11 @@ export function CollapsibleSection({
           onClick={() => setOpen((o) => !o)}
           className="flex w-full items-center gap-3 rounded-2xl p-5 text-left sm:p-6"
         >
-          <span
-            aria-hidden
-            className={cn(
-              "grid size-9 shrink-0 place-items-center rounded-xl",
-              ACCENT_CHIP[accent]
-            )}
-          >
-            <Icon className="size-4.5" />
-          </span>
+          <AccentIconChip accent={accent} icon={Icon} />
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-2">
               <span className="min-w-0">{title}</span>
-              {count !== undefined && (
-                <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-bold text-secondary-foreground tabular-nums">
-                  {count}
-                </span>
-              )}
+              {count !== undefined && <CountPill count={count} />}
             </span>
             {!open && collapsedHint && (
               <span className="mt-0.5 block text-sm font-normal text-muted-foreground">
