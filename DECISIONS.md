@@ -45,13 +45,13 @@ the affected part. Link related entries by title anchor, never by "above" /
 
 - [Student join flow & lobby](#student-join-flow--lobby)
   - [Stage swaps inside the student route open at the top of the page](#stage-swaps-inside-the-student-route-open-at-the-top-of-the-page)
+  - [No identity bar during chat either](#no-identity-bar-during-chat-either)
+  - [Mid-chat, the student's name is a corner badge](#mid-chat-the-students-name-is-a-corner-badge)
   - [Back during a live chat asks before ending it](#back-during-a-live-chat-asks-before-ending-it)
   - [One URL for the whole student journey](#one-url-for-the-whole-student-journey)
   - [Landing on code entry signs the student out](#landing-on-code-entry-signs-the-student-out)
   - [Lobby waiting dots are mint, not grape](#lobby-waiting-dots-are-mint-not-grape)
   - [The lobby shows no identity bar](#the-lobby-shows-no-identity-bar)
-  - [No identity bar during chat either](#no-identity-bar-during-chat-either)
-  - [Mid-chat, the student's name is a corner badge](#mid-chat-the-students-name-is-a-corner-badge)
   - [No emoji bubble row in the waiting lobby](#no-emoji-bubble-row-in-the-waiting-lobby)
   - [The student join flow lives in its own navbar-free "world"](#the-student-join-flow-lives-in-its-own-navbar-free-world)
   - [Background doodles are deterministic, and freeze (not hide) under reduced motion](#background-doodles-are-deterministic-and-freeze-not-hide-under-reduced-motion)
@@ -82,6 +82,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Character rows lead with the emoji avatar](#character-rows-lead-with-the-emoji-avatar)
   - [Setup sections each carry one brand accent; settings stays the quiet one](#setup-sections-each-carry-one-brand-accent-settings-stays-the-quiet-one)
 - [Teacher live activity page](#teacher-live-activity-page)
+  - [A character in a live chat shows the Live dot, and its hint says who](#a-character-in-a-live-chat-shows-the-live-dot-and-its-hint-says-who)
   - [The host page is never projected — it's the teacher's private control room](#the-host-page-is-never-projected--its-the-teachers-private-control-room)
   - [Host page layout: stacked sections on phones, a sticky pairing rail on desktop](#host-page-layout-stacked-sections-on-phones-a-sticky-pairing-rail-on-desktop)
   - [The waiting count is the hero stat, and it never leaves the screen](#the-waiting-count-is-the-hero-stat-and-it-never-leaves-the-screen)
@@ -92,7 +93,6 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Every chat runs its own auto-end clock, and students watch it tick](#every-chat-runs-its-own-auto-end-clock-and-students-watch-it-tick)
   - [Auto-end edits: new minutes wait for new chats; the toggle acts immediately](#auto-end-edits-new-minutes-wait-for-new-chats-the-toggle-acts-immediately)
   - [Live edits propagate after a 1-second pause, and invalid states never do](#live-edits-propagate-after-a-1-second-pause-and-invalid-states-never-do)
-  - [A character in a live chat shows the Live dot, and its hint says who](#a-character-in-a-live-chat-shows-the-live-dot-and-its-hint-says-who)
   - [No reveal-names control in Chats in progress](#no-reveal-names-control-in-chats-in-progress)
   - [An unknown host code redirects to the demo activity](#an-unknown-host-code-redirects-to-the-demo-activity)
   - [The copyable student link carries the current origin, and is never printed](#the-copyable-student-link-carries-the-current-origin-and-is-never-printed)
@@ -106,14 +106,14 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [The how-it-works footer answers cost, accounts, and devices](#the-how-it-works-footer-answers-cost-accounts-and-devices)
   - [The teacher bullets say the safety part out loud](#the-teacher-bullets-say-the-safety-part-out-loud)
   - [The homepage has no footer, and the demo-links line is gone](#the-homepage-has-no-footer-and-the-demo-links-line-is-gone)
+  - [The teacher preview mirrors the hero chat live](#the-teacher-preview-mirrors-the-hero-chat-live)
+  - [No testimonials on the homepage](#no-testimonials-on-the-homepage)
   - [The hero demo goes quiet after two Armstrong lines](#the-hero-demo-goes-quiet-after-two-armstrong-lines)
   - [Demo students have short names, and the teacher is never one of them](#demo-students-have-short-names-and-the-teacher-is-never-one-of-them)
   - [Solid grape is reserved for Join; both Host buttons are outline](#solid-grape-is-reserved-for-join-both-host-buttons-are-outline)
   - [The teacher section stays light, and never points at "this card"](#the-teacher-section-stays-light-and-never-points-at-this-card)
   - [The teacher pitch sells in-character talk, not a guessing game](#the-teacher-pitch-sells-in-character-talk-not-a-guessing-game)
   - [Hero CTAs sit right under the pitch at every width](#hero-ctas-sit-right-under-the-pitch-at-every-width)
-  - [The teacher preview mirrors the hero chat live](#the-teacher-preview-mirrors-the-hero-chat-live)
-  - [No testimonials on the homepage](#no-testimonials-on-the-homepage)
   - [Founder photo loads from `/founder-moshe.jpg` with a marked placeholder fallback](#founder-photo-loads-from-founder-moshejpg-with-a-marked-placeholder-fallback)
   - [The hero looks hand-made and never mentions AI](#the-hero-looks-hand-made-and-never-mentions-ai)
   - [The hero chatbox is the product running live, not a mockup](#the-hero-chatbox-is-the-product-running-live-not-a-mockup)
@@ -169,6 +169,58 @@ chat mid-scroll, with the chat header out of view. A new UI should start at
 the top of the page.
 
 _Implemented in
+[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._
+
+### No identity bar during chat either
+
+_2026-07-15_
+
+**Decision:** The chatting/ended stages no longer show the white identity
+strip (avatar initial + name + "Chatting with …") above the chatbox. The
+`StudentIdentityBar` component is deleted; the chatbox now stands alone on
+the student's screen. This supersedes the original prompt-8 requirement that
+the student's real name stay persistently visible while chatting.
+
+**Why:** The strip was too prominent for what it carried, and its stage text
+duplicated the chat header one line below it — the gradient header already
+says "You're Brutus 🔪 with Caesar's ghost 👻". Two adjacent bars announcing
+the same room read as clutter, especially on phones where vertical space is
+the scarcest resource in a chat.
+
+**Update (2026-07-15):** the real name came back in a much quieter form — a
+non-interactive badge in the world's top-left corner — see
+[Mid-chat, the student's name is a corner badge](#mid-chat-the-students-name-is-a-corner-badge).
+
+_Removed from [ChatStage](client/src/components/Student/ChatStage.tsx)._
+
+### Mid-chat, the student's name is a corner badge
+
+_2026-07-15_
+
+**Decision:** While a chat is on screen (chatting and just-ended stages), the
+student's name appears as a small badge in the top-left corner of the purple
+world — the exact spot the Chaverola brand pill vacates mid-chat (see
+[The brand home link disappears mid-chat and while hosting](#the-brand-home-link-disappears-mid-chat-and-while-hosting)).
+The badge is deliberately styled as **not a button**: a flat, translucent
+**dark grape** pill (translucent white washed out against the purple world),
+no shadow, no hover state, and it sits inside the corner bar's
+`pointer-events-none`, so taps pass through to the world. This contrasts
+with the solid-white pills up there (language switcher, brand pill), which
+are all clickable. It shows **just the name** — no avatar-initial disc,
+because students never upload a photo, so a disc with a letter promises an
+avatar that doesn't exist. The lobby is untouched: the brand pill still owns
+that corner, and the lobby heading ("You're in, {name}!") keeps confirming
+identity there.
+
+**Why:** After the in-card identity bar was removed as clutter, mid-chat was
+the one stage with no reassurance of whose session this is — which matters on
+shared classroom machines. The vacated corner gives the name a persistent
+home that costs the chatbox nothing, and mirrors the language pill on the
+other side. Product-owner call on the non-pill-like styling: the name is not
+clickable, so it must not look tappable.
+
+_Implemented in
+[StudentWorldLayout](client/src/components/layout/StudentWorldLayout.tsx) and
 [JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._
 
 ### Back during a live chat asks before ending it
@@ -228,6 +280,10 @@ screen. Distinct URLs pay off where pages are addressable and revisitable —
 the teacher side — and the route table reflects that (`/activity/create`,
 `/activity/host/:joinCode`).
 
+_Implemented in
+[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx); routes in
+[App.tsx](client/src/App.tsx)._
+
 ### Landing on code entry signs the student out
 
 _2026-07-13_
@@ -271,6 +327,9 @@ card's pulsing live dot and the identity bar's stage dot already use it.
 Green dots read as "the system is actively working on your match" rather
 than decoration, and they pop against the grape pill.
 
+_Implemented in
+[WaitingLobby](client/src/components/Student/WaitingLobby.tsx)._
+
 ### The lobby shows no identity bar
 
 _2026-07-13_
@@ -295,58 +354,6 @@ component is deleted — see
 [No identity bar during chat either](#no-identity-bar-during-chat-either).
 
 _Removed from
-[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._
-
-### No identity bar during chat either
-
-_2026-07-15_
-
-**Decision:** The chatting/ended stages no longer show the white identity
-strip (avatar initial + name + "Chatting with …") above the chatbox. The
-`StudentIdentityBar` component is deleted; the chatbox now stands alone on
-the student's screen. This supersedes the original prompt-8 requirement that
-the student's real name stay persistently visible while chatting.
-
-**Why:** The strip was too prominent for what it carried, and its stage text
-duplicated the chat header one line below it — the gradient header already
-says "You're Brutus 🔪 with Caesar's ghost 👻". Two adjacent bars announcing
-the same room read as clutter, especially on phones where vertical space is
-the scarcest resource in a chat.
-
-**Update (2026-07-15):** the real name came back in a much quieter form — a
-non-interactive badge in the world's top-left corner — see
-[Mid-chat, the student's name is a corner badge](#mid-chat-the-students-name-is-a-corner-badge).
-
-_Removed from [ChatStage](client/src/components/Student/ChatStage.tsx)._
-
-### Mid-chat, the student's name is a corner badge
-
-_2026-07-15_
-
-**Decision:** While a chat is on screen (chatting and just-ended stages), the
-student's name appears as a small badge in the top-left corner of the purple
-world — the exact spot the Chaverola brand pill vacates mid-chat (see
-[The brand home link disappears mid-chat and while hosting](#the-brand-home-link-disappears-mid-chat-and-while-hosting)).
-The badge is deliberately styled as **not a button**: a flat, translucent
-**dark grape** pill (translucent white washed out against the purple world),
-no shadow, no hover state, and it sits inside the corner bar's
-`pointer-events-none`, so taps pass through to the world. This contrasts
-with the solid-white pills up there (language switcher, brand pill), which
-are all clickable. It shows **just the name** — no avatar-initial disc,
-because students never upload a photo, so a disc with a letter promises an
-avatar that doesn't exist. The lobby is untouched: the brand pill still owns
-that corner, and the lobby heading ("You're in, {name}!") keeps confirming
-identity there.
-
-**Why:** After the in-card identity bar was removed as clutter, mid-chat was
-the one stage with no reassurance of whose session this is — which matters on
-shared classroom machines. The vacated corner gives the name a persistent
-home that costs the chatbox nothing, and mirrors the language pill on the
-other side. Product-owner call on the non-pill-like styling: the name is not
-clickable, so it must not look tappable.
-
-_Implemented in
-[StudentWorldLayout](client/src/components/layout/StudentWorldLayout.tsx) and
 [JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._
 
 ### No emoji bubble row in the waiting lobby
@@ -997,7 +1004,37 @@ _Implemented in
 (accent map) and
 [CreateActivityPage](client/src/pages/teacher/CreateActivityPage.tsx) (glow)._
 
+---
+
 ## Teacher live activity page
+
+### A character in a live chat shows the Live dot, and its hint says who
+
+_2026-07-16_
+
+**Decision:** While a live chat uses a character, that row in the host
+page's settings panel swaps its remove button for the same pulsing mint
+Live dot the chat cards wear (extracted to a shared
+[LiveDot](client/src/components/ui/live-dot.tsx)), and the hint under the
+input names the character: "Cleopatra is in a live chat right now. You can
+remove them once that chat ends." The name is the **committed** one — what
+running chats actually display — so a mid-rename draft never changes who
+the message claims is chatting.
+
+**Why:** Founder feedback (2026-07-16): the anonymous hint ("In a live
+chat right now…") rendered in the gap between two character rows and named
+nobody, so it read as ambiguous — which character is it about? — and the
+disabled × at 35% opacity was faint enough that the locked row looked like
+it had no remove control at all, while the neighbor's crisp × drew the eye
+to the wrong row. Naming the character makes the message unambiguous
+wherever it sits, and the Live dot marks the locked row with the exact
+signal that already means "chat running right now" on the cards below.
+
+_Implemented in
+[CharacterRowsField](client/src/components/Teacher/ActivitySetup/CharacterRowsField.tsx)
+(the indicator) and
+[LiveSettingsPanel](client/src/components/Teacher/HostActivity/LiveSettingsPanel.tsx)
+(the named message)._
 
 ### The host page is never projected — it's the teacher's private control room
 
@@ -1234,34 +1271,6 @@ _Implemented in
 [LiveSettingsPanel](client/src/components/Teacher/HostActivity/LiveSettingsPanel.tsx)
 with the draft model in [hostActivity](client/src/lib/hostActivity.ts)._
 
-### A character in a live chat shows the Live dot, and its hint says who
-
-_2026-07-16_
-
-**Decision:** While a live chat uses a character, that row in the host
-page's settings panel swaps its remove button for the same pulsing mint
-Live dot the chat cards wear (extracted to a shared
-[LiveDot](client/src/components/ui/live-dot.tsx)), and the hint under the
-input names the character: "Cleopatra is in a live chat right now. You can
-remove them once that chat ends." The name is the **committed** one — what
-running chats actually display — so a mid-rename draft never changes who
-the message claims is chatting.
-
-**Why:** Founder feedback (2026-07-16): the anonymous hint ("In a live
-chat right now…") rendered in the gap between two character rows and named
-nobody, so it read as ambiguous — which character is it about? — and the
-disabled × at 35% opacity was faint enough that the locked row looked like
-it had no remove control at all, while the neighbor's crisp × drew the eye
-to the wrong row. Naming the character makes the message unambiguous
-wherever it sits, and the Live dot marks the locked row with the exact
-signal that already means "chat running right now" on the cards below.
-
-_Implemented in
-[CharacterRowsField](client/src/components/Teacher/ActivitySetup/CharacterRowsField.tsx)
-(the indicator) and
-[LiveSettingsPanel](client/src/components/Teacher/HostActivity/LiveSettingsPanel.tsx)
-(the named message)._
-
 ### No reveal-names control in Chats in progress
 
 _2026-07-15_
@@ -1320,6 +1329,8 @@ when the pin is the classroom-friendly way in.
 
 _Implemented in
 [JoiningInstructions](client/src/components/Teacher/HostActivity/JoiningInstructions.tsx)._
+
+---
 
 ## Teacher monitoring view
 
@@ -1487,6 +1498,45 @@ removed._
 
 _Implemented in [HomePage](client/src/pages/HomePage.tsx)._
 
+### The teacher preview mirrors the hero chat live
+
+_2026-07-13_
+
+**Decision:** The homepage's "teacher's view" section renders the real teacher
+monitoring card (`ChatCard`) fed by the **same `useChatDemo` instance** as the
+hero chatbox — one shared conversation shown from two seats. Type as the Moon
+in the hero and the message appears in the teacher card with the sender's name
+prefixed. The homepage card gets no `onEndChat`, and `ChatCard` hides its End
+chat button whenever that handler is absent.
+
+**Why:** The strongest proof of "only the teacher sees who's who" is watching
+your own anonymous message show up further down the page with a name attached.
+A single source of truth also means the student and teacher previews can never
+drift out of sync — same reasoning as
+[The hero chatbox is the product running live](#the-hero-chatbox-is-the-product-running-live-not-a-mockup).
+The End chat button is hidden because a landing page shouldn't offer a
+destructive-looking control that kicks no one out of anything.
+
+_Implemented in [HomePage](client/src/pages/HomePage.tsx) (owns the chat),
+[TeacherViewSection](client/src/components/home/TeacherViewSection.tsx),
+[HeroChatbox](client/src/components/home/HeroChatbox.tsx) (chat is now a prop),
+and [ChatCard](client/src/components/Teacher/ChatCard/index.tsx)._
+
+### No testimonials on the homepage
+
+_2026-07-13_
+
+**Decision:** The homepage has no testimonials or social-proof section. The
+flow is hero → teacher's view → how it works → founder's note → contact.
+
+**Why:** Product-owner call. Pre-launch there are no real teacher quotes to
+show, and invented praise would clash with the hand-made honesty the page is
+built on (see
+[The hero looks hand-made and never mentions AI](#the-hero-looks-hand-made-and-never-mentions-ai)).
+Revisit once real teachers have run real activities and said real things.
+
+_Implemented in [HomePage](client/src/pages/HomePage.tsx)._
+
 ### The hero demo goes quiet after two Armstrong lines
 
 _2026-07-12_
@@ -1509,7 +1559,7 @@ maybe act natural" hangs there waiting for the visitor to answer.
 
 _Implemented in [heroChatDemo.ts](client/src/mockData/heroChatDemo.ts); the
 empty-pool guard is in
-[useChatDemo.ts](client/src/components/Student/Chatbox/useChatDemo.ts)._
+[useChatDemo.ts](client/src/components/chat/useChatDemo.ts)._
 
 ### Demo students have short names, and the teacher is never one of them
 
@@ -1610,45 +1660,6 @@ students tap Join. You do the hosting.") was removed at all widths.
 **Why:** Founder call (2026-07-12): the buttons belong right after the pitch
 everywhere, and the helper line was extra chrome the button labels already
 cover.
-
-_Implemented in [HomePage](client/src/pages/HomePage.tsx)._
-
-### The teacher preview mirrors the hero chat live
-
-_2026-07-13_
-
-**Decision:** The homepage's "teacher's view" section renders the real teacher
-monitoring card (`ChatCard`) fed by the **same `useChatDemo` instance** as the
-hero chatbox — one shared conversation shown from two seats. Type as the Moon
-in the hero and the message appears in the teacher card with the sender's name
-prefixed. The homepage card gets no `onEndChat`, and `ChatCard` hides its End
-chat button whenever that handler is absent.
-
-**Why:** The strongest proof of "only the teacher sees who's who" is watching
-your own anonymous message show up further down the page with a name attached.
-A single source of truth also means the student and teacher previews can never
-drift out of sync — same reasoning as
-[The hero chatbox is the product running live](#the-hero-chatbox-is-the-product-running-live-not-a-mockup).
-The End chat button is hidden because a landing page shouldn't offer a
-destructive-looking control that kicks no one out of anything.
-
-_Implemented in [HomePage](client/src/pages/HomePage.tsx) (owns the chat),
-[TeacherViewSection](client/src/components/home/TeacherViewSection.tsx),
-[HeroChatbox](client/src/components/home/HeroChatbox.tsx) (chat is now a prop),
-and [ChatCard](client/src/components/Teacher/ChatCard/index.tsx)._
-
-### No testimonials on the homepage
-
-_2026-07-13_
-
-**Decision:** The homepage has no testimonials or social-proof section. The
-flow is hero → teacher's view → how it works → founder's note → contact.
-
-**Why:** Product-owner call. Pre-launch there are no real teacher quotes to
-show, and invented praise would clash with the hand-made honesty the page is
-built on (see
-[The hero looks hand-made and never mentions AI](#the-hero-looks-hand-made-and-never-mentions-ai)).
-Revisit once real teachers have run real activities and said real things.
 
 _Implemented in [HomePage](client/src/pages/HomePage.tsx)._
 
@@ -1991,6 +2002,8 @@ people, and it gives the lobby screen a chance to land.
 
 _Implemented in
 [JoinActivityPage.tsx](client/src/pages/student/JoinActivityPage.tsx)._
+
+---
 
 ## Routes & app structure
 
