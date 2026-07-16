@@ -123,6 +123,7 @@ the affected part. Link related entries by title anchor, never by "above" /
 - [Routes & app structure](#routes--app-structure)
   - [The temporary `/demo/*` routes are gone — every surface lives in its real flow](#the-temporary-demo-routes-are-gone--every-surface-lives-in-its-real-flow)
 - [Process & tooling](#process--tooling)
+  - [The repo is public on GitHub under MIT, and main auto-deploys to Vercel](#the-repo-is-public-on-github-under-mit-and-main-auto-deploys-to-vercel)
   - [Testing stays small while the app is UI-only: logic tests, no DOM](#testing-stays-small-while-the-app-is-ui-only-logic-tests-no-dom)
   - [The Fable prompt series document was deleted, not archived](#the-fable-prompt-series-document-was-deleted-not-archived)
   - [DECISIONS.md stays one file, with a linked table of contents](#decisionsmd-stays-one-file-with-a-linked-table-of-contents)
@@ -1713,6 +1714,27 @@ _Routes live in [App.tsx](client/src/App.tsx)._
 ---
 
 ## Process & tooling
+
+### The repo is public on GitHub under MIT, and main auto-deploys to Vercel
+
+_2026-07-16_
+
+**Decision:** The repo is public at
+[github.com/mssiegel/chaverola](https://github.com/mssiegel/chaverola) under
+the MIT license. Hosting is a Vercel project named `chaverola` with Root
+Directory `client`; every push to `main` deploys straight to production —
+there is no staging branch. `client/vercel.json` holds the SPA rewrite so
+deep links (`/activity/host/1234`, `/he/...`) resolve on a direct load. The
+GitHub description names no tech stack, on purpose: it describes only what
+Chaverola is, so it never goes stale as the stack evolves.
+
+**Why:** Product-owner call. MIT was chosen over the all-rights-reserved
+default so others can reuse the code. Deploy-on-main matches the
+commit-directly-to-main workflow (no PRs to gate a release train on), and a
+UI-only demo app with mock data carries no rollout risk that would justify
+one.
+
+_Implemented in [LICENSE](LICENSE) and [vercel.json](client/vercel.json)._
 
 ### Testing stays small while the app is UI-only: logic tests, no DOM
 
