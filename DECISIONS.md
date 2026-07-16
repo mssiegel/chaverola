@@ -1813,6 +1813,11 @@ stage on, pinned below the corner pills so the stages scroll underneath it;
 same wording as before, still label-only — no teacher nudges inside the
 student experience. Supersedes
 [Demo surfaces say so: a pretend-students chip on both views](#demo-surfaces-say-so-a-pretend-students-chip-on-both-views).
+(**2026-07-16, later the same day:** the teacher notice is a centered
+floating golden card — rounded, shadowed, hugging its text — instead of an
+edge-to-edge bar, matching the student world's card. Everything else holds:
+solid gold, sticky under the navbar for the whole scroll, "Start your own"
+link kept.)
 
 **Why:** Founder feedback (2026-07-16): the wording was right, but the chip
 was too easy to miss — the notice must be big and obvious, and it must stay
@@ -1820,6 +1825,10 @@ visible while scrolling (asked first for the teacher page, then extended to
 the student world the same day). Honesty about the demo is
 load-bearing (a visitor who realizes late that the students are pretend
 feels tricked), and the always-visible "Start your own" is the sales exit.
+The full-width bar was then softened to a centered card (founder pick,
+2026-07-16): edge-to-edge reads like a system warning or cookie notice,
+while the floating card keeps the can't-miss size and persistence, looks
+friendlier, and makes the two demo surfaces visually consistent.
 
 _Implemented in [DemoBanner.tsx](client/src/components/demo/DemoBanner.tsx)
 (which replaced `DemoChip.tsx`), rendered by

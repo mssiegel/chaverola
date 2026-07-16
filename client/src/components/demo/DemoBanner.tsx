@@ -9,11 +9,13 @@ import { LocaleLink } from "@/components/layout/LocaleLink";
  * (2026-07-16) was that it's too easy to miss — see DECISIONS.md → "The demo
  * notice is a banner you can't miss".
  *
- * Default theme: a full-width golden bar for the teacher host page. It sticks
- * just below the navbar (top offsets match AppLayout's h-14/h-16 header) so
- * it never scrolls away, and slims down from `lg` up so it clears the
- * pairing rail pinned at top-24. HostHeader's condensed waiting bar stands
- * down on the demo so the two never fight over this band.
+ * Default theme: a centered golden card for the teacher host page, matching
+ * the student world's card so the two demo surfaces read as one idiom. It
+ * sticks just below the navbar (top offsets clear AppLayout's h-14/h-16
+ * header with a small gap so the card visibly floats), and slims down from
+ * `lg` up so it clears the pairing rail pinned at top-24. HostHeader's
+ * condensed waiting bar stands down on the demo so the two never fight over
+ * this band.
  *
  * `onWorld`: a golden card for the purple student world, label only — no
  * teacher nudges inside the student experience. It pins too: `top-20` equals
@@ -30,8 +32,8 @@ export function DemoBanner({ onWorld = false }: { onWorld?: boolean }) {
     );
   }
   return (
-    <div className="sticky top-14 z-20 border-b border-foreground/10 bg-brand-sun sm:top-16">
-      <p className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-center gap-x-2 px-4 py-1.5 text-center text-sm font-semibold text-foreground lg:py-1">
+    <div className="sticky top-16 z-20 px-4 sm:top-[4.5rem]">
+      <p className="mx-auto flex w-fit max-w-full flex-wrap items-center justify-center gap-x-2 rounded-2xl bg-brand-sun px-5 py-2.5 text-center text-sm font-semibold text-foreground shadow-lg lg:py-1.5">
         This is the demo class. The students are pretend.
         <LocaleLink
           to="/activity/create"
