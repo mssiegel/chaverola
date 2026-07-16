@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { DEMO_JOIN_CODE } from "@/mockData";
 import type { HostedActivity } from "@/types/activity";
 
 /**
@@ -70,8 +71,10 @@ export function HostHeader({
 
       {/* The condensed bar once the hero stat scrolls away. Purely visual —
           it repeats what's already on the page — so it stays out of the
-          accessibility tree. */}
-      {statOffScreen && (
+          accessibility tree. On the demo activity the sticky DemoBanner owns
+          the under-navbar band, so this bar stands down there (the desktop
+          pairing rail still shows the count). */}
+      {statOffScreen && activity.joinCode !== DEMO_JOIN_CODE && (
         <div
           aria-hidden
           className="fixed inset-x-0 top-14 z-10 animate-in border-b border-border/70 bg-background/90 backdrop-blur-sm duration-200 fade-in slide-in-from-top-2 motion-reduce:animate-none sm:top-16"

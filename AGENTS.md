@@ -10,14 +10,14 @@ The demo flows are a **permanent product surface** — the homepage links to
 them and the founder pitches with them — not scaffolding; see the working
 rule below. The map:
 
-| Surface               | Route                                     | Where it lives                                                                                                                                                                                                   |
-| --------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Homepage              | `/`                                       | `client/src/pages/HomePage.tsx` + `components/home/` — the hero chatbox and the teacher-view `ChatCard` mirror one live `useChatDemo` chat; demo section (`DemoSection.tsx`); founder's note with photo fallback |
-| Student join flow     | `/activity/join[/:joinCode]`              | `client/src/pages/student/JoinActivityPage.tsx` — code → name → lobby → chatting → ended, all on one URL; `components/Student/ChatStage.tsx` owns the chat stages, keyed per match                               |
-| Teacher setup         | `/activity/create`                        | `client/src/components/Teacher/ActivitySetup/` — form UI; the caps, draft persistence, validation, and hand-off live in `client/src/lib/activitySetup.ts`                                                        |
-| Teacher live activity | `/activity/host/:joinCode`                | `client/src/components/Teacher/HostActivity/` — engine `useHostActivityDemo.ts` + pure world model `hostWorld.ts`; live-edit draft model in `client/src/lib/hostActivity.ts`                                     |
-| Demo entry URLs       | `/demo`, `/demo/teacher`, `/demo/student` | Thin locale-aware redirects in `client/src/App.tsx` into the host demo / join flow — never pages of their own (see DECISIONS.md → "Routes & app structure")                                                      |
-| Not found             | `*`                                       | `client/src/pages/NotFoundPage.tsx`                                                                                                                                                                              |
+| Surface               | Route                                     | Where it lives                                                                                                                                                                                                                           |
+| --------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Homepage              | `/`                                       | `client/src/pages/HomePage.tsx` + `components/home/` — the hero chatbox and the teacher-view `ChatCard` mirror one live `useChatDemo` chat; demo section (`DemoSection.tsx`); founder's note with photo fallback                         |
+| Student join flow     | `/activity/join[/:joinCode]`              | `client/src/pages/student/JoinActivityPage.tsx` — code → name → lobby → chatting → ended, all on one URL; `components/Student/ChatStage.tsx` owns the chat stages, keyed per match                                                       |
+| Teacher setup         | `/activity/create`                        | `client/src/components/Teacher/ActivitySetup/` — form UI; the caps, draft persistence, validation, and hand-off live in `client/src/lib/activitySetup.ts`                                                                                |
+| Teacher live activity | `/activity/host/:joinCode`                | `client/src/components/Teacher/HostActivity/` — engine `useHostActivityDemo.ts` + pure world model `hostWorld.ts`; live-edit draft model in `client/src/lib/hostActivity.ts`                                                             |
+| Demo entry URLs       | `/demo`, `/demo/teacher`, `/demo/student` | Thin locale-aware redirects in `client/src/App.tsx` — teacher entries land on `/activity/host/1234`, the student entry on `/activity/join/1234` (name prefilled); never pages of their own (see DECISIONS.md → "Routes & app structure") |
+| Not found             | `*`                                       | `client/src/pages/NotFoundPage.tsx`                                                                                                                                                                                                      |
 
 Load-bearing flow facts (the reasoning for each is in DECISIONS.md):
 
@@ -39,10 +39,13 @@ Load-bearing flow facts (the reasoning for each is in DECISIONS.md):
 - The setup form and the host page's live settings panel share their field
   components and validation; live edits propagate on a 1-second pause,
   last-valid-wins, with stable character ids (`lib/hostActivity.ts`).
-- Demo surfaces are marked and steerable: a `DemoChip` ("the students are
-  pretend") shows on the host page and the student world whenever the
-  activity is the `1234` demo, and the "You're driving this demo" panels
-  are permanent, teacher-facing demo furniture. The demo lobby auto-pairs
+- Demo surfaces are marked and steerable: a golden `DemoBanner` ("the
+  students are pretend") shows whenever the activity is the `1234` demo —
+  sticky under the navbar on the host page (where HostHeader's condensed
+  waiting bar stands down), a solid card in the student world — and the
+  "You're driving this demo" panels are permanent, teacher-facing demo
+  furniture. Student-demo entries land on `/activity/join/1234` with the
+  name prefilled (`DEMO_STUDENT_NAME`, "Rachel"). The demo lobby auto-pairs
   after ~20s if no demo button is pressed (`JoinActivityPage.tsx`).
 - Setup-page layout gotcha: the form grid must NOT get `items-start`, or the
   sticky `LobbyPreview` rail loses its track (there's a code comment on it).
@@ -170,7 +173,7 @@ Run from the repo root:
   (`DemoControlsPanel` — the dashed "You're driving this demo" panel — with
   `EventButton`, `DemoToggle`, `ChatDemoControls` — the student-seat trigger
   panel used by the join flow's chatting stage, with an `extraEvents` slot —
-  and `DemoChip`, the pretend-students marker). The panels also appear in the
+  and `DemoBanner`, the pretend-students banner). The panels also appear in the
   join-flow lobby and on the teacher host page. It is teacher-facing and
   permanent on the demo flows, NOT dev scaffolding (founder pitches use it);
   when a real backend arrives it leaves real activities only. The `onWorld`

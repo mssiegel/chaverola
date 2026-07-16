@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AppLayout } from "@/components/layout/AppLayout";
+import { ScrollToTop } from "@/components/layout/ScrollToTop";
 import { StudentWorldLayout } from "@/components/layout/StudentWorldLayout";
 import { useLocalePath } from "@/lib/locale";
 import { DEMO_JOIN_CODE } from "@/mockData";
@@ -43,7 +44,9 @@ function LocalizedRoutes() {
         <Route path="activity/join/:joinCode" element={<JoinActivityPage />} />
       </Route>
       {/* The demo entry URLs — easy to say out loud in a meeting. Bare /demo
-          lands on the teacher view because that's who a pitch is aimed at. */}
+          lands on the teacher view because that's who a pitch is aimed at.
+          The student entry skips the code screen: it lands on the name step
+          with the demo name already filled in (see JoinActivityPage). */}
       <Route
         path="demo"
         element={<DemoRedirect to={`/activity/host/${DEMO_JOIN_CODE}`} />}
@@ -54,7 +57,7 @@ function LocalizedRoutes() {
       />
       <Route
         path="demo/student"
-        element={<DemoRedirect to="/activity/join" />}
+        element={<DemoRedirect to={`/activity/join/${DEMO_JOIN_CODE}`} />}
       />
     </>
   );
@@ -62,9 +65,12 @@ function LocalizedRoutes() {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/">{LocalizedRoutes()}</Route>
-      <Route path="/he">{LocalizedRoutes()}</Route>
-    </Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
+        <Route path="/">{LocalizedRoutes()}</Route>
+        <Route path="/he">{LocalizedRoutes()}</Route>
+      </Routes>
+    </>
   );
 }

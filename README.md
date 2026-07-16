@@ -40,15 +40,15 @@ pnpm dev            # run the client dev server (Vite)
 Then open the URL Vite prints. The demo join code **`1234`** always works,
 and `/demo` jumps you straight into the running teacher demo.
 
-| Route                      | What it shows                                                      |
-| -------------------------- | ------------------------------------------------------------------ |
-| `/`                        | Homepage — the hero chatbox is the real product running a demo     |
-| `/activity/join`           | Student join-code entry                                            |
-| `/activity/join/:joinCode` | Name entry → waiting lobby (one URL for the whole student journey) |
-| `/activity/create`         | Teacher activity setup                                             |
-| `/activity/host/:joinCode` | Teacher's live activity page (join code `1234` hosts the demo)     |
-| `/demo` · `/demo/teacher`  | Redirects to the teacher demo (`/activity/host/1234`)              |
-| `/demo/student`            | Redirects to the student join flow (`/activity/join`)              |
+| Route                      | What it shows                                                           |
+| -------------------------- | ----------------------------------------------------------------------- |
+| `/`                        | Homepage — the hero chatbox is the real product running a demo          |
+| `/activity/join`           | Student join-code entry                                                 |
+| `/activity/join/:joinCode` | Name entry → waiting lobby (one URL for the whole student journey)      |
+| `/activity/create`         | Teacher activity setup                                                  |
+| `/activity/host/:joinCode` | Teacher's live activity page (join code `1234` hosts the demo)          |
+| `/demo` · `/demo/teacher`  | Redirects to the teacher demo (`/activity/host/1234`)                   |
+| `/demo/student`            | Redirects into the student demo (`/activity/join/1234`, name prefilled) |
 
 Every route also exists under an `/he` prefix (Hebrew variant — same English text for
 now). Routes are canonical: don't invent new ones beyond the project brief's table.

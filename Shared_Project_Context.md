@@ -52,15 +52,15 @@ You may take **loose** inspiration from Frempco.com, but do **not** copy it.
 
 ## Routes (Canonical — Do Not Invent Others)
 
-| Route                      | Purpose                                                                                                          |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `/`                        | Homepage                                                                                                         |
-| `/activity/join`           | Student enters 4-digit join code                                                                                 |
-| `/activity/join/:joinCode` | Student enters name → waiting lobby → chatting → chat ended (same route through all stages; UI changes by stage) |
-| `/activity/create`         | Teacher sets up an activity                                                                                      |
-| `/activity/host/:joinCode` | Teacher's live activity page                                                                                     |
-| `/demo`, `/demo/teacher`   | Speakable demo entry — redirects to `/activity/host/1234` (never a page of its own)                              |
-| `/demo/student`            | Speakable demo entry — redirects to `/activity/join` (never a page of its own)                                   |
+| Route                      | Purpose                                                                                                            |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `/`                        | Homepage                                                                                                           |
+| `/activity/join`           | Student enters 4-digit join code                                                                                   |
+| `/activity/join/:joinCode` | Student enters name → waiting lobby → chatting → chat ended (same route through all stages; UI changes by stage)   |
+| `/activity/create`         | Teacher sets up an activity                                                                                        |
+| `/activity/host/:joinCode` | Teacher's live activity page                                                                                       |
+| `/demo`, `/demo/teacher`   | Speakable demo entry — redirects to `/activity/host/1234` (never a page of its own)                                |
+| `/demo/student`            | Speakable demo entry — redirects to `/activity/join/1234`, the name step, name prefilled (never a page of its own) |
 
 ### Hebrew variant
 

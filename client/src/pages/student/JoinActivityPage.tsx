@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
 import { ArrowRight, Handshake, Users, UserX } from "lucide-react";
 
-import { DemoChip } from "@/components/demo/DemoChip";
+import { DemoBanner } from "@/components/demo/DemoBanner";
 import { DemoControlsPanel, EventButton } from "@/components/demo/DemoControls";
 import type { StudentWorldOutletContext } from "@/components/layout/StudentWorldLayout";
 import { ChatStage } from "@/components/Student/ChatStage";
@@ -16,6 +16,7 @@ import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 import {
   DEMO_JOIN_CODE,
+  DEMO_STUDENT_NAME,
   findActivityByCode,
   type ActivityChatScenarioKey,
 } from "@/mockData";
@@ -60,6 +61,11 @@ const STUDENT_CARD_CLASS =
  * entry, and a session that matches the code means the lobby — until a mock
  * match starts a chat. The match itself lives only in memory (chat state is
  * mock-only), so a mid-chat refresh lands back in the lobby by design.
+ *
+ * Demo entries (the homepage's "Try the student side", /demo/student) skip
+ * the code screen: they land straight on /activity/join/1234 with the name
+ * already filled in, so the lobby is one click away — see DECISIONS.md →
+ * "The student demo skips the code screen and joins you as Rachel".
  */
 export function JoinActivityPage() {
   const { joinCode: joinCodeParam } = useParams();
@@ -136,12 +142,18 @@ export function JoinActivityPage() {
   const [codeNotFound, setCodeNotFound] = useState(
     () => joinCodeParam !== undefined && activity === undefined
   );
-  const [name, setName] = useState("");
+  // The demo arrives with a name ready, so the lobby is one click away; it
+  // stays editable, and real codes always start blank.
+  const demoPrefillName =
+    activity?.joinCode === DEMO_JOIN_CODE ? DEMO_STUDENT_NAME : "";
+  const [name, setName] = useState(demoPrefillName);
   const [removedByTeacher, setRemovedByTeacher] = useState(false);
 
-  // Autofocusing the code input on a phone pops the keyboard over half the
-  // world before the student has even seen the page — desktop only. The name
-  // input autofocuses everywhere: by then they're committed to joining.
+  // Autofocusing an input on a phone pops the keyboard over half the world,
+  // so phones only get it when there's typing to do: never on the code input
+  // (fresh landing, let the page breathe first) and not on a prefilled demo
+  // name. Desktop always autofocuses — no keyboard to pop, and Enter submits
+  // the prefilled name straight away.
   const isDesktopViewport = window.matchMedia("(min-width: 640px)").matches;
 
   const isCodeComplete = /^\d{4}$/.test(code);
@@ -171,19 +183,19 @@ export function JoinActivityPage() {
   };
 
   // Mock event: the teacher kicks the student out of the activity. They're
-  // signed out on the spot and must enter their name again to rejoin.
+  // signed out on the spot and land back on the name step (which the demo
+  // refills, so rejoining stays one click).
   const teacherRemovesStudent = () => {
     signOut();
-    setName("");
+    setName(demoPrefillName);
     setRemovedByTeacher(true);
   };
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center gap-6">
-      {/* From the name stage on, the world is honest about being the demo.
-          The code screen has no resolved activity yet (its own demo-code
-          pill covers it). */}
-      {activity?.joinCode === DEMO_JOIN_CODE && <DemoChip onWorld />}
+      {/* From the name stage on, the world is honest about being the demo
+          (the code screen resolves no activity, so it can't know yet). */}
+      {activity?.joinCode === DEMO_JOIN_CODE && <DemoBanner onWorld />}
       {activity && session && match ? (
         // Chatting + chat ended, on this same route. Keyed per match so a
         // rematch always boots a fresh chat.
@@ -251,7 +263,7 @@ export function JoinActivityPage() {
                 <input
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  autoFocus
+                  autoFocus={isDesktopViewport || name === ""}
                   maxLength={40}
                   aria-label="Your name"
                   placeholder="Your name"
@@ -296,23 +308,6 @@ export function JoinActivityPage() {
               </Button>
             </form>
           </div>
-
-          {stage === "code" && (
-            <p className="rounded-full bg-white/15 px-4 py-2 text-sm text-white/85 backdrop-blur-sm">
-              Demo code{" "}
-              <button
-                type="button"
-                onClick={() => {
-                  setCode(DEMO_JOIN_CODE);
-                  setCodeNotFound(false);
-                }}
-                className="font-semibold text-white underline-offset-2 hover:underline"
-              >
-                {DEMO_JOIN_CODE}
-              </button>{" "}
-              always works.
-            </p>
-          )}
         </div>
       )}
     </div>

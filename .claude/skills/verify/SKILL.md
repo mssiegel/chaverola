@@ -41,8 +41,11 @@ Useful, stable handles:
   (`Caesar's ghost`, `Brutus`, …), host name is `#setup-host-name`. Two
   "Host the Activity" buttons exist (desktop rail + mobile dock) — click the
   visible one. Success = `waitForURL(/\/activity\/host\/\d{4}$/)`.
-- Host page (`/activity/host/1234`): the desktop pairing rail is the
-  `aside`; queue rows are `ul li button[aria-pressed]` (tap-to-select), each
+- Host page (`/activity/host/1234`): a golden demo banner ("This is the
+  demo class…") is sticky under the navbar; the condensed "waiting to chat"
+  bar never appears on the demo page (it stands down for the banner), so
+  assert it only on teacher-created activities. The desktop pairing rail is
+  the `aside`; queue rows are `ul li button[aria-pressed]` (tap-to-select), each
   row's remove control is `button[aria-label="Remove <name> from the
 activity"]`. Section headers are buttons whose `innerText` carries the
   count pill (e.g. "Chats in progress 2"). All confirmations are one shared
@@ -50,16 +53,20 @@ activity"]`. Section headers are buttons whose `innerText` carries the
   `getByRole("heading")` (button labels repeat the title words), cancel is
   "Never mind". Live-settings edits propagate ~1s after typing pauses
   (assert on "Hosted by <new name>" in the header after ~1.6s).
-- Student join (`/activity/join`): code input accepts Enter; the name step
-  swaps in-place — wait for `getByPlaceholder("Your name")`, then click
-  "Join Activity"; lobby shows "Waiting for your match". Auto-match keeps
+- Student join (`/activity/join`): code input accepts Enter; the code
+  screen carries no demo hint (the old "Demo code 1234 always works" pill
+  is gone). The name step swaps in-place — wait for
+  `getByPlaceholder("Your name")`, then click "Join Activity"; lobby shows
+  "Waiting for your match". On `/activity/join/1234` the name input arrives
+  prefilled "Rachel" (demo only — cleared on real codes). Auto-match keeps
   the host-page queue moving (~20s waits), so re-query rows right before
   clicking and avoid exact queue-count assertions.
 - Demo entry URLs: `/demo` and `/demo/teacher` redirect to
-  `/activity/host/1234`; `/demo/student` redirects to `/activity/join`
-  (locale-preserving: `/he/demo` → `/he/activity/host/1234`). The DEMO
-  lobby also auto-pairs the student ~20s after it renders — take lobby
-  assertions before that fires, or expect to land in a chat.
+  `/activity/host/1234`; `/demo/student` redirects to `/activity/join/1234`
+  (name step, prefilled; locale-preserving: `/he/demo` →
+  `/he/activity/host/1234`). The DEMO lobby also auto-pairs the student
+  ~20s after it renders — take lobby assertions before that fires, or
+  expect to land in a chat.
 
 ## Gotchas
 

@@ -11,7 +11,8 @@ import { DEMO_JOIN_CODE } from "@/mockData";
 /**
  * "See it in action": the homepage's two demo doorways, straight into the
  * real flows running the demo activity — the teacher's host dashboard
- * mid-round, and the student trip from code entry to a chat. Plain
+ * mid-round, and the student trip from the name step to a chat (the demo
+ * skips code entry and prefills the name; see JoinActivityPage). Plain
  * text-and-button blocks, not icon cards, to match the page's hand-made look
  * (see DECISIONS.md → "The hero looks hand-made and never mentions AI").
  * The founder opens the same places in pitches via the speakable redirect
@@ -53,11 +54,11 @@ export function DemoSection() {
             The student side
           </h3>
           <p className="text-[15px] text-pretty text-muted-foreground">
-            Join with the demo code, pick a name, and get matched into a
-            character chat. It's the same trip your students will take.
+            You join the demo class as a student named Rachel and get matched
+            into a character chat. It's the same trip your students will take.
           </p>
           <Button asChild variant="secondary">
-            <LocaleLink to="/activity/join">
+            <LocaleLink to={`/activity/join/${DEMO_JOIN_CODE}`}>
               <Gamepad2 className="size-5 text-brand-grape" />
               Try the student side
             </LocaleLink>

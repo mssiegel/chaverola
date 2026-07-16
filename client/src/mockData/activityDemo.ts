@@ -7,6 +7,14 @@ import type { Activity } from "@/types/activity";
 
 export const DEMO_JOIN_CODE = "1234";
 
+/**
+ * The name waiting in the demo's name field, so demo entries (the homepage's
+ * "Try the student side", /demo/student) are one click from the lobby.
+ * Deliberately absent from every pretend roster, so the demo never shows two
+ * Rachels side by side.
+ */
+export const DEMO_STUDENT_NAME = "Rachel";
+
 export const demoActivity: Activity = {
   joinCode: DEMO_JOIN_CODE,
   hostName: "Ms. Cohen",

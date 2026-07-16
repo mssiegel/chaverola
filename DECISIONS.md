@@ -123,11 +123,13 @@ the affected part. Link related entries by title anchor, never by "above" /
 - [Branding & page titles](#branding--page-titles)
   - [Page titles read "&lt;Page&gt; | Chaverola", page name first](#page-titles-read-ltpagegt--chaverola-page-name-first)
 - [Demo flows & demo furniture](#demo-flows--demo-furniture)
+  - [The student demo skips the code screen and joins you as Rachel](#the-student-demo-skips-the-code-screen-and-joins-you-as-rachel)
+  - [The demo notice is a banner you can't miss](#the-demo-notice-is-a-banner-you-cant-miss)
   - [When the backend arrives: real activities get strictly real, and `1234` stays the only demo](#when-the-backend-arrives-real-activities-get-strictly-real-and-1234-stays-the-only-demo)
-  - [Demo surfaces say so: a pretend-students chip on both views](#demo-surfaces-say-so-a-pretend-students-chip-on-both-views)
   - [The demo control panels are teacher-facing and permanent (on demo flows)](#the-demo-control-panels-are-teacher-facing-and-permanent-on-demo-flows)
   - [The demo lobby pairs you by itself after 20 seconds](#the-demo-lobby-pairs-you-by-itself-after-20-seconds)
 - [Routes & app structure](#routes--app-structure)
+  - [Clicking to a new page opens it at the top](#clicking-to-a-new-page-opens-it-at-the-top)
   - [`/demo`, `/demo/teacher`, and `/demo/student` are thin redirects, never pages](#demo-demoteacher-and-demostudent-are-thin-redirects-never-pages)
   - [The temporary `/demo/*` routes are gone — every surface lives in its real flow](#the-temporary-demo-routes-are-gone--every-surface-lives-in-its-real-flow)
 - [Process & tooling](#process--tooling)
@@ -136,6 +138,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [The Fable prompt series document was deleted, not archived](#the-fable-prompt-series-document-was-deleted-not-archived)
   - [DECISIONS.md stays one file, with a linked table of contents](#decisionsmd-stays-one-file-with-a-linked-table-of-contents)
 - [Superseded](#superseded)
+  - [Demo surfaces say so: a pretend-students chip on both views](#demo-surfaces-say-so-a-pretend-students-chip-on-both-views)
   - [Hero CTAs sit above the fold on phones](#hero-ctas-sit-above-the-fold-on-phones)
 
 ---
@@ -982,6 +985,9 @@ the page header, re-animating on every change; when it scrolls out of view
 it condenses into a slim bar fixed under the navbar (count + pin). The page
 has no "Activity in Progress" status label. (Product-owner pick,
 2026-07-15, over a static header stat and over a floating HUD pill.)
+(**2026-07-16:** on the demo activity the condensed bar stands down — the
+sticky demo banner owns the under-navbar band there; see
+[The demo notice is a banner you can't miss](#the-demo-notice-is-a-banner-you-cant-miss).)
 
 **Why:** A teacher glancing from across a classroom must catch the number
 instantly, and it must visibly react when it changes — students sitting
@@ -1742,6 +1748,63 @@ _Implemented in [usePageTitle](client/src/lib/usePageTitle.ts)._
 
 ## Demo flows & demo furniture
 
+### The student demo skips the code screen and joins you as Rachel
+
+_2026-07-16_
+
+**Decision:** Every student-demo doorway (the homepage's "Try the student
+side" and `/demo/student`) lands directly on `/activity/join/1234` — the
+name step — with the name field prefilled "Rachel" (`DEMO_STUDENT_NAME`), so
+the lobby is one click (or one Enter) away. The name stays editable, and the
+demo's teacher-removes-you event refills it so rejoining is one click too.
+The code screen's "Demo code 1234 always works" pill is gone: nothing points
+the demo at code entry anymore, so the screen real students use carries no
+demo advertising. On phones a prefilled name doesn't autofocus — the
+keyboard must not bury the world before it's been seen. "Rachel" belongs to
+no pretend roster, so the demo never shows two Rachels.
+
+**Why:** Founder call (2026-07-16), reversing the earlier "walk the full
+trip from its first step" choice recorded in
+[`/demo`, `/demo/teacher`, and `/demo/student` are thin redirects, never pages](#demo-demoteacher-and-demostudent-are-thin-redirects-never-pages).
+Typing a code and inventing a name is the boring part of the trip, and a
+homepage visitor gives a demo seconds before deciding — the interesting part
+(the lobby, the matching, chatting in character) should be one click away.
+Anyone curious about code entry can still visit `/activity/join` and type
+`1234` by hand.
+
+_Implemented in [App.tsx](client/src/App.tsx),
+[DemoSection.tsx](client/src/components/home/DemoSection.tsx),
+[JoinActivityPage.tsx](client/src/pages/student/JoinActivityPage.tsx), and
+[activityDemo.ts](client/src/mockData/activityDemo.ts)._
+
+### The demo notice is a banner you can't miss
+
+_2026-07-16_
+
+**Decision:** The pretend-students notice is a golden (brand-sun) banner on
+both views, promoted from a small pill. Teacher host page: a full-width bar
+pinned directly under the navbar for the whole scroll — "This is the demo
+class. The students are pretend." with the "Start your own" link — and
+HostHeader's condensed waiting bar stands down on the demo so the two never
+fight over that band (the desktop pairing rail still shows the count).
+Student world: a solid golden card at the top of the column from the name
+stage on, same wording as before, still label-only — no teacher nudges
+inside the student experience. Supersedes
+[Demo surfaces say so: a pretend-students chip on both views](#demo-surfaces-say-so-a-pretend-students-chip-on-both-views).
+
+**Why:** Founder feedback (2026-07-16): the wording was right, but the chip
+was too easy to miss — the notice must be big and obvious, and on the
+teacher page it must stay visible while scrolling. Honesty about the demo is
+load-bearing (a visitor who realizes late that the students are pretend
+feels tricked), and the always-visible "Start your own" is the sales exit.
+
+_Implemented in [DemoBanner.tsx](client/src/components/demo/DemoBanner.tsx)
+(which replaced `DemoChip.tsx`), rendered by
+[HostActivityPage](client/src/pages/teacher/HostActivityPage.tsx) and
+[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx); the
+stand-down lives in
+[HostHeader](client/src/components/Teacher/HostActivity/HostHeader.tsx)._
+
 ### When the backend arrives: real activities get strictly real, and `1234` stays the only demo
 
 _2026-07-16_
@@ -1770,33 +1833,6 @@ _The client-side seams are the engine hooks
 [useHostActivityDemo.ts](client/src/components/Teacher/HostActivity/useHostActivityDemo.ts))
 behind the `ChatRoomState`/`ChatRoomActions` contract in
 [chat.ts](client/src/types/chat.ts)._
-
-### Demo surfaces say so: a pretend-students chip on both views
-
-_2026-07-16_
-
-**Decision:** When the activity on screen is the demo (join code `1234`),
-the teacher host page shows a small sun-tinted chip — "This is the demo
-class. The students are pretend." with a quiet "Start your own" link — next
-to the For-teachers badge, and the student world shows a glass variant
-("This is the demo. The other students are pretend.") at the top of the
-column from the name stage on. Never on a teacher's own hosted activity.
-Not on the student code screen (no activity is resolved yet, and the
-demo-code pill covers it) and not on the homepage hero (its captions
-already say it's a sample). The student-world variant carries no link — no
-teacher nudges inside the student experience.
-
-**Why:** Founder call (2026-07-16), picking the subtle chip on both views
-over a full-width banner, a teacher-only chip, or nothing. Once real
-activities exist, a demo host page and a real one look identical — a
-teacher shouldn't have to wonder whether "Daniel Katz" is a real kid. A
-banner would eat phone space and make pitch demos look less like the
-product; the chip also doubles as the sales exit.
-
-_Implemented in [DemoChip.tsx](client/src/components/demo/DemoChip.tsx),
-rendered by
-[HostActivityPage](client/src/pages/teacher/HostActivityPage.tsx) and
-[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._
 
 ### The demo control panels are teacher-facing and permanent (on demo flows)
 
@@ -1845,13 +1881,36 @@ _Implemented in
 
 ## Routes & app structure
 
+### Clicking to a new page opens it at the top
+
+_2026-07-16_
+
+**Decision:** In-app navigation scrolls the window to the top of the page it
+opens. Two exceptions: browser back/forward keeps the browser's own scroll
+restoration, and switching languages (same page, only the `/he` prefix
+changes) keeps your place.
+
+**Why:** Founder bug report (2026-07-16): "Open the teacher demo", clicked
+from the homepage's demo section, opened the host page scrolled to its
+middle. SPA routers keep the window's scroll position across navigations
+unless told otherwise, so every link clicked from far down a page inherited
+that scroll — and landing mid-page reads as broken.
+
+_Implemented in
+[ScrollToTop.tsx](client/src/components/layout/ScrollToTop.tsx), mounted in
+[App.tsx](client/src/App.tsx)._
+
 ### `/demo`, `/demo/teacher`, and `/demo/student` are thin redirects, never pages
 
 _2026-07-16_
 
 **Decision:** Three speakable demo URLs: `/demo` and `/demo/teacher` land on
 `/activity/host/1234`; `/demo/student` lands on `/activity/join` — the code
-screen, so a visitor walks the student trip from its first step. All three
+screen, so a visitor walks the student trip from its first step.
+(**2026-07-16:** that last part changed — `/demo/student` now lands on
+`/activity/join/1234`; see
+[The student demo skips the code screen and joins you as Rachel](#the-student-demo-skips-the-code-screen-and-joins-you-as-rachel).)
+All three
 are locale-aware `<Navigate>` redirects with no page components of their
 own, and that's a hard rule:
 [The temporary `/demo/*` routes are gone](#the-temporary-demo-routes-are-gone--every-surface-lives-in-its-real-flow)
@@ -1967,6 +2026,34 @@ table of contents restores scannability without breaking any of that.
 
 Replaced decisions, kept for history. Don't apply these; each date line links
 to what replaced it.
+
+### Demo surfaces say so: a pretend-students chip on both views
+
+_2026-07-16 · Superseded by
+[The demo notice is a banner you can't miss](#the-demo-notice-is-a-banner-you-cant-miss)_
+
+**Decision:** When the activity on screen is the demo (join code `1234`),
+the teacher host page shows a small sun-tinted chip — "This is the demo
+class. The students are pretend." with a quiet "Start your own" link — next
+to the For-teachers badge, and the student world shows a glass variant
+("This is the demo. The other students are pretend.") at the top of the
+column from the name stage on. Never on a teacher's own hosted activity.
+Not on the student code screen (no activity is resolved yet, and the
+demo-code pill covers it) and not on the homepage hero (its captions
+already say it's a sample). The student-world variant carries no link — no
+teacher nudges inside the student experience.
+
+**Why:** Founder call (2026-07-16), picking the subtle chip on both views
+over a full-width banner, a teacher-only chip, or nothing. Once real
+activities exist, a demo host page and a real one look identical — a
+teacher shouldn't have to wonder whether "Daniel Katz" is a real kid. A
+banner would eat phone space and make pitch demos look less like the
+product; the chip also doubles as the sales exit.
+
+_Implemented in `DemoChip.tsx` (since replaced by
+[DemoBanner.tsx](client/src/components/demo/DemoBanner.tsx)), rendered by
+[HostActivityPage](client/src/pages/teacher/HostActivityPage.tsx) and
+[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._
 
 ### Hero CTAs sit above the fold on phones
 

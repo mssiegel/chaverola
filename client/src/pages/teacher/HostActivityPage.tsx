@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
 
-import { DemoChip } from "@/components/demo/DemoChip";
+import { DemoBanner } from "@/components/demo/DemoBanner";
 import { HostActivityDashboard } from "@/components/Teacher/HostActivity";
 import { Badge } from "@/components/ui/badge";
 import { readHostedActivity, saveHostedActivity } from "@/lib/activitySetup";
@@ -71,6 +71,11 @@ function HostedActivityView({
 
   return (
     <div className="relative isolate">
+      {/* The demo's pretend-students banner pins below the navbar for the
+          whole scroll; HostHeader's condensed waiting bar stands down on the
+          demo so the two never fight over that band. */}
+      {activity.joinCode === DEMO_JOIN_CODE && <DemoBanner />}
+
       {/* The setup page's sibling: same soft brand glow, clipped so it can
           never cause sideways scroll on phones. */}
       <div
@@ -83,9 +88,8 @@ function HostedActivityView({
       </div>
 
       <div className="mx-auto w-full max-w-6xl px-4 pt-8 pb-16 sm:pt-10">
-        <div className="mb-5 flex flex-wrap items-center gap-2">
+        <div className="mb-5">
           <Badge>For teachers</Badge>
-          {activity.joinCode === DEMO_JOIN_CODE && <DemoChip />}
         </div>
         <HostActivityDashboard
           activity={activity}
