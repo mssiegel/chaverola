@@ -97,6 +97,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Teacher chat cards: collapsed to the last 5 lines, End chat asks first](#teacher-chat-cards-collapsed-to-the-last-5-lines-end-chat-asks-first)
   - [Teacher view: character colors follow participant order](#teacher-view-character-colors-follow-participant-order)
 - [Homepage & hero](#homepage--hero)
+  - [The homepage has a "see it in action" section with doorways into both demos](#the-homepage-has-a-see-it-in-action-section-with-doorways-into-both-demos)
   - [On phones the live chat comes before the setup steps](#on-phones-the-live-chat-comes-before-the-setup-steps)
   - [The how-it-works footer answers cost, accounts, and devices](#the-how-it-works-footer-answers-cost-accounts-and-devices)
   - [The teacher bullets say the safety part out loud](#the-teacher-bullets-say-the-safety-part-out-loud)
@@ -120,7 +121,13 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Navbar: CTA label shortens on phones; language switcher swaps in place](#navbar-cta-label-shortens-on-phones-language-switcher-swaps-in-place)
 - [Branding & page titles](#branding--page-titles)
   - [Page titles read "&lt;Page&gt; | Chaverola", page name first](#page-titles-read-ltpagegt--chaverola-page-name-first)
+- [Demo flows & demo furniture](#demo-flows--demo-furniture)
+  - [When the backend arrives: real activities get strictly real, and `1234` stays the only demo](#when-the-backend-arrives-real-activities-get-strictly-real-and-1234-stays-the-only-demo)
+  - [Demo surfaces say so: a pretend-students chip on both views](#demo-surfaces-say-so-a-pretend-students-chip-on-both-views)
+  - [The demo control panels are teacher-facing and permanent (on demo flows)](#the-demo-control-panels-are-teacher-facing-and-permanent-on-demo-flows)
+  - [The demo lobby pairs you by itself after 20 seconds](#the-demo-lobby-pairs-you-by-itself-after-20-seconds)
 - [Routes & app structure](#routes--app-structure)
+  - [`/demo`, `/demo/teacher`, and `/demo/student` are thin redirects, never pages](#demo-demoteacher-and-demostudent-are-thin-redirects-never-pages)
   - [The temporary `/demo/*` routes are gone — every surface lives in its real flow](#the-temporary-demo-routes-are-gone--every-surface-lives-in-its-real-flow)
 - [Process & tooling](#process--tooling)
   - [The repo is public on GitHub under MIT, and main auto-deploys to Vercel](#the-repo-is-public-on-github-under-mit-and-main-auto-deploys-to-vercel)
@@ -1249,6 +1256,27 @@ _Assignment happens in [ChatCard](client/src/components/Teacher/ChatCard/index.t
 
 ## Homepage & hero
 
+### The homepage has a "see it in action" section with doorways into both demos
+
+_2026-07-16_
+
+**Decision:** Between the teacher-view section and how-it-works sits a demo
+section — eyebrow "See it in action", heading "Poke around a live class." —
+with two plain text-and-button blocks: "Open the teacher demo"
+(→ `/activity/host/1234`) and "Try the student side" (→ `/activity/join`).
+Secondary buttons on purpose, so the hero's reserved styles stay unique
+([Solid grape is reserved for Join](#solid-grape-is-reserved-for-join-both-host-buttons-are-outline)).
+The hero's own CTA pair is untouched.
+
+**Why:** Founder call (2026-07-16), choosing a dedicated section over a
+third hero CTA (crowds the two real conversion buttons) and over quiet text
+links (too easy to miss). Teachers should reach a full running classroom in
+one click, and the founder opens the same doorways in live pitches. It sits
+right after the teacher-view section because that section shows one mirrored
+chat — the natural next thought is "show me the whole room."
+
+_Implemented in [DemoSection.tsx](client/src/components/home/DemoSection.tsx)._
+
 ### On phones the live chat comes before the setup steps
 
 _2026-07-15_
@@ -1322,6 +1350,11 @@ the README).
 **Why:** Founder call (2026-07-15): remove the bare demo-links line, and
 "don't add a footer at all." A footer was proposed for credibility and
 declined — the founder's note with the contact email already closes the page.
+
+_Note (2026-07-16): the footer part stands. The demo-links part is revisited
+by [The homepage has a "see it in action" section with doorways into both demos](#the-homepage-has-a-see-it-in-action-section-with-doorways-into-both-demos)
+— a designed section the founder chose, not the bare links line this entry
+removed._
 
 _Implemented in [HomePage](client/src/pages/HomePage.tsx)._
 
@@ -1686,7 +1719,131 @@ _Implemented in [usePageTitle](client/src/lib/usePageTitle.ts)._
 
 ---
 
+## Demo flows & demo furniture
+
+### When the backend arrives: real activities get strictly real, and `1234` stays the only demo
+
+_2026-07-16_
+
+**Decision:** Recorded now so backend work builds toward it. Once `server/`
+is real: (1) join code `1234` is reserved forever as the only simulated
+activity — the backend must never hand it out (the client's
+`mockGenerateJoinCode` already refuses it). (2) A teacher's real activity
+shows only real students; the simulated classroom never leaks into it.
+(3) An unknown host code becomes a friendly not-found —
+[An unknown host code redirects to the demo activity](#an-unknown-host-code-redirects-to-the-demo-activity)
+is right only while every live code is fake and a dead link can't exist.
+(4) The demo control panels leave real activities and stay on the demo ones.
+
+**Why:** Founder call (2026-07-16). The demo flows are product, permanently
+— they're the homepage pitch and the founder's sales tool. But demo blending
+into real flows (pretend students on a teacher's own activity, unknown codes
+resurrecting as the demo) is scaffolding that only makes sense while nothing
+is real. Writing the split down now means no future agent has to guess which
+side a behavior belongs to — a wrong guess looks broken in both directions:
+real students mixed with pretend ones, or a teacher's dead link opening
+someone else's demo.
+
+_The client-side seams are the engine hooks
+([useChatDemo.ts](client/src/components/chat/useChatDemo.ts),
+[useHostActivityDemo.ts](client/src/components/Teacher/HostActivity/useHostActivityDemo.ts))
+behind the `ChatRoomState`/`ChatRoomActions` contract in
+[chat.ts](client/src/types/chat.ts)._
+
+### Demo surfaces say so: a pretend-students chip on both views
+
+_2026-07-16_
+
+**Decision:** When the activity on screen is the demo (join code `1234`),
+the teacher host page shows a small sun-tinted chip — "This is the demo
+class. The students are pretend." with a quiet "Start your own" link — next
+to the For-teachers badge, and the student world shows a glass variant
+("This is the demo. The other students are pretend.") at the top of the
+column from the name stage on. Never on a teacher's own hosted activity.
+Not on the student code screen (no activity is resolved yet, and the
+demo-code pill covers it) and not on the homepage hero (its captions
+already say it's a sample). The student-world variant carries no link — no
+teacher nudges inside the student experience.
+
+**Why:** Founder call (2026-07-16), picking the subtle chip on both views
+over a full-width banner, a teacher-only chip, or nothing. Once real
+activities exist, a demo host page and a real one look identical — a
+teacher shouldn't have to wonder whether "Daniel Katz" is a real kid. A
+banner would eat phone space and make pitch demos look less like the
+product; the chip also doubles as the sales exit.
+
+_Implemented in [DemoChip.tsx](client/src/components/demo/DemoChip.tsx),
+rendered by
+[HostActivityPage](client/src/pages/teacher/HostActivityPage.tsx) and
+[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._
+
+### The demo control panels are teacher-facing and permanent (on demo flows)
+
+_2026-07-16_
+
+**Decision:** The dashed panels are titled "You're driving this demo" (a
+joystick icon, no more wrench or "dev only" badge) with a one-line caption
+saying who does this in real life — host page: "A real class does all this
+by itself."; lobby: "In a real activity, your teacher does this part.";
+chat: "In a real chat these happen on their own." — and human button labels
+("Pair me 1-on-1", "Partner drops off"). The panels are permanent furniture
+of the demo flows; when the backend arrives they disappear from real
+activities only. The dashed border stays, so demo furniture never passes
+for product UI. (This replaces the in-code plan that the panels would "go
+away once a real backend drives the events they trigger.")
+
+**Why:** Founder call (2026-07-16). In a pitch these buttons are the
+steering wheel — "watch, I'll pair the class now" — and homepage visitors
+read "dev only" as "not for me" and skip the best part. Keeping buttons
+beat autopilot-only: the founder keeps control of the big moments.
+
+_Implemented in
+[DemoControls.tsx](client/src/components/demo/DemoControls.tsx),
+[ChatDemoControls.tsx](client/src/components/demo/ChatDemoControls.tsx),
+and their consumers._
+
+### The demo lobby pairs you by itself after 20 seconds
+
+_2026-07-16_
+
+**Decision:** In the demo activity's waiting lobby, if the visitor presses
+no demo button for ~20 seconds, the pretend teacher pairs them anyway — a
+random 1:1 or group of 3. A manual match cancels the pending timer; coming
+back to the lobby starts a fresh one. Demo activity only: on a real
+activity, matching belongs to the real teacher, through the backend, later.
+
+**Why:** Founder call (2026-07-16), and the founder picked 20 seconds over
+the proposed ~10. The lobby only advances by demo triggers, so a homepage
+visitor who didn't spot the buttons would wait forever and leave — while in
+a live pitch the founder clicks first, so the fallback stays out of the
+way. The wait also mirrors reality: a real teacher takes a moment to pair
+people, and it gives the lobby screen a chance to land.
+
+_Implemented in
+[JoinActivityPage.tsx](client/src/pages/student/JoinActivityPage.tsx)._
+
 ## Routes & app structure
+
+### `/demo`, `/demo/teacher`, and `/demo/student` are thin redirects, never pages
+
+_2026-07-16_
+
+**Decision:** Three speakable demo URLs: `/demo` and `/demo/teacher` land on
+`/activity/host/1234`; `/demo/student` lands on `/activity/join` — the code
+screen, so a visitor walks the student trip from its first step. All three
+are locale-aware `<Navigate>` redirects with no page components of their
+own, and that's a hard rule:
+[The temporary `/demo/*` routes are gone](#the-temporary-demo-routes-are-gone--every-surface-lives-in-its-real-flow)
+still stands — a demo URL that grows its own UI recreates the diverging
+second path that entry deleted.
+
+**Why:** Founder call (2026-07-16). The demos are a sales surface, and
+"chaverola.com slash demo" can be said across a table in a way "slash
+activity slash host slash one-two-three-four" can't. Bare `/demo` goes to
+the teacher view because pitches are aimed at teachers. Redirects cost
+nothing to keep in sync — there is nothing in them to drift.
+
+_Implemented in [App.tsx](client/src/App.tsx)._
 
 ### The temporary `/demo/*` routes are gone — every surface lives in its real flow
 

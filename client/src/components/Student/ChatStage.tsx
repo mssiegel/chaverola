@@ -24,7 +24,7 @@ interface ChatStageProps {
 
 /**
  * The chatting + chat-ended stages of the student flow: the real chatbox
- * driven by the mock engine, plus the dev-only event triggers. Mounted fresh
+ * driven by the mock engine, plus the demo steering panel. Mounted fresh
  * per match (the page keys it), so every match starts a clean chat. No
  * identity bar here — the chat header already says who you're with (see
  * DECISIONS.md).

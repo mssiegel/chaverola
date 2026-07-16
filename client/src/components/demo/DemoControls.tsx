@@ -1,22 +1,27 @@
 import type { ReactNode } from "react";
-import { Wrench } from "lucide-react";
+import { Joystick } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 /*
-  The dev-only "Demo controls" kit: the dashed panel plus the small controls
+  The "you're driving this demo" kit: the dashed panel plus the small controls
   the demo surfaces share. `onWorld` renders the white/glass theme for panels
   sitting on the purple student world (StudentWorldLayout); the default theme
-  is for regular app pages. These all go away once a real backend drives the
-  events they trigger.
+  is for regular app pages. The panels are permanent furniture on the DEMO
+  flows — they're how a visitor (or the founder, mid-pitch) steers the story.
+  Once a real backend exists they disappear from real activities only; see
+  DECISIONS.md → "The demo control panels are teacher-facing and permanent".
 */
 
 export function DemoControlsPanel({
   onWorld = false,
+  caption,
   children,
 }: {
   /** True when the panel sits on the purple student world. */
   onWorld?: boolean;
+  /** One short line under the title explaining why these buttons exist. */
+  caption?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -28,21 +33,24 @@ export function DemoControlsPanel({
     >
       <div
         className={cn(
-          "mb-3 flex items-center gap-2 text-sm font-semibold",
+          "flex items-center gap-2 text-sm font-semibold",
+          caption ? "mb-1" : "mb-3",
           onWorld ? "text-white/80" : "text-muted-foreground"
         )}
       >
-        <Wrench className="size-4" />
-        Demo controls
-        <span
+        <Joystick className="size-4" />
+        You're driving this demo
+      </div>
+      {caption && (
+        <p
           className={cn(
-            "rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wide uppercase",
-            onWorld ? "bg-white/20 text-white" : "bg-muted"
+            "mb-3 text-xs",
+            onWorld ? "text-white/70" : "text-muted-foreground"
           )}
         >
-          dev only
-        </span>
-      </div>
+          {caption}
+        </p>
+      )}
       {children}
     </section>
   );

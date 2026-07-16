@@ -2,13 +2,16 @@ import { useEffect, useState } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
 import { ArrowRight, Handshake, Users, UserX } from "lucide-react";
 
+import { DemoChip } from "@/components/demo/DemoChip";
 import { DemoControlsPanel, EventButton } from "@/components/demo/DemoControls";
 import type { StudentWorldOutletContext } from "@/components/layout/StudentWorldLayout";
 import { ChatStage } from "@/components/Student/ChatStage";
 import { WaitingLobby } from "@/components/Student/WaitingLobby";
 import { Button } from "@/components/ui/button";
 import { useLocaleNavigate } from "@/lib/locale";
+import { randomFrom } from "@/lib/random";
 import { useStudentSession } from "@/lib/studentSession";
+import { useLatestRef } from "@/lib/useLatestRef";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { cn } from "@/lib/utils";
 import {
@@ -33,6 +36,14 @@ const PAGE_TITLES: Record<StudentStage, string> = {
   chatting: "Chatting",
   ended: "Chat Ended",
 };
+
+/**
+ * How long the demo lobby waits before the pretend teacher pairs the student
+ * anyway, so a visitor who never touches the demo buttons still reaches a
+ * chat. ~20s (founder-picked): enough time to take the lobby in first.
+ * See DECISIONS.md → "The demo lobby pairs you by itself after 20 seconds".
+ */
+const DEMO_LOBBY_AUTO_MATCH_MS = 20_000;
 
 /** The floating white card the student world's stages render on. */
 const STUDENT_CARD_CLASS =
@@ -107,6 +118,18 @@ export function JoinActivityPage() {
     setChatEnded(false);
   };
 
+  // The demo lobby's fallback: after a short wait the pretend teacher pairs
+  // the student unprompted (random 1:1 or group). Demo activity only — on a
+  // real activity a real teacher does this, via the backend, later.
+  const startMatchRef = useLatestRef(startMatch);
+  useEffect(() => {
+    if (stage !== "lobby" || activity?.joinCode !== DEMO_JOIN_CODE) return;
+    const timer = setTimeout(() => {
+      startMatchRef.current(randomFrom(["duo", "group"] as const));
+    }, DEMO_LOBBY_AUTO_MATCH_MS);
+    return () => clearTimeout(timer);
+  }, [stage, activity, startMatchRef]);
+
   // Shared-link arrivals with a bad code land on code entry with the code
   // filled in and the not-found message already showing.
   const [code, setCode] = useState(() => joinCodeParam ?? "");
@@ -157,6 +180,10 @@ export function JoinActivityPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center gap-6">
+      {/* From the name stage on, the world is honest about being the demo.
+          The code screen has no resolved activity yet (its own demo-code
+          pill covers it). */}
+      {activity?.joinCode === DEMO_JOIN_CODE && <DemoChip onWorld />}
       {activity && session && match ? (
         // Chatting + chat ended, on this same route. Keyed per match so a
         // rematch always boots a fresh chat.
@@ -293,10 +320,11 @@ export function JoinActivityPage() {
 }
 
 /**
- * Dev-only triggers for the lobby's mock events: the teacher matching this
- * student into a chat (1:1 or a group of 3, so the group drop behavior is
- * demoable too) and the teacher removing them from the activity. Goes away
- * once a real backend pushes these.
+ * The lobby's demo steering: what a real teacher does from the host page —
+ * matching this student into a chat (1:1 or a group of 3, so the group drop
+ * behavior is demoable too) and removing them from the activity. Permanent
+ * demo furniture; on a real activity a backend pushes these instead. If the
+ * visitor presses nothing, the auto-match fallback above pairs them anyway.
  */
 function LobbyDemoControls({
   onTeacherRemove,
@@ -306,21 +334,24 @@ function LobbyDemoControls({
   onMatch: (scenarioKey: ActivityChatScenarioKey) => void;
 }) {
   return (
-    <DemoControlsPanel onWorld>
+    <DemoControlsPanel
+      onWorld
+      caption="In a real activity, your teacher does this part."
+    >
       <div className="grid grid-cols-2 gap-2">
         <EventButton
           onWorld
           onClick={() => onMatch("duo")}
           icon={<Handshake className="size-4" />}
         >
-          Match: 1:1
+          Pair me 1-on-1
         </EventButton>
         <EventButton
           onWorld
           onClick={() => onMatch("group")}
           icon={<Users className="size-4" />}
         >
-          Match: group of 3
+          Put me in a group of 3
         </EventButton>
         <div className="col-span-2">
           <EventButton

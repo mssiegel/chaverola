@@ -55,6 +55,11 @@ activity"]`. Section headers are buttons whose `innerText` carries the
   "Join Activity"; lobby shows "Waiting for your match". Auto-match keeps
   the host-page queue moving (~20s waits), so re-query rows right before
   clicking and avoid exact queue-count assertions.
+- Demo entry URLs: `/demo` and `/demo/teacher` redirect to
+  `/activity/host/1234`; `/demo/student` redirects to `/activity/join`
+  (locale-preserving: `/he/demo` → `/he/activity/host/1234`). The DEMO
+  lobby also auto-pairs the student ~20s after it renders — take lobby
+  assertions before that fires, or expect to land in a chat.
 
 ## Gotchas
 

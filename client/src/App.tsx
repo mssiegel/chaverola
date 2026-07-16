@@ -1,12 +1,24 @@
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StudentWorldLayout } from "@/components/layout/StudentWorldLayout";
+import { useLocalePath } from "@/lib/locale";
+import { DEMO_JOIN_CODE } from "@/mockData";
 import { HomePage } from "@/pages/HomePage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { JoinActivityPage } from "@/pages/student/JoinActivityPage";
 import { CreateActivityPage } from "@/pages/teacher/CreateActivityPage";
 import { HostActivityPage } from "@/pages/teacher/HostActivityPage";
+
+/**
+ * A speakable demo URL. Always a redirect into the real flow, never a page of
+ * its own — standalone /demo pages were tried and deleted for diverging from
+ * the real components (see DECISIONS.md → "Routes & app structure").
+ */
+function DemoRedirect({ to }: { to: string }) {
+  const localePath = useLocalePath();
+  return <Navigate to={localePath(to)} replace />;
+}
 
 /**
  * The canonical route tree (see Shared_Project_Context.md). Rendered once at
@@ -30,6 +42,20 @@ function LocalizedRoutes() {
         <Route path="activity/join" element={<JoinActivityPage />} />
         <Route path="activity/join/:joinCode" element={<JoinActivityPage />} />
       </Route>
+      {/* The demo entry URLs — easy to say out loud in a meeting. Bare /demo
+          lands on the teacher view because that's who a pitch is aimed at. */}
+      <Route
+        path="demo"
+        element={<DemoRedirect to={`/activity/host/${DEMO_JOIN_CODE}`} />}
+      />
+      <Route
+        path="demo/teacher"
+        element={<DemoRedirect to={`/activity/host/${DEMO_JOIN_CODE}`} />}
+      />
+      <Route
+        path="demo/student"
+        element={<DemoRedirect to="/activity/join" />}
+      />
     </>
   );
 }

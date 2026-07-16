@@ -25,10 +25,10 @@ interface ChatDemoControlsProps {
 }
 
 /**
- * The dev-only trigger panel for a student-seat chat: the mock events a real
- * backend will push later (connection drops, a peer or the clock ending the
- * chat) plus the mocked "reveal names" setting. Used by the join flow's
- * chatting stage, which adds its own extras.
+ * The demo steering panel for a student-seat chat: the events a real backend
+ * will push later (connection drops, a peer or the clock ending the chat)
+ * plus the mocked "reveal names" setting, as visitor-friendly buttons. Used
+ * by the join flow's chatting stage, which adds its own extras.
  */
 export function ChatDemoControls({
   chat,
@@ -40,7 +40,10 @@ export function ChatDemoControls({
   const peerConnected = chat.peerState === "connected";
 
   return (
-    <DemoControlsPanel onWorld={onWorld}>
+    <DemoControlsPanel
+      onWorld={onWorld}
+      caption="In a real chat these happen on their own."
+    >
       <div className="space-y-4">
         <label className="flex cursor-pointer items-center justify-between gap-3">
           <span
@@ -61,7 +64,7 @@ export function ChatDemoControls({
               onWorld ? "text-white/80" : "text-muted-foreground"
             )}
           >
-            Trigger events
+            Make something happen
           </p>
           <div className="grid grid-cols-2 gap-2">
             <EventButton
@@ -70,7 +73,7 @@ export function ChatDemoControls({
               disabled={!peerConnected || chat.isEnded}
               icon={<WifiOff className="size-4" />}
             >
-              Peer drops
+              Partner drops off
             </EventButton>
             <EventButton
               onWorld={onWorld}
@@ -78,7 +81,7 @@ export function ChatDemoControls({
               disabled={peerConnected || chat.isEnded}
               icon={<Wifi className="size-4" />}
             >
-              Peer reconnects
+              Partner comes back
             </EventButton>
             <EventButton
               onWorld={onWorld}
@@ -94,7 +97,7 @@ export function ChatDemoControls({
               disabled={!peerConnected || chat.isEnded}
               icon={<MessageCirclePlus className="size-4" />}
             >
-              Make peer talk
+              Make them talk
             </EventButton>
             <EventButton
               onWorld={onWorld}
@@ -102,7 +105,7 @@ export function ChatDemoControls({
               disabled={!peerConnected || chat.isEnded}
               icon={<LogOut className="size-4" />}
             >
-              Peer ends chat
+              Partner ends chat
             </EventButton>
             <EventButton
               onWorld={onWorld}
@@ -110,7 +113,7 @@ export function ChatDemoControls({
               disabled={chat.isEnded}
               icon={<Unplug className="size-4" />}
             >
-              You drop (2 min pass)
+              You drop off (2 min pass)
             </EventButton>
             {/* Staged: first press jumps to the clock's final-minute state,
                 a second press jumps to the expiry itself. */}

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
 
+import { DemoChip } from "@/components/demo/DemoChip";
 import { HostActivityDashboard } from "@/components/Teacher/HostActivity";
 import { Badge } from "@/components/ui/badge";
 import { readHostedActivity, saveHostedActivity } from "@/lib/activitySetup";
@@ -82,8 +83,9 @@ function HostedActivityView({
       </div>
 
       <div className="mx-auto w-full max-w-6xl px-4 pt-8 pb-16 sm:pt-10">
-        <div className="mb-5">
+        <div className="mb-5 flex flex-wrap items-center gap-2">
           <Badge>For teachers</Badge>
+          {activity.joinCode === DEMO_JOIN_CODE && <DemoChip />}
         </div>
         <HostActivityDashboard
           activity={activity}

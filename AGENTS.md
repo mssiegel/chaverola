@@ -4,16 +4,20 @@ This file is the canonical source of guidance for all AI agents (Claude Code, Cu
 
 ## Status
 
-Every UI surface is built, mock-driven, and lives in its real flow (no demo
-routes); `server/` is still an empty placeholder. The map:
+Every UI surface is built, mock-driven, and lives in its real flow (demo
+URLs exist but only as redirects); `server/` is still an empty placeholder.
+The demo flows are a **permanent product surface** — the homepage links to
+them and the founder pitches with them — not scaffolding; see the working
+rule below. The map:
 
-| Surface               | Route                        | Where it lives                                                                                                                                                                     |
-| --------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Homepage              | `/`                          | `client/src/pages/HomePage.tsx` + `components/home/` — the hero chatbox and the teacher-view `ChatCard` mirror one live `useChatDemo` chat; founder's note with photo fallback     |
-| Student join flow     | `/activity/join[/:joinCode]` | `client/src/pages/student/JoinActivityPage.tsx` — code → name → lobby → chatting → ended, all on one URL; `components/Student/ChatStage.tsx` owns the chat stages, keyed per match |
-| Teacher setup         | `/activity/create`           | `client/src/components/Teacher/ActivitySetup/` — form UI; the caps, draft persistence, validation, and hand-off live in `client/src/lib/activitySetup.ts`                          |
-| Teacher live activity | `/activity/host/:joinCode`   | `client/src/components/Teacher/HostActivity/` — engine `useHostActivityDemo.ts` + pure world model `hostWorld.ts`; live-edit draft model in `client/src/lib/hostActivity.ts`       |
-| Not found             | `*`                          | `client/src/pages/NotFoundPage.tsx`                                                                                                                                                |
+| Surface               | Route                                     | Where it lives                                                                                                                                                                                                   |
+| --------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Homepage              | `/`                                       | `client/src/pages/HomePage.tsx` + `components/home/` — the hero chatbox and the teacher-view `ChatCard` mirror one live `useChatDemo` chat; demo section (`DemoSection.tsx`); founder's note with photo fallback |
+| Student join flow     | `/activity/join[/:joinCode]`              | `client/src/pages/student/JoinActivityPage.tsx` — code → name → lobby → chatting → ended, all on one URL; `components/Student/ChatStage.tsx` owns the chat stages, keyed per match                               |
+| Teacher setup         | `/activity/create`                        | `client/src/components/Teacher/ActivitySetup/` — form UI; the caps, draft persistence, validation, and hand-off live in `client/src/lib/activitySetup.ts`                                                        |
+| Teacher live activity | `/activity/host/:joinCode`                | `client/src/components/Teacher/HostActivity/` — engine `useHostActivityDemo.ts` + pure world model `hostWorld.ts`; live-edit draft model in `client/src/lib/hostActivity.ts`                                     |
+| Demo entry URLs       | `/demo`, `/demo/teacher`, `/demo/student` | Thin locale-aware redirects in `client/src/App.tsx` into the host demo / join flow — never pages of their own (see DECISIONS.md → "Routes & app structure")                                                      |
+| Not found             | `*`                                       | `client/src/pages/NotFoundPage.tsx`                                                                                                                                                                              |
 
 Load-bearing flow facts (the reasoning for each is in DECISIONS.md):
 
@@ -35,6 +39,11 @@ Load-bearing flow facts (the reasoning for each is in DECISIONS.md):
 - The setup form and the host page's live settings panel share their field
   components and validation; live edits propagate on a 1-second pause,
   last-valid-wins, with stable character ids (`lib/hostActivity.ts`).
+- Demo surfaces are marked and steerable: a `DemoChip` ("the students are
+  pretend") shows on the host page and the student world whenever the
+  activity is the `1234` demo, and the "You're driving this demo" panels
+  are permanent, teacher-facing demo furniture. The demo lobby auto-pairs
+  after ~20s if no demo button is pressed (`JoinActivityPage.tsx`).
 - Setup-page layout gotcha: the form grid must NOT get `items-start`, or the
   sticky `LobbyPreview` rail loses its track (there's a code comment on it).
 
@@ -157,12 +166,15 @@ Run from the repo root:
   components there over hand-rolling equivalents. They're owned code and may be
   customized: our `ui/badge.tsx` IS the rounded "eyebrow pill", not the stock ShadCN
   badge styling.
-- **Dev-only demo chrome** lives in `client/src/components/demo/`
-  (`DemoControlsPanel`, `EventButton`, `DemoToggle`, and `ChatDemoControls` —
-  the student-seat trigger panel used by the join flow's chatting stage, with
-  an `extraEvents` slot for its extras) — the panels also appear in the
-  join-flow lobby and on the teacher host page. The `onWorld` prop switches to
-  the white/glass theme for the purple student world.
+- **Demo furniture** lives in `client/src/components/demo/`
+  (`DemoControlsPanel` — the dashed "You're driving this demo" panel — with
+  `EventButton`, `DemoToggle`, `ChatDemoControls` — the student-seat trigger
+  panel used by the join flow's chatting stage, with an `extraEvents` slot —
+  and `DemoChip`, the pretend-students marker). The panels also appear in the
+  join-flow lobby and on the teacher host page. It is teacher-facing and
+  permanent on the demo flows, NOT dev scaffolding (founder pitches use it);
+  when a real backend arrives it leaves real activities only. The `onWorld`
+  prop switches to the white/glass theme for the purple student world.
 - **Accepted duplication** (deliberate — don't extract): the sticky-note captions on
   the homepage, the two numbered-step renderers (HomePage vs HowItWorksSection emit
   different markup), the page-section wrapper strings, the page-H1 strings, the
@@ -225,6 +237,19 @@ Run from the repo root:
   or why a screen works a certain way — especially anything non-obvious or that looks like
   a bug but is intentional — add it to [DECISIONS.md](DECISIONS.md) with its reasoning, so
   future agents don't "fix" it. Record the decision, not just the change.
+- **The demo flows are product — every feature must show up in them.** The demo
+  activity (join code `1234`, reached from the homepage demo section and the `/demo`
+  redirect URLs) is a permanent sales surface: teachers self-serve it and the founder
+  pitches with it. A user-facing feature is not done until it can be experienced in the
+  demo flows. Because the demo renders the SAME components as the real flows, UI changes
+  carry over for free; what's on you is the simulation — when a feature adds new
+  behavior or data, extend the demo engines (`useChatDemo.ts`,
+  `useHostActivityDemo.ts` + `hostWorld.ts`) and the `client/src/mockData/` fixtures so
+  the demo actually demonstrates it. The `ChatRoomState`/`ChatRoomActions` contract
+  type-checks the shape, but showing the feature in the demo story is a judgment call —
+  make it. Never fork demo-specific pages or components; demo URLs stay thin redirects.
+  Once `server/` is real, keep the split recorded in DECISIONS.md → "Demo flows & demo
+  furniture": real activities strictly real, `1234` the only simulated one.
 - **Record learnings in the repo, not in private memory.** Gotchas, verification
   techniques, and working knowledge worth keeping go in this file (or the relevant
   doc) so every future agent and tool sees them — never only in an assistant's own

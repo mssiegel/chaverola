@@ -181,8 +181,8 @@ export function HostActivityDashboard({
         </div>
       </div>
 
-      {/* Dev-only triggers for what a real classroom would do on its own. */}
-      <DemoControlsPanel>
+      {/* Demo steering for what a real classroom would do on its own. */}
+      <DemoControlsPanel caption="A real class does all this by itself.">
         <div className="grid grid-cols-2 gap-2 sm:max-w-md">
           <EventButton
             onClick={demo.triggerJoin}

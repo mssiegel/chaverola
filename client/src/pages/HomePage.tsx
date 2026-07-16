@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { GraduationCap, MessageCircle } from "lucide-react";
 
+import { DemoSection } from "@/components/home/DemoSection";
 import { FounderNote } from "@/components/home/FounderNote";
 import { HeroChatbox } from "@/components/home/HeroChatbox";
 import { HowItWorksSection } from "@/components/home/HowItWorksSection";
@@ -18,7 +19,7 @@ import { heroChatScenario } from "@/mockData";
 
 /**
  * The homepage: hero (student-side live chat), the teacher's view of that
- * same chat, how hosting works, and the founder's note. The pitch to a
+ * same chat, the demo doorways, how hosting works, and the founder's note. The pitch to a
  * teacher in one glance: a classroom activity where students chat with each
  * other in character (a real classmate behind every character), quick to set
  * up, with the who's-who mystery — and live chatboxes to prove it. Styling
@@ -116,6 +117,8 @@ export function HomePage() {
         participants={chat.participants}
         messages={chat.messages}
       />
+
+      <DemoSection />
 
       <HowItWorksSection />
 
