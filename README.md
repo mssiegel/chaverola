@@ -5,6 +5,9 @@ students. A teacher creates an activity and assigns characters; students join wi
 4-digit code and chat in real time as their characters — without knowing who they're
 really talking to. Only the teacher sees real names, and can reveal them at the end.
 
+**Live site:** [chaverola.vercel.app](https://chaverola.vercel.app) (every push to
+`main` deploys automatically via Vercel).
+
 > **Scope note:** This repository is **UI/UX only** (with animations/transitions) — no
 > backend logic. Every screen is driven by mock data and demo events, and nothing is a
 > dead end. See [Shared_Project_Context.md](Shared_Project_Context.md) for the full brief.
