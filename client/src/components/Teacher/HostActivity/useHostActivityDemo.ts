@@ -5,6 +5,7 @@ import {
   SKIP_AUTO_END_TO_FINALE_SECONDS,
 } from "@/components/chat/useChatDemo";
 import { characterLabel } from "@/lib/characterLabel";
+import { scaledMs } from "@/lib/demoTime";
 import { withCurrentCharacters } from "@/lib/hostActivity";
 import { nextId, randInt, randomFrom } from "@/lib/random";
 import { useLatestRef } from "@/lib/useLatestRef";
@@ -84,7 +85,7 @@ export function useHostActivityDemo(
   useEffect(() => {
     const interval = setInterval(() => {
       commit(tickWorld(worldRef.current, activityRef.current));
-    }, 1000);
+    }, scaledMs(1000));
     return () => clearInterval(interval);
   }, [activityRef]);
 
@@ -120,7 +121,7 @@ export function useHostActivityDemo(
             : c
         ),
       });
-    }, DRIP_INTERVAL_MS);
+    }, scaledMs(DRIP_INTERVAL_MS));
     return () => clearInterval(interval);
   }, []);
 

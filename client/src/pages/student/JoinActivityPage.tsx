@@ -8,6 +8,7 @@ import type { StudentWorldOutletContext } from "@/components/layout/StudentWorld
 import { ChatStage } from "@/components/Student/ChatStage";
 import { WaitingLobby } from "@/components/Student/WaitingLobby";
 import { Button } from "@/components/ui/button";
+import { scaledMs } from "@/lib/demoTime";
 import { useLocaleNavigate } from "@/lib/locale";
 import { randomFrom } from "@/lib/random";
 import { useStudentSession } from "@/lib/studentSession";
@@ -144,7 +145,7 @@ export function JoinActivityPage() {
     if (stage !== "lobby" || activity?.joinCode !== DEMO_JOIN_CODE) return;
     const timer = setTimeout(() => {
       startMatchRef.current(randomFrom(["duo", "group"] as const));
-    }, DEMO_LOBBY_AUTO_MATCH_MS);
+    }, scaledMs(DEMO_LOBBY_AUTO_MATCH_MS));
     return () => clearTimeout(timer);
   }, [stage, activity, startMatchRef]);
 

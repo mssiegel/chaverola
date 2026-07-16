@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { characterLabel } from "@/lib/characterLabel";
+import { scaledMs } from "@/lib/demoTime";
 import { nextId, randomFrom } from "@/lib/random";
 import { useLatestRef } from "@/lib/useLatestRef";
 import { useSecondCountdown } from "@/lib/useSecondCountdown";
@@ -142,7 +143,7 @@ export function useChatDemo(
     const handle = setTimeout(() => {
       timers.current.delete(handle);
       fn();
-    }, ms);
+    }, scaledMs(ms));
     timers.current.add(handle);
     return handle;
   };

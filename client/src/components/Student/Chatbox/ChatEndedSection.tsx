@@ -130,7 +130,9 @@ export function ChatEndedSection({
         {chatGoesOnWithoutYou ? (
           <div className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-card/60 p-3 text-sm text-muted-foreground">
             <EyeOff className="size-4" />
-            <span>Names stay secret. This chat is still going without you.</span>
+            <span>
+              Names stay secret. This chat is still going without you.
+            </span>
           </div>
         ) : revealNames ? (
           <div className="w-full rounded-xl border border-border bg-card p-3 text-left shadow-sm">

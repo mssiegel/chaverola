@@ -83,4 +83,5 @@ Read in this order:
    reasoning, grouped by area. Check it before changing behavior that looks odd, and add
    an entry when a new decision is made.
 4. [PROJECT_DOCUMENTATION_STANDARD.md](PROJECT_DOCUMENTATION_STANDARD.md) — the
-   structure future documentation must follow.
+   structure future documentation must follow. Skip it until `server/` work
+   begins; it describes docs that deliberately don't exist yet.

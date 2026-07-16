@@ -139,9 +139,7 @@ export function LiveSettingsPanel({
                   (c) => c.id === row.id
                 );
                 const name =
-                  committed?.name.trim() ||
-                  row.name.trim() ||
-                  "This character";
+                  committed?.name.trim() || row.name.trim() || "This character";
                 return `${name} is in a live chat right now. You can remove them once that chat ends.`;
               }}
             />

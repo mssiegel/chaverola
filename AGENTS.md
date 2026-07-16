@@ -57,24 +57,7 @@ The full project brief (what Chaverola is, scope, tech stack, canonical routes, 
 
 ## Documentation
 
-All project documentation must be created and maintained according to [PROJECT_DOCUMENTATION_STANDARD.md](PROJECT_DOCUMENTATION_STANDARD.md). That file defines the canonical structure, reading order, and the purpose (with "should contain" / "should NOT contain" rules) for every document. When creating or updating docs, follow it — do not invent an alternate structure.
-
-The recommended documentation flow is:
-
-```text
-README
-01 Product Vision
-02 Core Concepts
-03 Data Concept
-04 Architecture
-05 Database Design
-06 API Design
-07 UI Design
-08 Contributing
-09 Change Log
-```
-
-Documentation moves from **business concepts** toward **technical implementation**. Docs after 04 Architecture / 05 Database Design become project-specific (e.g. Infrastructure, Deployment, Security, AI Components) and may be added, merged, or reordered as the project requires. Keep documentation in sync with the code: update all related documents before considering a feature or architectural change complete, and record significant changes in the Change Log.
+The living docs are [README.md](README.md), this file, [DECISIONS.md](DECISIONS.md), and [Shared_Project_Context.md](Shared_Project_Context.md) — keep them in sync with the code before considering a change complete. [PROJECT_DOCUMENTATION_STANDARD.md](PROJECT_DOCUMENTATION_STANDARD.md) defines the numbered doc structure (Product Vision → Change Log) for when `server/` becomes real; per its own status note, don't scaffold those documents yet.
 
 ## Project Overview
 
@@ -216,6 +199,18 @@ Run from the repo root:
   `lib/storage.ts` (`readSessionJson`/`writeSessionJson`/`removeSessionItem`,
   plus the `isRecord`/`hasString` guards for the validate callbacks)
   — don't hand-roll try/catch JSON storage access.
+- **React Compiler does the memoizing** — never hand-write `memo` /
+  `useCallback` / `useMemo` (all removed 2026-07-11 at the product owner's
+  request). The wiring is in `client/vite.config.ts`: `@vitejs/plugin-react`
+  v6 runs the compiler as a Babel preset via `@rolldown/plugin-babel` (v6
+  dropped the old `babel` option). The `react-hooks` `recommended-latest`
+  lint enforces the Rules of React so the compiler can optimize; it bails on
+  any component that breaks them — it caught refs written during render in
+  `useChatDemo` (sync latest-value refs in a `useEffect`, or use
+  `useLatestRef`). Confirm optimization is happening by grepping the build
+  for `useMemoCache`. Relatedly, `typescript` stays pinned to `5.9.3` (not
+  the native-preview 7.x) so the typescript-eslint parser can handle the
+  code.
 - **Dependency policy:** stay lean while the app is UI-only. Deliberately not
   added (evaluated 2026-07-15): `zod` (the storage validators are a few lines
   on shared guards), `react-hook-form` (the setup form is built and its UX
@@ -258,6 +253,14 @@ Run from the repo root:
   techniques, and working knowledge worth keeping go in this file (or the relevant
   doc) so every future agent and tool sees them — never only in an assistant's own
   memory store. This is a product-owner preference.
+- **Verify at the cheapest gate that catches the mistake.** Run
+  `pnpm typecheck` on every change (incremental, seconds). Add `pnpm test`
+  only when logic in `client/src/lib/` or `hostWorld.ts` changed. Drive the
+  browser (the `verify` skill) only when the change shows up in rendered
+  UI — and then only the surfaces the change touches, at desktop and phone
+  widths, with fast timers on (`?fast=10` on a dev build; see the skill).
+  A full every-surface sweep is for cross-cutting changes (layout shells,
+  design tokens, shared chat pieces), not for localized ones.
 - **Verifying a style-neutral refactor:** run `pnpm build` before and after and
   compare the `dist/assets/index-*.css` filename hash — identical hash is byte-level
   proof no styling changed (used across the 2026-07-13 DRY refactor). If the hash

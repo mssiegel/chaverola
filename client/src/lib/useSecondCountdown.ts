@@ -1,9 +1,11 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 
+import { scaledMs } from "./demoTime";
 import { useLatestRef } from "./useLatestRef";
 
 /**
- * A once-a-second countdown (null: no clock running). Ticks down while
+ * A once-a-second countdown (null: no clock running; dev fast-timers mode
+ * compresses the tick — see lib/demoTime.ts). Ticks down while
  * `active`; at zero it clears itself to null and fires `onExpire` once. The
  * setter is exposed because engines drive the clock from actions — starting
  * a reconnect window, clearing it on reconnect, fast-forwarding in the demo
@@ -30,7 +32,7 @@ export function useSecondCountdown(
           onExpireRef.current();
         }
       },
-      secondsLeft > 0 ? 1000 : 0
+      secondsLeft > 0 ? scaledMs(1000) : 0
     );
     return () => clearTimeout(handle);
   }, [secondsLeft, active, onExpireRef]);

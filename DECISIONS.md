@@ -136,6 +136,9 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [`/demo`, `/demo/teacher`, and `/demo/student` are thin redirects, never pages](#demo-demoteacher-and-demostudent-are-thin-redirects-never-pages)
   - [The temporary `/demo/*` routes are gone — every surface lives in its real flow](#the-temporary-demo-routes-are-gone--every-surface-lives-in-its-real-flow)
 - [Process & tooling](#process--tooling)
+  - [`?fast` compresses the demo clocks — dev builds only, and never to zero](#fast-compresses-the-demo-clocks--dev-builds-only-and-never-to-zero)
+  - [Verification climbs a ladder: typecheck, then tests, then the browser](#verification-climbs-a-ladder-typecheck-then-tests-then-the-browser)
+  - [The repo `memory/` folder is gone — its notes live in AGENTS.md](#the-repo-memory-folder-is-gone--its-notes-live-in-agentsmd)
   - [The repo is public on GitHub under MIT, and main auto-deploys to Vercel](#the-repo-is-public-on-github-under-mit-and-main-auto-deploys-to-vercel)
   - [Testing stays small while the app is UI-only: logic tests, no DOM](#testing-stays-small-while-the-app-is-ui-only-logic-tests-no-dom)
   - [The Fable prompt series document was deleted, not archived](#the-fable-prompt-series-document-was-deleted-not-archived)
@@ -670,7 +673,7 @@ confirmation copy on both seats says so explicitly.
 
 > **Scope note (2026-07-16):** the rule itself is unchanged, but per
 > [In a group the student leaves; only a 2-person chat can be ended](#in-a-group-the-student-leaves-only-a-2-person-chat-can-be-ended),
-> students are only *offered* End chat when the room has exactly 2 active
+> students are only _offered_ End chat when the room has exactly 2 active
 > people — in a larger group their exit is Leave.
 
 **Why:** The roleplay needs its partners: once one student leaves, the others would be
@@ -2061,6 +2064,70 @@ _Routes live in [App.tsx](client/src/App.tsx)._
 ---
 
 ## Process & tooling
+
+### `?fast` compresses the demo clocks — dev builds only, and never to zero
+
+_2026-07-16_
+
+**Decision:** In a dev build (`pnpm dev`), loading any page with `?fast`
+compresses every demo-engine timer — the scripted chats and typing beats,
+the host page's world tick (joins, wait clocks, auto-match, auto-end,
+returns), the chatter drip, the demo lobby's auto-pair, and the countdown
+clocks — by a scale factor: bare `?fast` is 10x, `?fast=<n>` clamps to
+1–100. The scale is read once per full page load. Delays scale, they never
+zero out. Production builds compile the entire mechanism away
+(`import.meta.env.DEV`), and real-user timing — the live-settings ~1s
+typing debounce, the 2s "copied" reset — is never scaled.
+
+**Why:** Product-owner call, to make AI-agent verification fast: runtime
+checks were spending nearly all their wall clock waiting out real-time demo
+timers (~9s hero script, ~20s auto-pair, 2-minute reconnect window).
+Scaling instead of zeroing keeps message order and typing→reply sequencing
+assertable. The double gate (dev build AND an explicit param) means no
+deployed link and no default `pnpm dev` session — including the founder's
+pitch flow — ever runs fast. The verify skill documents how agents use it.
+
+_Implemented in [demoTime.ts](client/src/lib/demoTime.ts); consumed by
+[useChatDemo.ts](client/src/components/chat/useChatDemo.ts),
+[useSecondCountdown.ts](client/src/lib/useSecondCountdown.ts),
+[useHostActivityDemo.ts](client/src/components/Teacher/HostActivity/useHostActivityDemo.ts),
+and [JoinActivityPage.tsx](client/src/pages/student/JoinActivityPage.tsx)._
+
+### Verification climbs a ladder: typecheck, then tests, then the browser
+
+_2026-07-16_
+
+**Decision:** Agents verify at the cheapest gate that can catch the
+mistake: `pnpm typecheck` on every change; `pnpm test` only when logic in
+`client/src/lib/` or `hostWorld.ts` changed; a browser drive (the verify
+skill, with fast timers) only when the change shows up in rendered UI —
+and then only the surfaces the change touches, at desktop and phone
+widths. The CSS-hash double-build proof still covers style-neutral
+refactors.
+
+**Why:** Product-owner call. Nothing in the automated suite renders
+components, so agents defaulted to driving every surface in a browser for
+every change — the slowest check applied to changes the type checker
+already proves. The ladder reserves the browser for what only the browser
+can show.
+
+_Implemented in [AGENTS.md](AGENTS.md) → "Working Rules" and
+[SKILL.md](.claude/skills/verify/SKILL.md)._
+
+### The repo `memory/` folder is gone — its notes live in AGENTS.md
+
+_2026-07-16_
+
+**Decision:** `memory/MEMORY.md` and `memory/react-compiler-setup.md` were
+deleted; the React Compiler guidance moved into AGENTS.md → Conventions,
+with its stale typescript-eslint peer-version claim corrected on the way.
+
+**Why:** The folder contradicted the recorded rule that learnings live in
+the repo's shared docs, nothing referenced it, and its one load-bearing
+fact had already drifted out of date. Recover it from git history if ever
+needed.
+
+_Implemented in [AGENTS.md](AGENTS.md)._
 
 ### The repo is public on GitHub under MIT, and main auto-deploys to Vercel
 
