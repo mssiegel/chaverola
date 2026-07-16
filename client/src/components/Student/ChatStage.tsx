@@ -58,7 +58,8 @@ export function ChatStage({
   }, [chat.isEnded, onEndedChange]);
 
   // A stray back-swipe must never silently kill a live chat: back opens the
-  // same end-chat confirmation as the End chat button (see DECISIONS.md).
+  // same exit confirmation as the header button — Leave in a group, End in
+  // a 2-person chat (see DECISIONS.md).
   useBackGuard(!chat.isEnded, () => setConfirmOpen(true));
 
   return (
@@ -69,6 +70,7 @@ export function ChatStage({
           revealNames={revealNames}
           onSend={chat.send}
           onEndChat={() => chat.endChat("student")}
+          onLeaveChat={chat.leaveChat}
           onBackToLobby={onBackToLobby}
           endConfirmOpen={confirmOpen}
           onEndConfirmOpenChange={setConfirmOpen}

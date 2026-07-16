@@ -59,6 +59,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [One page serves both join routes; a wrong code never changes the URL](#one-page-serves-both-join-routes-a-wrong-code-never-changes-the-url)
   - [Student sign-in lives in the tab, and removal sends you to the name step](#student-sign-in-lives-in-the-tab-and-removal-sends-you-to-the-name-step)
 - [Chat behavior](#chat-behavior)
+  - [In a group the student leaves; only a 2-person chat can be ended](#in-a-group-the-student-leaves-only-a-2-person-chat-can-be-ended)
   - [The composer's emoji picker stays open across inserts](#the-composers-emoji-picker-stays-open-across-inserts)
   - [Every chat end explains itself](#every-chat-end-explains-itself)
   - [The chat header summarizes the room, and tapping it shows everyone](#the-chat-header-summarizes-the-room-and-tapping-it-shows-everyone)
@@ -176,6 +177,11 @@ the chat and lands the student on the chat-ended screen — it never continues
 out of the page; canceling stays in the chat. The guard arms only while a
 chat is live: the lobby keeps its back-as-reset behavior, and the ended
 screen doesn't trap the student.
+
+> **Scope note (2026-07-16):** back still opens the header button's
+> confirmation, but that confirmation is now contextual — per
+> [In a group the student leaves; only a 2-person chat can be ended](#in-a-group-the-student-leaves-only-a-2-person-chat-can-be-ended),
+> in a 3+ group it asks about leaving, not ending.
 
 **Why:** This is the guard promised by the lobby-only note in
 [Landing on code entry signs the student out](#landing-on-code-entry-signs-the-student-out):
@@ -469,6 +475,40 @@ _Implemented in [studentSession.ts](client/src/lib/studentSession.ts) and
 
 ## Chat behavior
 
+### In a group the student leaves; only a 2-person chat can be ended
+
+_2026-07-16_
+
+**Decision:** The student's exit action depends on who's still in the room.
+With 3+ active people, the header button is **Leave** (door icon) and browser
+back asks "Leave this chat?" — confirming removes just that student, while
+the others keep chatting and see a centered "«character» left the chat"
+notice. With exactly 2 active people — a 1:1, or a group that dwindled — the
+button is **End chat** and works as before, ending the room for everyone.
+Only one button ever shows, and it swaps live as the group shrinks: the rule
+reads the room's current size, not how the chat started, and the open
+confirmation re-reads it at confirm time, so a group dwindling to two
+mid-dialog can never turn a Leave tap into a silent end (the dialog's copy
+morphs with it). A leaver lands on a "You left the chat" screen and returns
+to the lobby by their own tap, per
+[End of chat requires a tap to return to the lobby](#end-of-chat-requires-a-tap-to-return-to-the-lobby);
+their name reveal is suppressed regardless of the teacher's setting — the
+chat is still running for the others, so the mystery holds.
+
+**Why:** Founder call.
+[Ending a chat ends it for everyone in the room](#ending-a-chat-ends-it-for-everyone-in-the-room)
+exists because a chat without partners is dead air — but in a group,
+partners remain, so one student stepping out shouldn't cost the others their
+conversation (the same reasoning as
+[A group chat drops a timed-out peer instead of ending](#a-group-chat-drops-a-timed-out-peer-instead-of-ending)).
+Showing Leave and End side by side was rejected as clutter — one exit, one
+decision. The accepted consequence: in a 3+ group, ending for everyone is a
+teacher/timer-only action.
+
+_Implemented in [useChatDemo](client/src/components/chat/useChatDemo.ts),
+[the student chatbox](client/src/components/Student/Chatbox/index.tsx), and
+[ChatEndedSection](client/src/components/Student/Chatbox/ChatEndedSection.tsx)._
+
 ### The composer's emoji picker stays open across inserts
 
 _2026-07-14_
@@ -626,6 +666,11 @@ _2026-07-12_
 **Decision:** When a student ends a chat, it ends for **every participant in that chat**,
 not just the student who tapped End chat — same as when the teacher ends it. The
 confirmation copy on both seats says so explicitly.
+
+> **Scope note (2026-07-16):** the rule itself is unchanged, but per
+> [In a group the student leaves; only a 2-person chat can be ended](#in-a-group-the-student-leaves-only-a-2-person-chat-can-be-ended),
+> students are only *offered* End chat when the room has exactly 2 active
+> people — in a larger group their exit is Leave.
 
 **Why:** The roleplay needs its partners: once one student leaves, the others would be
 sitting in a dead chat with no one to answer. Ending it room-wide moves everyone to the

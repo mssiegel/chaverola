@@ -69,6 +69,12 @@ function endedCopy(
         title: "You lost connection",
         body: "You couldn't get back in time, so this chat ended for you. It happens!",
       };
+    case "self-left":
+      return {
+        tile: "👋",
+        title: "You left the chat",
+        body: "The others are still chatting away. Nicely played! 👏",
+      };
     default:
       return {
         tile: "🎭",
@@ -103,6 +109,10 @@ export function ChatEndedSection({
     endedInGroup
   );
 
+  // A leaver's chat is still going for everyone else, so the mystery must
+  // hold — no reveal for them, whatever the teacher's setting says.
+  const chatGoesOnWithoutYou = endReason === "self-left";
+
   return (
     <div className="border-t border-border bg-gradient-to-b from-brand-grape-soft/60 to-card px-4 py-6 text-center">
       <div className="mx-auto flex max-w-md flex-col items-center gap-4">
@@ -117,7 +127,12 @@ export function ChatEndedSection({
           <p className="text-sm text-muted-foreground">{copy.body}</p>
         </div>
 
-        {revealNames ? (
+        {chatGoesOnWithoutYou ? (
+          <div className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-card/60 p-3 text-sm text-muted-foreground">
+            <EyeOff className="size-4" />
+            <span>Names stay secret. This chat is still going without you.</span>
+          </div>
+        ) : revealNames ? (
           <div className="w-full rounded-xl border border-border bg-card p-3 text-left shadow-sm">
             <SectionLabel className="mb-2 text-center">
               You were really chatting with

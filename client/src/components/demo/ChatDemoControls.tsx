@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import {
+  DoorOpen,
   FastForward,
   LogOut,
   MessageCirclePlus,
@@ -106,6 +107,16 @@ export function ChatDemoControls({
               icon={<LogOut className="size-4" />}
             >
               Partner ends chat
+            </EventButton>
+            {/* Leaving is a group move — in a 1:1 a partner exiting ends the
+                chat instead, so this stays disabled there. */}
+            <EventButton
+              onWorld={onWorld}
+              onClick={chat.peerLeavesChat}
+              disabled={chat.peers.length < 2 || chat.isEnded}
+              icon={<DoorOpen className="size-4" />}
+            >
+              Partner leaves chat
             </EventButton>
             <EventButton
               onWorld={onWorld}

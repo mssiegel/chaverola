@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { LogOut } from "lucide-react";
+import { DoorOpen, LogOut } from "lucide-react";
 
 import { AutoEndCountdown } from "@/components/chat/AutoEndCountdown";
 import { ChatFrame } from "@/components/chat/ChatFrame";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { Conversation } from "@/components/chat/Conversation";
-import { EndChatConfirmationModal } from "@/components/chat/EndChatConfirmationModal";
 import { MessageComposer } from "@/components/chat/MessageComposer";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { characterLabel } from "@/lib/characterLabel";
 import { selfFirstCharacterColors } from "@/lib/characterColor";
 import type { ChatRoomState } from "@/types/chat";
@@ -20,9 +20,10 @@ export interface ChatboxProps {
   revealNames: boolean;
   onSend: (text: string) => void;
   onEndChat: () => void;
+  onLeaveChat: () => void;
   onBackToLobby: () => void;
   /**
-   * Optional external control of the end-chat confirm dialog — the join
+   * Optional external control of the exit confirm dialog — the join
    * flow's back-swipe guard opens it from outside. Pass both or neither;
    * when absent the dialog manages itself.
    */
@@ -42,6 +43,7 @@ export function Chatbox({
   revealNames,
   onSend,
   onEndChat,
+  onLeaveChat,
   onBackToLobby,
   endConfirmOpen,
   onEndConfirmOpenChange,
@@ -73,9 +75,41 @@ export function Chatbox({
   // transcript, so their mystery deserves an answer too.
   const everPeers = participants.filter((p) => p.id !== self.id);
 
-  const handleConfirmEnd = () => {
+  // With 3+ people still in the room your exit is Leave — the chat goes on
+  // without you. With 2, ending is the only exit: a chat without partners is
+  // dead air (see DECISIONS.md). Derived live from the room, so the header
+  // button and an already-open dialog swap together as a group dwindles.
+  const isGroupExit = peers.length > 1;
+
+  const exitConfirm = isGroupExit
+    ? {
+        title: "Leave this chat?",
+        description:
+          "The chat keeps going without you, and there's no coming back in. You can head back to the lobby whenever you're ready.",
+        confirmLabel: (
+          <>
+            <DoorOpen className="size-4" />
+            Leave chat
+          </>
+        ),
+      }
+    : {
+        title: "End this chat?",
+        description:
+          "This ends the chat for everyone in it, and there's no reopening it. You can head back to the lobby whenever you're ready.",
+        confirmLabel: (
+          <>
+            <LogOut className="size-4" />
+            End chat
+          </>
+        ),
+      };
+
+  const handleConfirmExit = () => {
     setConfirmOpen(false);
-    onEndChat();
+    // Decided at confirm time from the room's current size — never stale.
+    if (isGroupExit) onLeaveChat();
+    else onEndChat();
   };
 
   return (
@@ -95,14 +129,23 @@ export function Chatbox({
               <button
                 type="button"
                 onClick={() => setConfirmOpen(true)}
-                aria-label="End chat"
+                aria-label={isGroupExit ? "Leave chat" : "End chat"}
                 className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/25 active:scale-[0.98]"
               >
-                <LogOut className="size-4" />
-                <span className="max-sm:hidden">End chat</span>
-                <span aria-hidden className="sm:hidden">
-                  End
-                </span>
+                {isGroupExit ? (
+                  <>
+                    <DoorOpen className="size-4" />
+                    <span>Leave</span>
+                  </>
+                ) : (
+                  <>
+                    <LogOut className="size-4" />
+                    <span className="max-sm:hidden">End chat</span>
+                    <span aria-hidden className="sm:hidden">
+                      End
+                    </span>
+                  </>
+                )}
               </button>
             </div>
           )
@@ -139,11 +182,15 @@ export function Chatbox({
         />
       )}
 
-      <EndChatConfirmationModal
-        open={confirmOpen}
+      {/* Gated on !isEnded so a chat ending underneath the dialog (timer, a
+          peer ending it) snaps it shut over the ended screen. */}
+      <ConfirmDialog
+        open={confirmOpen && !isEnded}
         onOpenChange={setConfirmOpen}
-        onConfirm={handleConfirmEnd}
-        description="This ends the chat for everyone in it, and there's no reopening it. You can head back to the lobby whenever you're ready."
+        onConfirm={handleConfirmExit}
+        title={exitConfirm.title}
+        description={exitConfirm.description}
+        confirmLabel={exitConfirm.confirmLabel}
         cancelLabel="Keep chatting"
       />
     </ChatFrame>

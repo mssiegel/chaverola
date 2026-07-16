@@ -27,6 +27,7 @@ import type {
  */
 export interface ChatDemo extends ChatRoomState, ChatRoomActions {
   peerEndsChat: () => void;
+  peerLeavesChat: () => void;
   disconnectPeer: () => void;
   reconnectPeer: () => void;
   skipReconnectWait: () => void;
@@ -82,7 +83,7 @@ export function useChatDemo(
   const [endReason, setEndReason] = useState<ChatEndReason | null>(null);
   /** Who ended the chat, when endReason is "peer". */
   const [endedByPeerId, setEndedByPeerId] = useState<string | null>(null);
-  /** Peers removed from the room after their reconnect window ran out. */
+  /** Peers out of the room — reconnect window ran out, or they left. */
   const [droppedPeerIds, setDroppedPeerIds] = useState<ReadonlySet<string>>(
     () => new Set()
   );
@@ -173,7 +174,13 @@ export function useChatDemo(
     typingTimer.current = later(() => {
       typingTimer.current = null;
       setTypingPeerId(null);
-      if (statusRef.current === "active") appendMessage(senderId, text);
+      // A peer who left mid-typing must not speak after their own notice.
+      if (
+        statusRef.current === "active" &&
+        !droppedPeerIdsRef.current.has(senderId)
+      ) {
+        appendMessage(senderId, text);
+      }
     }, typeMs);
   };
 
@@ -327,6 +334,9 @@ export function useChatDemo(
   };
 
   const endChat = (reason: ChatEndReason) => {
+    // Already over — a confirm dialog racing the auto-end clock must not
+    // overwrite the reason the chat actually ended for.
+    if (statusRef.current !== "active") return;
     setStatus("ended");
     statusRef.current = "ended";
     setEndReason(reason);
@@ -334,6 +344,9 @@ export function useChatDemo(
     setReconnectSecondsLeft(null);
     clearAllTimers();
   };
+
+  /** The student walks out of a group; from their seat the room is over. */
+  const leaveChat = () => endChat("self-left");
 
   /** Another student in the room taps End chat — it ends for everyone. */
   const peerEndsChat = () => {
@@ -344,6 +357,30 @@ export function useChatDemo(
     if (!ender) return;
     setEndedByPeerId(ender.id);
     endChat("peer");
+  };
+
+  /** A peer taps Leave in a group: they drop out, the chat keeps going. */
+  const peerLeavesChat = () => {
+    if (statusRef.current !== "active") return;
+    const active = activePeersNow();
+    // In a 1:1 there's no "leave" — a peer exiting ends it (peerEndsChat).
+    if (active.length < 2) return;
+    // Prefer a peer who's actually online; someone offline can't tap anything.
+    const leaver = active.find((p) => p.id !== offlinePeerId) ?? active[0];
+    if (!leaver) return;
+    const nextDropped = new Set(droppedPeerIdsRef.current).add(leaver.id);
+    setDroppedPeerIds(nextDropped);
+    droppedPeerIdsRef.current = nextDropped;
+    setTypingPeerId((cur) => (cur === leaver.id ? null : cur));
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: nextId("m"),
+        senderId: NOTICE_SENDER_ID,
+        kind: "notice",
+        text: `${characterLabel(leaver)} left the chat`,
+      },
+    ]);
   };
 
   /** Everyone still in the room (a group may have dropped someone). */
@@ -366,7 +403,9 @@ export function useChatDemo(
     endedByPeerId,
     send,
     endChat,
+    leaveChat,
     peerEndsChat,
+    peerLeavesChat,
     disconnectPeer,
     reconnectPeer,
     skipReconnectWait,

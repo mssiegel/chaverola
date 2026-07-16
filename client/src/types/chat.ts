@@ -53,10 +53,18 @@ export type ChatStatus = "active" | "ended";
  * copy can name their character (never their real name — the mystery holds
  * until the reveal). "peer-timeout" is a partner who never came back from a
  * disconnect; "self-timeout" is the student's own missed reconnect window,
- * seen when they finally get back in.
+ * seen when they finally get back in. "self-left" is the student walking out
+ * of a group that keeps going without them — only reachable with 3+ active
+ * people, since a 2-person room offers End, not Leave (see DECISIONS.md).
  */
 export type ChatEndReason =
-  "student" | "peer" | "teacher" | "timer" | "peer-timeout" | "self-timeout";
+  | "student"
+  | "peer"
+  | "teacher"
+  | "timer"
+  | "peer-timeout"
+  | "self-timeout"
+  | "self-left";
 
 /** A chat message before a demo engine stamps an id on it. */
 export type SeedMessage = Omit<ChatMessage, "id">;
@@ -103,6 +111,12 @@ export interface ChatRoomState {
 export interface ChatRoomActions {
   send: (text: string) => void;
   endChat: (reason: ChatEndReason) => void;
+  /**
+   * Leave a group that keeps going without you (3+ active people). A separate
+   * action from endChat because a real backend treats them differently: leave
+   * removes one participant, end closes the room for everyone.
+   */
+  leaveChat: () => void;
 }
 
 export interface ScriptedLine extends SeedMessage {
