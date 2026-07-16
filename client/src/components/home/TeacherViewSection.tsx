@@ -1,5 +1,4 @@
 import {
-  HighlightMark,
   SectionEyebrow,
   SectionHeading,
 } from "@/components/home/SectionHeading";
@@ -38,8 +37,7 @@ export function TeacherViewSection({
           <SectionEyebrow>The teacher's view</SectionEyebrow>
 
           <SectionHeading>
-            Students see characters. You see{" "}
-            <HighlightMark>who's who.</HighlightMark>
+            Students see characters. You see who's who.
           </SectionHeading>
 
           {/* No "this card" here: on phones the card renders well below this

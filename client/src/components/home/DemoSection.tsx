@@ -1,7 +1,6 @@
 import { Gamepad2, Presentation } from "lucide-react";
 
 import {
-  HighlightMark,
   SectionEyebrow,
   SectionHeading,
 } from "@/components/home/SectionHeading";
@@ -24,9 +23,7 @@ export function DemoSection() {
     <section className="mx-auto w-full max-w-6xl px-4 py-14 sm:py-16">
       <div className="flex flex-col items-start gap-5 sm:gap-6">
         <SectionEyebrow>See it in action</SectionEyebrow>
-        <SectionHeading>
-          Poke around a <HighlightMark>live class.</HighlightMark>
-        </SectionHeading>
+        <SectionHeading>Poke around a live class.</SectionHeading>
         <p className="max-w-2xl text-lg text-pretty text-muted-foreground">
           Both sides of Chaverola, running on pretend students. Click around all
           you like: you don't need to sign up, and you can't break anything.

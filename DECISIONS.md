@@ -97,6 +97,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Teacher chat cards: collapsed to the last 5 lines, End chat asks first](#teacher-chat-cards-collapsed-to-the-last-5-lines-end-chat-asks-first)
   - [Teacher view: character colors follow participant order](#teacher-view-character-colors-follow-participant-order)
 - [Homepage & hero](#homepage--hero)
+  - [The highlighter mark appears once on the homepage, under "In character"](#the-highlighter-mark-appears-once-on-the-homepage-under-in-character)
   - [The homepage has a "see it in action" section with doorways into both demos](#the-homepage-has-a-see-it-in-action-section-with-doorways-into-both-demos)
   - [On phones the live chat comes before the setup steps](#on-phones-the-live-chat-comes-before-the-setup-steps)
   - [The how-it-works footer answers cost, accounts, and devices](#the-how-it-works-footer-answers-cost-accounts-and-devices)
@@ -1255,6 +1256,26 @@ _Assignment happens in [ChatCard](client/src/components/Teacher/ChatCard/index.t
 ---
 
 ## Homepage & hero
+
+### The highlighter mark appears once on the homepage, under "In character"
+
+_2026-07-16_
+
+**Decision:** `HighlightMark` (the yellow highlighter sweep) is used exactly
+once on the homepage: the hero's "In character." The section headings that
+briefly had their own marks ("who's who", "live class") are plain text.
+Future homepage sections don't get one either — one mark, hero only.
+
+**Why:** Product-owner feedback (2026-07-16): a yellow highlight on every
+section heading is "so obviously AI generated" — repetition turns a hand-made
+touch into a template tell. Used once, the mark reads like someone ran a real
+highlighter over the one phrase that matters. This extends
+[The hero looks hand-made and never mentions AI](#the-hero-looks-hand-made-and-never-mentions-ai).
+
+_Implemented in [HomePage](client/src/pages/HomePage.tsx) (the keeper);
+removed from
+[TeacherViewSection](client/src/components/home/TeacherViewSection.tsx) and
+[DemoSection](client/src/components/home/DemoSection.tsx)._
 
 ### The homepage has a "see it in action" section with doorways into both demos
 
