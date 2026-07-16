@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
 import { ArrowRight, Handshake, Users, UserX } from "lucide-react";
 
@@ -112,6 +112,18 @@ export function JoinActivityPage() {
   }, [chatStudentName, setChatStudentName]);
 
   usePageTitle(PAGE_TITLES[stage]);
+
+  // Match changes swap the screen on this same route (lobby → chat, rematch,
+  // back to lobby) without navigating, so ScrollToTop can't see them — open
+  // each one at the top like a fresh page. Layout effect so the jump lands
+  // before paint; the ref skips the initial mount, leaving arrival scrolling
+  // (including ScrollToTop's back/forward exception) alone. Chatting → ended
+  // stays put on purpose: that swap happens in place, mid-read.
+  const previousMatchRef = useRef(match);
+  useLayoutEffect(() => {
+    if (previousMatchRef.current !== match) window.scrollTo(0, 0);
+    previousMatchRef.current = match;
+  }, [match]);
 
   const startMatch = (scenarioKey: ActivityChatScenarioKey) => {
     setChatEnded(false);

@@ -44,6 +44,7 @@ the affected part. Link related entries by title anchor, never by "above" /
 ## Contents
 
 - [Student join flow & lobby](#student-join-flow--lobby)
+  - [Stage swaps inside the student route open at the top of the page](#stage-swaps-inside-the-student-route-open-at-the-top-of-the-page)
   - [Back during a live chat asks before ending it](#back-during-a-live-chat-asks-before-ending-it)
   - [One URL for the whole student journey](#one-url-for-the-whole-student-journey)
   - [Landing on code entry signs the student out](#landing-on-code-entry-signs-the-student-out)
@@ -144,6 +145,26 @@ the affected part. Link related entries by title anchor, never by "above" /
 ---
 
 ## Student join flow & lobby
+
+### Stage swaps inside the student route open at the top of the page
+
+_2026-07-16_
+
+**Decision:** When the student's screen swaps without the URL changing —
+lobby into a chat (manual trigger or the auto-match), a rematch, or back to
+the lobby — the page scrolls to the top, the same way a route change opens a
+fresh page. One exception: a chat ending stays put, because that swap happens
+in place while the student is reading the conversation.
+
+**Why:** Founder call. Per
+[One URL for the whole student journey](#one-url-for-the-whole-student-journey),
+these stages are all one route, so the app-wide scroll-to-top (which watches
+the URL) never fires — a student scrolled down in the lobby would land in the
+chat mid-scroll, with the chat header out of view. A new UI should start at
+the top of the page.
+
+_Implemented in
+[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._
 
 ### Back during a live chat asks before ending it
 
