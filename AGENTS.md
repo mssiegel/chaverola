@@ -42,7 +42,8 @@ Load-bearing flow facts (the reasoning for each is in DECISIONS.md):
 - Demo surfaces are marked and steerable: a golden `DemoBanner` ("the
   students are pretend") shows whenever the activity is the `1234` demo —
   sticky under the navbar on the host page (where HostHeader's condensed
-  waiting bar stands down), a solid card in the student world — and the
+  waiting bar stands down), a solid card pinned below the corner pills in
+  the student world — and the
   "You're driving this demo" panels are permanent, teacher-facing demo
   furniture. Student-demo entries land on `/activity/join/1234` with the
   name prefilled (`DEMO_STUDENT_NAME`, "Rachel"). The demo lobby auto-pairs

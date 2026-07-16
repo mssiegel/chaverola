@@ -58,7 +58,8 @@ activity"]`. Section headers are buttons whose `innerText` carries the
   is gone). The name step swaps in-place — wait for
   `getByPlaceholder("Your name")`, then click "Join Activity"; lobby shows
   "Waiting for your match". On `/activity/join/1234` the name input arrives
-  prefilled "Rachel" (demo only — cleared on real codes). Auto-match keeps
+  prefilled "Rachel" (demo only — cleared on real codes), and the golden
+  "This is the demo…" card is sticky at `top-20` (y≈80 while scrolled). Auto-match keeps
   the host-page queue moving (~20s waits), so re-query rows right before
   clicking and avoid exact queue-count assertions.
 - Demo entry URLs: `/demo` and `/demo/teacher` redirect to

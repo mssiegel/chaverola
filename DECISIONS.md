@@ -1788,13 +1788,15 @@ class. The students are pretend." with the "Start your own" link — and
 HostHeader's condensed waiting bar stands down on the demo so the two never
 fight over that band (the desktop pairing rail still shows the count).
 Student world: a solid golden card at the top of the column from the name
-stage on, same wording as before, still label-only — no teacher nudges
-inside the student experience. Supersedes
+stage on, pinned below the corner pills so the stages scroll underneath it;
+same wording as before, still label-only — no teacher nudges inside the
+student experience. Supersedes
 [Demo surfaces say so: a pretend-students chip on both views](#demo-surfaces-say-so-a-pretend-students-chip-on-both-views).
 
 **Why:** Founder feedback (2026-07-16): the wording was right, but the chip
-was too easy to miss — the notice must be big and obvious, and on the
-teacher page it must stay visible while scrolling. Honesty about the demo is
+was too easy to miss — the notice must be big and obvious, and it must stay
+visible while scrolling (asked first for the teacher page, then extended to
+the student world the same day). Honesty about the demo is
 load-bearing (a visitor who realizes late that the students are pretend
 feels tricked), and the always-visible "Start your own" is the sales exit.
 
