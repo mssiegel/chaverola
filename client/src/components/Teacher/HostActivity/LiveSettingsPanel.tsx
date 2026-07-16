@@ -131,11 +131,19 @@ export function LiveSettingsPanel({
               onRemove={removeCharacter}
               problemFor={problemFor}
               registerField={() => () => undefined}
-              removeGuard={(row) =>
-                characterIdsInUse.has(row.id)
-                  ? "In a live chat right now. You can remove them once that chat ends."
-                  : null
-              }
+              removeGuard={(row) => {
+                if (!characterIdsInUse.has(row.id)) return null;
+                // Name who's locked with the committed name — that's what
+                // the running chat shows, even mid-rename.
+                const committed = activity.characters.find(
+                  (c) => c.id === row.id
+                );
+                const name =
+                  committed?.name.trim() ||
+                  row.name.trim() ||
+                  "This character";
+                return `${name} is in a live chat right now. You can remove them once that chat ends.`;
+              }}
             />
           </div>
         </div>

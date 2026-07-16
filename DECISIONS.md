@@ -92,6 +92,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Every chat runs its own auto-end clock, and students watch it tick](#every-chat-runs-its-own-auto-end-clock-and-students-watch-it-tick)
   - [Auto-end edits: new minutes wait for new chats; the toggle acts immediately](#auto-end-edits-new-minutes-wait-for-new-chats-the-toggle-acts-immediately)
   - [Live edits propagate after a 1-second pause, and invalid states never do](#live-edits-propagate-after-a-1-second-pause-and-invalid-states-never-do)
+  - [A character in a live chat shows the Live dot, and its hint says who](#a-character-in-a-live-chat-shows-the-live-dot-and-its-hint-says-who)
   - [No reveal-names control in Chats in progress](#no-reveal-names-control-in-chats-in-progress)
   - [An unknown host code redirects to the demo activity](#an-unknown-host-code-redirects-to-the-demo-activity)
   - [The copyable student link carries the current origin, and is never printed](#the-copyable-student-link-carries-the-current-origin-and-is-never-printed)
@@ -1222,9 +1223,41 @@ debounce keeps half-typed names from flashing across live chat cards;
 last-valid-wins means students can never see a blank or duplicate label,
 even while the teacher is mid-edit.
 
+**Update (2026-07-16):** the in-use row's disabled remove control became
+the Live dot with a hint that names the character — see
+[A character in a live chat shows the Live dot, and its hint says who](#a-character-in-a-live-chat-shows-the-live-dot-and-its-hint-says-who).
+
 _Implemented in
 [LiveSettingsPanel](client/src/components/Teacher/HostActivity/LiveSettingsPanel.tsx)
 with the draft model in [hostActivity](client/src/lib/hostActivity.ts)._
+
+### A character in a live chat shows the Live dot, and its hint says who
+
+_2026-07-16_
+
+**Decision:** While a live chat uses a character, that row in the host
+page's settings panel swaps its remove button for the same pulsing mint
+Live dot the chat cards wear (extracted to a shared
+[LiveDot](client/src/components/ui/live-dot.tsx)), and the hint under the
+input names the character: "Cleopatra is in a live chat right now. You can
+remove them once that chat ends." The name is the **committed** one — what
+running chats actually display — so a mid-rename draft never changes who
+the message claims is chatting.
+
+**Why:** Founder feedback (2026-07-16): the anonymous hint ("In a live
+chat right now…") rendered in the gap between two character rows and named
+nobody, so it read as ambiguous — which character is it about? — and the
+disabled × at 35% opacity was faint enough that the locked row looked like
+it had no remove control at all, while the neighbor's crisp × drew the eye
+to the wrong row. Naming the character makes the message unambiguous
+wherever it sits, and the Live dot marks the locked row with the exact
+signal that already means "chat running right now" on the cards below.
+
+_Implemented in
+[CharacterRowsField](client/src/components/Teacher/ActivitySetup/CharacterRowsField.tsx)
+(the indicator) and
+[LiveSettingsPanel](client/src/components/Teacher/HostActivity/LiveSettingsPanel.tsx)
+(the named message)._
 
 ### No reveal-names control in Chats in progress
 

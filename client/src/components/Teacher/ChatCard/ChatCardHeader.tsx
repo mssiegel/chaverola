@@ -1,6 +1,7 @@
 import { CheckCircle2, X } from "lucide-react";
 
 import { AutoEndCountdown } from "@/components/chat/AutoEndCountdown";
+import { LiveDot } from "@/components/ui/live-dot";
 import { characterLabel } from "@/lib/characterLabel";
 import { cn } from "@/lib/utils";
 import type { Participant } from "@/types/chat";
@@ -78,10 +79,7 @@ export function ChatCardHeader({
           </span>
         ) : (
           <span className="flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-xs font-semibold text-foreground shadow-sm">
-            <span className="relative flex size-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-mint opacity-75" />
-              <span className="relative inline-flex size-2 rounded-full bg-brand-mint" />
-            </span>
+            <LiveDot />
             Live
           </span>
         )}

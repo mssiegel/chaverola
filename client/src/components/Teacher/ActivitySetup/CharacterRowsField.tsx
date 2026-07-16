@@ -1,6 +1,7 @@
 import { Plus, X } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
+import { LiveDot } from "@/components/ui/live-dot";
 import {
   MAX_CHARACTERS,
   MIN_CHARACTERS,
@@ -36,9 +37,10 @@ interface CharacterRowsFieldProps {
   registerField: (field: SetupField) => (el: HTMLElement | null) => void;
   /**
    * Live host page only: why a removable row can't be removed right now
-   * (e.g. its character is in a live chat). A returned string disables the
-   * remove button and shows as a short hint under the row; null/undefined
-   * keeps the row removable. Only called for rows 3–4.
+   * (e.g. its character is in a live chat). A returned string replaces the
+   * remove button with the live-chat dot and shows as a short hint under
+   * the row; null/undefined keeps the row removable. Only called for
+   * rows 3–4.
    */
   removeGuard?: (row: CharacterRowState) => string | null | undefined;
 }
@@ -108,13 +110,22 @@ export function CharacterRowsField({
               )}
             </div>
 
-            {removable ? (
+            {guardMessage ? (
+              // The chat cards' pulsing "Live" dot stands in for the remove
+              // button — the row is locked by the same running chat the dot
+              // marks below. The named hint under the input explains.
+              <span
+                className="mt-2 grid size-8 shrink-0 place-items-center"
+                aria-hidden
+              >
+                <LiveDot />
+              </span>
+            ) : removable ? (
               <button
                 type="button"
                 onClick={() => onRemove(row.id)}
-                disabled={Boolean(guardMessage)}
                 aria-label={`Remove character ${index + 1}`}
-                className="mt-2 grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-35"
+                className="mt-2 grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
               >
                 <X className="size-4" />
               </button>
