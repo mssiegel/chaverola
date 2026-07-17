@@ -1,6 +1,7 @@
 import { Check, Repeat2, Sparkles, UsersRound, X, Zap } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { formatWaitShort } from "@/lib/time";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +26,11 @@ export interface PairingPanelProps {
   leftoverStudentId: string | null;
   autoMatchOn: boolean;
   autoMatchSeconds: number;
+  /** Flips the real activity setting — the same one Edit activity settings shows. */
+  onAutoMatchChange: (on: boolean) => void;
+  /** Post-End-all hold banner — only when End-all itself turned auto-match off. */
+  showHoldNotice: boolean;
+  onDismissHoldNotice: () => void;
 }
 
 /**
@@ -49,11 +55,53 @@ export function PairingPanel({
   leftoverStudentId,
   autoMatchOn,
   autoMatchSeconds,
+  onAutoMatchChange,
+  showHoldNotice,
+  onDismissHoldNotice,
 }: PairingPanelProps) {
   const selectionFull = selectedIds.length >= maxGroupSize;
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Above the empty-state branch on purpose: right after End-all the
+          queue is briefly empty while students wrap up, and this is exactly
+          when the teacher needs to see the hold. The count is live — it
+          climbs as students come back. */}
+      {showHoldNotice && (
+        <div
+          role="status"
+          className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800"
+        >
+          <div className="flex items-start gap-2">
+            <Zap aria-hidden className="mt-0.5 size-4 shrink-0" />
+            <span className="min-w-0 flex-1">
+              {waiting.length === 0
+                ? "Auto-match is off. Students land back here as their chats wrap up."
+                : waiting.length === 1
+                  ? "1 student is waiting, and auto-match is off."
+                  : `${waiting.length} students are waiting, and auto-match is off.`}
+            </span>
+            <button
+              type="button"
+              onClick={onDismissHoldNotice}
+              aria-label="Dismiss"
+              className="grid size-6 shrink-0 place-items-center rounded-full text-amber-700 transition-colors hover:bg-amber-100"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onAutoMatchChange(true)}
+            className="mt-2 w-full border-amber-300 bg-white text-amber-900 hover:bg-amber-100 hover:text-amber-900"
+          >
+            <Zap aria-hidden />
+            Turn auto-match back on
+          </Button>
+        </div>
+      )}
+
       {waiting.length === 0 ? (
         <EmptyState className="py-8">
           <p className="text-2xl" aria-hidden>
@@ -182,16 +230,31 @@ export function PairingPanel({
         </>
       )}
 
-      {autoMatchOn && (
-        <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
-          <Zap
-            aria-hidden
-            className="mt-0.5 size-3.5 shrink-0 text-brand-mint"
-          />
-          Auto-match is on: students pair up on their own after waiting{" "}
-          {autoMatchSeconds} seconds.
-        </p>
-      )}
+      {/* The matching control lives where the teacher watches the queue —
+          it IS the activity setting, the same one Edit activity settings
+          shows, so the two switches can never disagree. */}
+      <div className="flex items-start gap-2 border-t border-border/70 pt-3">
+        <Zap
+          aria-hidden
+          className={cn(
+            "mt-0.5 size-3.5 shrink-0",
+            autoMatchOn ? "text-brand-mint" : "text-muted-foreground/50"
+          )}
+        />
+        <label
+          htmlFor="pairing-auto-match"
+          className="min-w-0 flex-1 cursor-pointer text-xs leading-relaxed text-muted-foreground"
+        >
+          {autoMatchOn
+            ? `Auto-match is on: students pair up on their own after waiting ${autoMatchSeconds} seconds.`
+            : "Auto-match is off: students wait here until you pair them."}
+        </label>
+        <Switch
+          id="pairing-auto-match"
+          checked={autoMatchOn}
+          onCheckedChange={onAutoMatchChange}
+        />
+      </div>
     </div>
   );
 }

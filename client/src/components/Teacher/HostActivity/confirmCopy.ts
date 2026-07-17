@@ -8,8 +8,16 @@ export type PendingAction =
   | { kind: "remove-from-chat"; chat: HostedChat; participant: Participant }
   | { kind: "end-all" };
 
-/** The confirmation copy per action — each names what actually happens. */
-export function confirmCopy(action: PendingAction | null): {
+/**
+ * The confirmation copy per action — each names what actually happens.
+ * `autoMatchOn` is read live at render, never frozen into the action: a
+ * pending settings edit can flip it while the dialog is open, and the copy
+ * must not promise a hold that won't happen.
+ */
+export function confirmCopy(
+  action: PendingAction | null,
+  autoMatchOn: boolean
+): {
   title: string;
   description: string;
   confirmLabel: string;
@@ -39,8 +47,9 @@ export function confirmCopy(action: PendingAction | null): {
   }
   return {
     title: "End all chats?",
-    description:
-      "Every active chat will end right now for everyone in it. Students will see the chat is over and can head back to the lobby for another round.",
+    description: autoMatchOn
+      ? "Every active chat will end right now for everyone in it. Auto-match goes on hold too, so students wait in the lobby until you pair them or turn it back on."
+      : "Every active chat will end right now for everyone in it. Students will see the chat is over and can head back to the lobby for another round.",
     confirmLabel: "End all chats",
     cancelLabel: "Let them keep chatting",
   };

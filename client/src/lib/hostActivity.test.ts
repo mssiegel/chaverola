@@ -6,6 +6,7 @@ import type { Participant } from "@/types/chat";
 import { DEFAULT_ACTIVITY_SETTINGS } from "./activitySetup";
 import {
   activityFromLiveDraft,
+  mergeExternalSettings,
   validateLiveDraft,
   withCurrentCharacters,
   type LiveActivityDraft,
@@ -73,6 +74,54 @@ describe("activityFromLiveDraft", () => {
     expect(activity.characters).toEqual([{ id: "caesar", name: "Julius" }]);
     expect(activity.scenario).toBe("Rome, 44 BC");
     expect(activity.joinCode).toBe("4321");
+  });
+});
+
+describe("mergeExternalSettings", () => {
+  const settings = () => ({ ...DEFAULT_ACTIVITY_SETTINGS });
+
+  it("merges a key that changed outside the panel", () => {
+    const prev = settings();
+    const next = { ...settings(), autoMatch: false };
+    const draft = settings();
+    expect(mergeExternalSettings(prev, next, draft)).toEqual({
+      ...settings(),
+      autoMatch: false,
+    });
+  });
+
+  it("returns null for the panel's own commit echoing back", () => {
+    // The panel committed autoMatch: false itself — the draft already agrees.
+    const prev = settings();
+    const next = { ...settings(), autoMatch: false };
+    const draft = { ...settings(), autoMatch: false };
+    expect(mergeExternalSettings(prev, next, draft)).toBeNull();
+  });
+
+  it("returns null when nothing changed at all", () => {
+    expect(mergeExternalSettings(settings(), settings(), settings())).toBeNull();
+  });
+
+  it("keeps a pending draft edit on a different key", () => {
+    const prev = settings();
+    const next = { ...settings(), autoMatch: false };
+    const draft = { ...settings(), autoEndMinutes: 12 };
+    expect(mergeExternalSettings(prev, next, draft)).toEqual({
+      ...settings(),
+      autoMatch: false,
+      autoEndMinutes: 12,
+    });
+  });
+
+  it("merges every externally changed key at once", () => {
+    const prev = settings();
+    const next = { ...settings(), autoMatch: false, revealNames: false };
+    const draft = settings();
+    expect(mergeExternalSettings(prev, next, draft)).toEqual({
+      ...settings(),
+      autoMatch: false,
+      revealNames: false,
+    });
   });
 });
 

@@ -39,6 +39,29 @@ export function HostActivityDashboard({
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(
     null
   );
+  // Set only when End-all itself turned auto-match off — the banner offers
+  // the one-tap undo for that specific moment, not for every off state.
+  const [autoMatchHoldNotice, setAutoMatchHoldNotice] = useState(false);
+
+  const setAutoMatch = (autoMatch: boolean) => {
+    if (activity.settings.autoMatch === autoMatch) return;
+    onActivityChange({
+      ...activity,
+      settings: { ...activity.settings, autoMatch },
+    });
+  };
+
+  // Turning auto-match back on from ANY surface — the banner's button, the
+  // rail's switch, the settings panel — retires the hold notice. Adjusted
+  // during render (not an effect), so a later unrelated off-flip in the
+  // settings panel can't resurrect a stale banner.
+  const [prevAutoMatchOn, setPrevAutoMatchOn] = useState(
+    activity.settings.autoMatch
+  );
+  if (activity.settings.autoMatch !== prevAutoMatchOn) {
+    setPrevAutoMatchOn(activity.settings.autoMatch);
+    if (activity.settings.autoMatch) setAutoMatchHoldNotice(false);
+  }
 
   // Selection is derived against the live queue: a student who got matched
   // away or removed simply falls out of it.
@@ -89,7 +112,15 @@ export function HostActivityDashboard({
     } else if (pendingAction.kind === "remove-from-chat") {
       demo.removeFromChat(pendingAction.chat.id, pendingAction.participant.id);
     } else {
+      // End-all is the round-closer: end every chat, then hold auto-match so
+      // nobody gets re-paired into a round the teacher just closed. The
+      // setting is re-read at confirm time — already off means no flip and
+      // no banner.
       demo.endAllChats();
+      if (activity.settings.autoMatch) {
+        setAutoMatch(false);
+        setAutoMatchHoldNotice(true);
+      }
     }
     setPendingAction(null);
   };
@@ -111,6 +142,9 @@ export function HostActivityDashboard({
       leftoverStudentId={demo.leftoverStudentId}
       autoMatchOn={activity.settings.autoMatch}
       autoMatchSeconds={activity.settings.autoMatchSeconds}
+      onAutoMatchChange={setAutoMatch}
+      showHoldNotice={autoMatchHoldNotice && !activity.settings.autoMatch}
+      onDismissHoldNotice={() => setAutoMatchHoldNotice(false)}
     />
   );
 
@@ -209,7 +243,7 @@ export function HostActivityDashboard({
           if (!open) setPendingAction(null);
         }}
         onConfirm={confirmPendingAction}
-        {...confirmCopy(pendingAction)}
+        {...confirmCopy(pendingAction, activity.settings.autoMatch)}
       />
     </div>
   );

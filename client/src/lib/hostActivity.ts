@@ -1,4 +1,4 @@
-import type { HostedActivity } from "@/types/activity";
+import type { ActivitySettings, HostedActivity } from "@/types/activity";
 import type { Character, Participant } from "@/types/chat";
 
 import {
@@ -90,6 +90,39 @@ export function validateLiveDraft(
     }
   });
   return problems;
+}
+
+function copySettingsKey<K extends keyof ActivitySettings>(
+  target: ActivitySettings,
+  source: ActivitySettings,
+  key: K
+) {
+  target[key] = source[key];
+}
+
+/**
+ * Folds settings changed OUTSIDE the live panel (the pairing rail's
+ * auto-match switch, End-all's auto-hold) into the panel's draft. Without
+ * this the draft — captured once on mount — would show the old switch
+ * position and, worse, quietly put the old value back on its next commit.
+ * A key merges only when the activity value actually moved AND the draft
+ * disagrees: the panel's own commits echo back as no-ops, and a pending
+ * edit to any other key is never clobbered. Returns null when there's
+ * nothing to change so callers can skip the state update entirely.
+ */
+export function mergeExternalSettings(
+  prev: ActivitySettings,
+  next: ActivitySettings,
+  draft: ActivitySettings
+): ActivitySettings | null {
+  let merged: ActivitySettings | null = null;
+  for (const key of Object.keys(next) as (keyof ActivitySettings)[]) {
+    if (prev[key] !== next[key] && draft[key] !== next[key]) {
+      merged ??= { ...draft };
+      copySettingsKey(merged, next, key);
+    }
+  }
+  return merged;
 }
 
 /**

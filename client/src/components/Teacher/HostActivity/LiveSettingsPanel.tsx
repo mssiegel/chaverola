@@ -11,6 +11,7 @@ import { type SetupField } from "@/lib/activitySetup";
 import {
   activityFromLiveDraft,
   liveDraftFromActivity,
+  mergeExternalSettings,
   mintLiveCharacterId,
   validateLiveDraft,
   type LiveActivityDraft,
@@ -46,6 +47,22 @@ export function LiveSettingsPanel({
   const [draft, setDraft] = useState<LiveActivityDraft>(() =>
     liveDraftFromActivity(activity)
   );
+
+  // Settings can change outside this panel too — the pairing rail's
+  // auto-match switch, End-all's auto-hold. Those changes must reach this
+  // draft, or its next commit would quietly put the old value back. Only
+  // keys that actually moved merge in, so half-typed text and pending edits
+  // to other settings survive, and the panel's own commits echo through as
+  // no-ops (mergeExternalSettings returns null, setDraft bails).
+  const prevSettingsRef = useRef(activity.settings);
+  useEffect(() => {
+    const prev = prevSettingsRef.current;
+    prevSettingsRef.current = activity.settings;
+    setDraft((d) => {
+      const merged = mergeExternalSettings(prev, activity.settings, d.settings);
+      return merged ? { ...d, settings: merged } : d;
+    });
+  }, [activity.settings]);
 
   const committedIds = useMemo(
     () => new Set(activity.characters.map((c) => c.id)),

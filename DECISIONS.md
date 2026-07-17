@@ -82,6 +82,8 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Character rows lead with the emoji avatar](#character-rows-lead-with-the-emoji-avatar)
   - [Setup sections each carry one brand accent; settings stays the quiet one](#setup-sections-each-carry-one-brand-accent-settings-stays-the-quiet-one)
 - [Teacher live activity page](#teacher-live-activity-page)
+  - [The pairing rail carries the auto-match switch, and it IS the activity setting](#the-pairing-rail-carries-the-auto-match-switch-and-it-is-the-activity-setting)
+  - [End all chats holds auto-match by turning the real setting off](#end-all-chats-holds-auto-match-by-turning-the-real-setting-off)
   - [A character in a live chat shows the Live dot, and its hint says who](#a-character-in-a-live-chat-shows-the-live-dot-and-its-hint-says-who)
   - [The host page is never projected — it's the teacher's private control room](#the-host-page-is-never-projected--its-the-teachers-private-control-room)
   - [Host page layout: stacked sections on phones, a sticky pairing rail on desktop](#host-page-layout-stacked-sections-on-phones-a-sticky-pairing-rail-on-desktop)
@@ -1007,6 +1009,65 @@ _Implemented in
 ---
 
 ## Teacher live activity page
+
+### The pairing rail carries the auto-match switch, and it IS the activity setting
+
+_2026-07-17_
+
+**Decision:** The Pair-your-students panel's auto-match footnote is now a
+switch row that renders in **both** states ("Auto-match is on: students pair
+up on their own after waiting N seconds." / "Auto-match is off: students wait
+here until you pair them."). It reads and writes `settings.autoMatch` — the
+same setting the setup form and Edit activity settings show — with **no
+separate hold flag**. The seconds stepper stays in the settings panels only.
+External flips reach the settings panel's draft through a keyed merge
+([mergeExternalSettings](client/src/lib/hostActivity.ts)): only settings keys
+that actually moved fold in, so a half-typed edit elsewhere in the panel
+survives, and the panel's next debounced commit can no longer resurrect a
+stale value it captured on mount.
+
+**Why:** Founder call (2026-07-17). Between rounds the teacher needs to stop
+matching while explaining the next scene, and the only switch was buried in
+the collapsed settings section — invisible exactly when it mattered (the old
+footnote rendered nothing at all when auto-match was off). One real setting
+with multiple views was chosen over a transient session "hold" so two
+controls can never disagree about whether matching runs.
+
+_Implemented in
+[PairingPanel](client/src/components/Teacher/HostActivity/PairingPanel.tsx)
+(the switch row),
+[LiveSettingsPanel](client/src/components/Teacher/HostActivity/LiveSettingsPanel.tsx)
+(the draft merge), and
+[hostActivity](client/src/lib/hostActivity.ts) (`mergeExternalSettings`)._
+
+### End all chats holds auto-match by turning the real setting off
+
+_2026-07-17_
+
+**Decision:** Confirming **End all chats** while auto-match is on flips
+`settings.autoMatch` off for real — every surface shows off — and the pairing
+rail shows a dismissible amber banner ("N students are waiting, and
+auto-match is off.") with a one-tap **Turn auto-match back on**. The confirm
+dialog says the hold out loud ("Auto-match goes on hold too, so students wait
+in the lobby until you pair them or turn it back on."). Only the explicit
+End-all does this: chats ending naturally (timer, students, a single chat
+ended from its card) never touch the setting, and End-all with auto-match
+already off changes nothing extra and shows the plain confirm copy.
+
+**Why:** Founder call (2026-07-17): End-all means "the round is closed."
+Without the hold, auto-match re-pairs returning students within seconds —
+with the round's old characters — while the teacher is still explaining the
+next scene, silently undoing the close. Flipping the real setting keeps every
+surface honest (rejected: a shadow hold flag that could disagree with the
+switches), and the banner plus the confirm copy make the flip loud, so a
+teacher is never surprised that matching stopped.
+
+_Implemented in
+[HostActivityDashboard](client/src/components/Teacher/HostActivity/index.tsx)
+(the flip and the notice state),
+[confirmCopy](client/src/components/Teacher/HostActivity/confirmCopy.ts), and
+[PairingPanel](client/src/components/Teacher/HostActivity/PairingPanel.tsx)
+(the banner)._
 
 ### A character in a live chat shows the Live dot, and its hint says who
 
