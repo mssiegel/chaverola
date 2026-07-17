@@ -26,6 +26,8 @@ export interface PairingPanelProps {
   leftoverStudentId: string | null;
   autoMatchOn: boolean;
   autoMatchSeconds: number;
+  /** The activity-wide pause: matching is on hold, and the row says so. */
+  paused?: boolean;
   /** Flips the real activity setting — the same one Edit activity settings shows. */
   onAutoMatchChange: (on: boolean) => void;
   /** Post-End-all hold banner — only when End-all itself turned auto-match off. */
@@ -55,6 +57,7 @@ export function PairingPanel({
   leftoverStudentId,
   autoMatchOn,
   autoMatchSeconds,
+  paused = false,
   onAutoMatchChange,
   showHoldNotice,
   onDismissHoldNotice,
@@ -245,9 +248,11 @@ export function PairingPanel({
           htmlFor="pairing-auto-match"
           className="min-w-0 flex-1 cursor-pointer text-xs leading-relaxed text-muted-foreground"
         >
-          {autoMatchOn
-            ? `Auto-match is on: students pair up on their own after waiting ${autoMatchSeconds} seconds.`
-            : "Auto-match is off: students wait here until you pair them."}
+          {!autoMatchOn
+            ? "Auto-match is off: students wait here until you pair them."
+            : paused
+              ? "Auto-match is on hold while chats are paused."
+              : `Auto-match is on: students pair up on their own after waiting ${autoMatchSeconds} seconds.`}
         </label>
         <Switch
           id="pairing-auto-match"

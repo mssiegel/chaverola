@@ -111,6 +111,8 @@ export function HostActivityDashboard({
       demo.removeFromQueue(pendingAction.student.id);
     } else if (pendingAction.kind === "remove-from-chat") {
       demo.removeFromChat(pendingAction.chat.id, pendingAction.participant.id);
+    } else if (pendingAction.kind === "pause-all") {
+      demo.pauseAllChats();
     } else {
       // End-all is the round-closer: end every chat, then hold auto-match so
       // nobody gets re-paired into a round the teacher just closed. The
@@ -142,6 +144,7 @@ export function HostActivityDashboard({
       leftoverStudentId={demo.leftoverStudentId}
       autoMatchOn={activity.settings.autoMatch}
       autoMatchSeconds={activity.settings.autoMatchSeconds}
+      paused={demo.paused}
       onAutoMatchChange={setAutoMatch}
       showHoldNotice={autoMatchHoldNotice && !activity.settings.autoMatch}
       onDismissHoldNotice={() => setAutoMatchHoldNotice(false)}
@@ -202,6 +205,9 @@ export function HostActivityDashboard({
             waitingCount={demo.waiting.length}
             onEndChat={demo.endChat}
             onRequestEndAll={() => setPendingAction({ kind: "end-all" })}
+            paused={demo.paused}
+            onRequestPauseAll={() => setPendingAction({ kind: "pause-all" })}
+            onResumeAll={demo.resumeAllChats}
             onRequestRemoveParticipant={(chat, participant) =>
               setPendingAction({ kind: "remove-from-chat", chat, participant })
             }

@@ -19,6 +19,8 @@ export interface ChatCardProps {
   messages: ChatMessage[];
   /** Completed chats render the muted variant with no End chat button. */
   isEnded: boolean;
+  /** The activity-wide pause: badge and clock freeze (never per chat). */
+  isPaused?: boolean;
   /** Omit to hide the End chat button (e.g. the homepage preview card). */
   onEndChat?: () => void;
   /** Seconds left on the chat's auto-end clock (null/omitted: no clock). */
@@ -43,6 +45,7 @@ export function ChatCard({
   participants,
   messages,
   isEnded,
+  isPaused = false,
   onEndChat,
   autoEndSecondsLeft = null,
   inactiveParticipantIds,
@@ -99,6 +102,7 @@ export function ChatCard({
         participants={participants}
         characterColors={characterColors}
         isEnded={isEnded}
+        isPaused={isPaused}
         autoEndSecondsLeft={autoEndSecondsLeft}
         inactiveParticipantIds={inactiveParticipantIds}
         onRemoveParticipant={onRemoveParticipant}

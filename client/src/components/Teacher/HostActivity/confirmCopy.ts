@@ -6,7 +6,8 @@ import type { HostedChat, WaitingStudent } from "./hostWorld";
 export type PendingAction =
   | { kind: "remove-from-queue"; student: WaitingStudent }
   | { kind: "remove-from-chat"; chat: HostedChat; participant: Participant }
-  | { kind: "end-all" };
+  | { kind: "end-all" }
+  | { kind: "pause-all" };
 
 /**
  * The confirmation copy per action — each names what actually happens.
@@ -22,6 +23,8 @@ export function confirmCopy(
   description: string;
   confirmLabel: string;
   cancelLabel: string;
+  /** Pause is reversible, so it confirms in the default color, not red. */
+  confirmVariant: "default" | "destructive";
 } {
   if (action?.kind === "remove-from-queue") {
     return {
@@ -30,6 +33,7 @@ export function confirmCopy(
         "They'll be signed out and sent back to the join screen, with a note that you removed them. They can sign in again, with a better name if that was the problem.",
       confirmLabel: "Remove them",
       cancelLabel: "Never mind",
+      confirmVariant: "destructive",
     };
   }
   if (action?.kind === "remove-from-chat") {
@@ -43,6 +47,17 @@ export function confirmCopy(
         : "They'll be signed out and sent back to the join screen, and their partner's chat ends. Nobody is told it was a removal.",
       confirmLabel: "Remove them",
       cancelLabel: "Never mind",
+      confirmVariant: "destructive",
+    };
+  }
+  if (action?.kind === "pause-all") {
+    return {
+      title: "Pause all chats?",
+      description:
+        "Students keep their chat on screen but can't send anything until you resume. Chat clocks stop too, so nobody loses time.",
+      confirmLabel: "Pause chats",
+      cancelLabel: "Never mind",
+      confirmVariant: "default",
     };
   }
   return {
@@ -52,5 +67,6 @@ export function confirmCopy(
       : "Every active chat will end right now for everyone in it. Students will see the chat is over and can head back to the lobby for another round.",
     confirmLabel: "End all chats",
     cancelLabel: "Let them keep chatting",
+    confirmVariant: "destructive",
   };
 }

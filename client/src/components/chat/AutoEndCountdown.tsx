@@ -1,4 +1,4 @@
-import { Timer } from "lucide-react";
+import { Pause, Timer } from "lucide-react";
 
 import { formatSecondsAsClock } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,11 @@ interface AutoEndCountdownProps {
   secondsLeft: number;
   /** True on dark chrome (the student chat header's grape gradient). */
   onDark?: boolean;
+  /**
+   * The teacher paused the activity: the clock holds, so the frozen look
+   * wins — muted tone, a pause glyph, and no finale pulse even under 60s.
+   */
+  paused?: boolean;
   className?: string;
 }
 
@@ -24,9 +29,11 @@ interface AutoEndCountdownProps {
 export function AutoEndCountdown({
   secondsLeft,
   onDark = false,
+  paused = false,
   className,
 }: AutoEndCountdownProps) {
-  const finale = secondsLeft <= FINALE_FROM_SECONDS;
+  const finale = !paused && secondsLeft <= FINALE_FROM_SECONDS;
+  const Icon = paused ? Pause : Timer;
 
   return (
     <span
@@ -43,10 +50,14 @@ export function AutoEndCountdown({
         className
       )}
     >
-      <Timer aria-hidden className="size-3.5 shrink-0" />
+      <Icon aria-hidden className="size-3.5 shrink-0" />
       <span aria-hidden>{formatSecondsAsClock(secondsLeft)}</span>
       <span role="status" className="sr-only">
-        {finale ? "Less than a minute left in this chat" : ""}
+        {paused
+          ? "The chat clock is paused"
+          : finale
+            ? "Less than a minute left in this chat"
+            : ""}
       </span>
     </span>
   );

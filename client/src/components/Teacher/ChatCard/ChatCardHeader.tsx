@@ -1,4 +1,4 @@
-import { CheckCircle2, X } from "lucide-react";
+import { CheckCircle2, Pause, X } from "lucide-react";
 
 import { AutoEndCountdown } from "@/components/chat/AutoEndCountdown";
 import { LiveDot } from "@/components/ui/live-dot";
@@ -11,6 +11,8 @@ interface ChatCardHeaderProps {
   /** Distinct color (CSS var) per character id in this chat. */
   characterColors: Map<string, string>;
   isEnded: boolean;
+  /** The activity-wide pause: the badge and clock freeze. Ended wins. */
+  isPaused?: boolean;
   /** Seconds left on the chat's auto-end clock (null/omitted: no clock). */
   autoEndSecondsLeft?: number | null;
   /** Participants no longer in the room (removed mid-chat) render muted. */
@@ -29,6 +31,7 @@ export function ChatCardHeader({
   participants,
   characterColors,
   isEnded,
+  isPaused = false,
   autoEndSecondsLeft = null,
   inactiveParticipantIds,
   onRemoveParticipant,
@@ -77,6 +80,11 @@ export function ChatCardHeader({
             <CheckCircle2 className="size-3.5" />
             Ended
           </span>
+        ) : isPaused ? (
+          <span className="flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 shadow-sm">
+            <Pause className="size-3.5" />
+            Paused
+          </span>
         ) : (
           <span className="flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-xs font-semibold text-foreground shadow-sm">
             <LiveDot />
@@ -87,6 +95,7 @@ export function ChatCardHeader({
           <span className="flex items-center rounded-full bg-card px-2.5 py-1 shadow-sm">
             <AutoEndCountdown
               secondsLeft={autoEndSecondsLeft}
+              paused={isPaused}
               className="text-xs"
             />
           </span>

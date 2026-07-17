@@ -1,4 +1,4 @@
-import { LogOut, MessagesSquare, UsersRound } from "lucide-react";
+import { LogOut, MessagesSquare, Pause, Play, UsersRound } from "lucide-react";
 
 import { ChatCard } from "@/components/Teacher/ChatCard";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,10 @@ interface ChatsInProgressSectionProps {
   waitingCount: number;
   onEndChat: (chatId: string) => void;
   onRequestEndAll: () => void;
+  /** The activity-wide pause; pausing confirms, resuming is one tap. */
+  paused: boolean;
+  onRequestPauseAll: () => void;
+  onResumeAll: () => void;
   onRequestRemoveParticipant: (
     chat: HostedChat,
     participant: Participant
@@ -37,6 +41,9 @@ export function ChatsInProgressSection({
   waitingCount,
   onEndChat,
   onRequestEndAll,
+  paused,
+  onRequestPauseAll,
+  onResumeAll,
   onRequestRemoveParticipant,
   onPairEveryone,
 }: ChatsInProgressSectionProps) {
@@ -49,25 +56,44 @@ export function ChatsInProgressSection({
       collapsedHint={
         chats.length === 0
           ? "No chats going right now"
-          : `${studentsChattingCount} students chatting right now`
+          : paused
+            ? `Paused: ${studentsChattingCount} students mid-chat`
+            : `${studentsChattingCount} students chatting right now`
       }
     >
       {chats.length === 0 ? (
-        <EmptyState className="py-8">
-          <p className="font-semibold text-foreground">No chats yet</p>
-          <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
-            Pair two students in the queue, or start the whole round in one tap.
-          </p>
-          <Button
-            variant="outline"
-            className="mt-4"
-            onClick={onPairEveryone}
-            disabled={waitingCount < 2}
-          >
-            <UsersRound aria-hidden />
-            Pair everyone 1:1
-          </Button>
-        </EmptyState>
+        // A paused room can empty out chat by chat (per-chat ends don't
+        // clear the pause), so Resume must stay reachable here too.
+        paused ? (
+          <EmptyState className="py-8">
+            <p className="font-semibold text-foreground">Still paused</p>
+            <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+              The chats are over, but the class is still paused. Students in
+              the lobby stay unmatched until you resume.
+            </p>
+            <Button className="mt-4" onClick={onResumeAll}>
+              <Play aria-hidden />
+              Resume
+            </Button>
+          </EmptyState>
+        ) : (
+          <EmptyState className="py-8">
+            <p className="font-semibold text-foreground">No chats yet</p>
+            <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+              Pair two students in the queue, or start the whole round in one
+              tap.
+            </p>
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={onPairEveryone}
+              disabled={waitingCount < 2}
+            >
+              <UsersRound aria-hidden />
+              Pair everyone 1:1
+            </Button>
+          </EmptyState>
+        )
       ) : (
         <>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -77,16 +103,46 @@ export function ChatsInProgressSection({
               </span>{" "}
               students chatting
             </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onRequestEndAll}
-              className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-            >
-              <LogOut aria-hidden />
-              End all chats
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              {paused ? (
+                <Button size="sm" onClick={onResumeAll}>
+                  <Play aria-hidden />
+                  Resume
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onRequestPauseAll}
+                  className="border-amber-400/60 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
+                >
+                  <Pause aria-hidden />
+                  Pause all chats
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRequestEndAll}
+                className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              >
+                <LogOut aria-hidden />
+                End all chats
+              </Button>
+            </div>
           </div>
+          {paused && (
+            <div
+              role="status"
+              className="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800"
+            >
+              <Pause aria-hidden className="mt-0.5 size-4 shrink-0" />
+              <span>
+                Chats are paused. Students can read their chat but can't type
+                until you resume.
+              </span>
+            </div>
+          )}
           <div className="grid items-start gap-4 md:grid-cols-2">
             {chats.map((chat) => (
               <ChatCard
@@ -99,6 +155,7 @@ export function ChatsInProgressSection({
                 )}
                 messages={chat.messages}
                 isEnded={false}
+                isPaused={paused}
                 onEndChat={() => onEndChat(chat.id)}
                 autoEndSecondsLeft={chat.autoEndSecondsLeft}
                 inactiveParticipantIds={new Set(chat.inactiveStudentIds)}
