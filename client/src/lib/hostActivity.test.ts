@@ -99,7 +99,9 @@ describe("mergeExternalSettings", () => {
   });
 
   it("returns null when nothing changed at all", () => {
-    expect(mergeExternalSettings(settings(), settings(), settings())).toBeNull();
+    expect(
+      mergeExternalSettings(settings(), settings(), settings())
+    ).toBeNull();
   });
 
   it("keeps a pending draft edit on a different key", () => {
