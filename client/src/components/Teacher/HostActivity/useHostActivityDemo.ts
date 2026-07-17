@@ -57,6 +57,10 @@ export interface HostActivityDemo {
   pairEveryone: () => void;
   endChat: (chatId: string) => void;
   endAllChats: () => void;
+  /** The teacher's world-level pause — never per chat. */
+  paused: boolean;
+  pauseAllChats: () => void;
+  resumeAllChats: () => void;
   removeFromQueue: (studentId: string) => void;
   removeFromChat: (chatId: string, studentId: string) => void;
   /** Dev-only trigger: a student joins right now. */
@@ -94,6 +98,8 @@ export function useHostActivityDemo(
   useEffect(() => {
     const interval = setInterval(() => {
       const w = worldRef.current;
+      // A paused class is silent: the drip holds until the teacher resumes.
+      if (w.paused) return;
       const live = w.chats.filter(
         (c) => c.status === "active" && activeChatMembers(c).length >= 2
       );
@@ -175,7 +181,18 @@ export function useHostActivityDemo(
     for (const chat of w.chats.filter((c) => c.status === "active")) {
       w = endChatIn(w, chat.id, "teacher");
     }
-    commit(w);
+    // End-all closes the round, so it clears the pause too — the next round
+    // starts unpaused. (The dashboard separately holds auto-match; that acts
+    // on activity settings, a different owner than this world flag.)
+    commit({ ...w, paused: false });
+  };
+
+  const pauseAllChats = () => {
+    commit({ ...worldRef.current, paused: true });
+  };
+
+  const resumeAllChats = () => {
+    commit({ ...worldRef.current, paused: false });
   };
 
   const removeFromQueue = (studentId: string) => {
@@ -260,6 +277,8 @@ export function useHostActivityDemo(
     });
   };
 
+  // Stays enabled while paused on purpose: it only clamps numbers, and a
+  // paused tick can't expire anything — the clock waits at its new value.
   const fastForwardClocks = () => {
     const w = worldRef.current;
     const clocks = w.chats
@@ -307,6 +326,9 @@ export function useHostActivityDemo(
     pairEveryone,
     endChat,
     endAllChats,
+    paused: world.paused,
+    pauseAllChats,
+    resumeAllChats,
     removeFromQueue,
     removeFromChat,
     triggerJoin,

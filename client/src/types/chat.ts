@@ -43,7 +43,11 @@ export interface ChatMessage {
   kind?: "notice";
 }
 
-/** Whether a chat is still going or has been ended. */
+/**
+ * Whether a chat is still going or has been ended. Deliberately no third
+ * "paused" value: the teacher's pause is activity-wide, never per chat, and
+ * a paused chat is still an active chat — see ChatRoomState.isPaused.
+ */
 export type ChatStatus = "active" | "ended";
 
 /**
@@ -101,6 +105,14 @@ export interface ChatRoomState {
    */
   autoEndSecondsLeft: number | null;
   isEnded: boolean;
+  /**
+   * True while the teacher has the whole activity paused. The room freezes:
+   * send() is a no-op, no peer messages arrive, typing indicators clear, and
+   * the auto-end clock and any reconnect window hold their remaining time.
+   * Pause is activity-wide, never per chat (see DECISIONS.md) — a real
+   * backend broadcasts one world-level event. isEnded wins over isPaused.
+   */
+  isPaused: boolean;
   /** Why the chat ended; drives the wrap-up copy. Null while it's going. */
   endReason: ChatEndReason | null;
   /** Which peer ended it, when endReason is "peer". */
@@ -109,6 +121,7 @@ export interface ChatRoomState {
 
 /** What a participant can do to a live room. */
 export interface ChatRoomActions {
+  /** Send a message. Must be a no-op while the activity is paused. */
   send: (text: string) => void;
   endChat: (reason: ChatEndReason) => void;
   /**

@@ -28,6 +28,7 @@ function world(overrides: Partial<HostWorld>): HostWorld {
     secondsUntilAutoMatch: 99,
     leftoverStudentId: null,
     rematchNotice: null,
+    paused: false,
     ...overrides,
   };
 }
@@ -182,5 +183,68 @@ describe("tickWorld", () => {
     expect(ticked.chats).toHaveLength(1);
     expect(ticked.queue).toHaveLength(0);
     expect(ticked.secondsUntilAutoMatch).toBe(AUTO_MATCH_GAP_SECONDS);
+  });
+});
+
+describe("tickWorld while paused", () => {
+  it("holds wait times, chat clocks, and the auto-match countdown, and pairs nobody", () => {
+    const seeded = createChat(
+      world({
+        queue: ["a", "b", "c", "d"].map((id) => student(id, 30)),
+        secondsUntilAutoMatch: 0,
+      }),
+      ["a", "b"],
+      activity(2, { autoMatch: true })
+    );
+    const clockBefore = seeded.chats[0]!.autoEndSecondsLeft;
+    const paused = { ...seeded, paused: true };
+
+    const ticked = tickWorld(paused, activity(2, { autoMatch: true }));
+    expect(ticked.queue.map((s) => s.waitSeconds)).toEqual([30, 30]);
+    expect(ticked.chats[0]!.autoEndSecondsLeft).toBe(clockBefore);
+    expect(ticked.secondsUntilAutoMatch).toBe(0);
+    // Both leftovers are past the threshold, yet no pair forms.
+    expect(ticked.chats).toHaveLength(1);
+  });
+
+  it("never expires a clock mid-pause, even at 1 second left", () => {
+    const seeded = createChat(
+      world({ queue: [student("a"), student("b")] }),
+      ["a", "b"],
+      activity()
+    );
+    seeded.chats[0]!.autoEndSecondsLeft = 1;
+    let w = { ...seeded, paused: true };
+    for (let i = 0; i < 5; i++) w = tickWorld(w, activity());
+    expect(w.chats[0]!.status).toBe("active");
+    expect(w.chats[0]!.autoEndSecondsLeft).toBe(1);
+  });
+
+  it("keeps joins dripping and wrapping-up students returning", () => {
+    const w = world({
+      paused: true,
+      joinPool: [{ id: "j", realName: "Joiner" }],
+      secondsUntilNextJoin: 1,
+      wrappingUp: [
+        { student: { id: "r", realName: "Returner" }, secondsUntilReturn: 1 },
+      ],
+    });
+    const ticked = tickWorld(w, activity());
+    expect(ticked.queue.map((s) => s.id).sort()).toEqual(["j", "r"]);
+    expect(ticked.joinPool).toHaveLength(0);
+    expect(ticked.wrappingUp).toHaveLength(0);
+  });
+
+  it("still creates chats — born with a full, frozen clock", () => {
+    const w = createChat(
+      world({ paused: true, queue: [student("a"), student("b")] }),
+      ["a", "b"],
+      activity()
+    );
+    expect(w.chats).toHaveLength(1);
+    expect(w.paused).toBe(true);
+    expect(w.chats[0]!.autoEndSecondsLeft).toBe(
+      DEFAULT_ACTIVITY_SETTINGS.autoEndMinutes * 60
+    );
   });
 });

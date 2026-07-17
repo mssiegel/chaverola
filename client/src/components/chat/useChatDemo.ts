@@ -43,6 +43,13 @@ export interface ChatDemoOptions {
    * visitor mid-read.
    */
   autoEndSeconds?: number | null;
+  /**
+   * The teacher's activity-wide pause, owned by the page (a real backend
+   * pushes it; the demo drives it from the demo controls). While true the
+   * room freezes: no messages in or out, typing clears, and both countdowns
+   * hold their remaining time.
+   */
+  isPaused?: boolean;
 }
 
 /**
@@ -76,6 +83,7 @@ export function useChatDemo(
   options?: ChatDemoOptions
 ): ChatDemo {
   const autoEndSeconds = options?.autoEndSeconds ?? null;
+  const isPaused = options?.isPaused ?? false;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [typingPeerId, setTypingPeerId] = useState<string | null>(null);
   const [peerState, setPeerState] = useState<PeerConnectionState>("connected");
@@ -94,6 +102,17 @@ export function useChatDemo(
   const statusRef = useLatestRef(status);
   const peerStateRef = useLatestRef(peerState);
   const droppedPeerIdsRef = useLatestRef(droppedPeerIds);
+  const isPausedRef = useLatestRef(isPaused);
+
+  // Pausing freezes the room mid-gesture: the typing bubble clears right
+  // away (adjusted during render, not in an effect). The line it was typing
+  // is dropped by the guards below — a real backend arbitrates in-flight
+  // messages server-side.
+  const [prevPaused, setPrevPaused] = useState(isPaused);
+  if (isPaused !== prevPaused) {
+    setPrevPaused(isPaused);
+    if (isPaused) setTypingPeerId(null);
+  }
 
   // The reconnect window's clock. At zero the room moves on — a 1:1 chat
   // ends (nobody is left to talk to), a group chat drops the peer with a
@@ -101,7 +120,7 @@ export function useChatDemo(
   // "A group chat drops a timed-out peer instead of ending".
   const [reconnectSecondsLeft, setReconnectSecondsLeft] = useSecondCountdown(
     null,
-    status === "active",
+    status === "active" && !isPaused,
     () => {
       const offline = scenario.peers.find((p) => p.id === offlinePeerId);
       const remaining = scenario.peers.filter(
@@ -132,7 +151,7 @@ export function useChatDemo(
   // DECISIONS.md. (endChat is declared below; the callback only runs later.)
   const [autoEndSecondsLeft, setAutoEndSecondsLeft] = useSecondCountdown(
     autoEndSeconds,
-    status === "active",
+    status === "active" && !isPaused,
     () => endChat("timer")
   );
 
@@ -169,15 +188,17 @@ export function useChatDemo(
 
   /** Show a typing indicator for `senderId`, then post their message. */
   const peerSpeak = (senderId: string, text: string, typeMs = 1200) => {
-    if (statusRef.current !== "active") return;
+    if (statusRef.current !== "active" || isPausedRef.current) return;
     setTypingPeerId(senderId);
     if (typingTimer.current) clearTimeout(typingTimer.current);
     typingTimer.current = later(() => {
       typingTimer.current = null;
       setTypingPeerId(null);
-      // A peer who left mid-typing must not speak after their own notice.
+      // A peer who left mid-typing must not speak after their own notice —
+      // and a line caught mid-typing by a pause is dropped, not deferred.
       if (
         statusRef.current === "active" &&
+        !isPausedRef.current &&
         !droppedPeerIdsRef.current.has(senderId)
       ) {
         appendMessage(senderId, text);
@@ -208,8 +229,9 @@ export function useChatDemo(
       if (statusRef.current !== "active") return;
       // A dropped peer's lines die with them.
       if (droppedPeerIdsRef.current.has(line.senderId)) return;
-      // If the peer is offline when a line is due, retry shortly.
-      if (peerStateRef.current !== "connected") {
+      // If the peer is offline — or the class is paused — when a line is
+      // due, retry shortly; it lands moments after things come back.
+      if (peerStateRef.current !== "connected" || isPausedRef.current) {
         later(() => runScriptedLine(line), 1500);
         return;
       }
@@ -222,11 +244,13 @@ export function useChatDemo(
         if (
           statusRef.current === "active" &&
           peerStateRef.current === "connected" &&
+          !isPausedRef.current &&
           !typingTimer.current
         ) {
           const speaker = randomActivePeer();
           if (speaker) peerSpeak(speaker.id, randomFrom(scenario.ambientLines));
         }
+        // Keep rescheduling through a pause so chatter resumes on its own.
         if (statusRef.current === "active") scheduleAmbient();
       }, delay);
     };
@@ -252,13 +276,17 @@ export function useChatDemo(
 
   const send = (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed || statusRef.current !== "active") return;
+    // Paused means paused: belt and suspenders under the disabled composer.
+    if (!trimmed || statusRef.current !== "active" || isPausedRef.current) {
+      return;
+    }
     appendMessage(scenario.self.id, trimmed);
     later(
       () => {
         if (
           statusRef.current !== "active" ||
-          peerStateRef.current !== "connected"
+          peerStateRef.current !== "connected" ||
+          isPausedRef.current
         ) {
           return;
         }
@@ -322,7 +350,8 @@ export function useChatDemo(
   const nudgePeer = () => {
     if (
       statusRef.current !== "active" ||
-      peerStateRef.current !== "connected"
+      peerStateRef.current !== "connected" ||
+      isPausedRef.current
     ) {
       return;
     }
@@ -400,6 +429,7 @@ export function useChatDemo(
     reconnectSecondsLeft,
     autoEndSecondsLeft,
     isEnded: status === "ended",
+    isPaused,
     endReason,
     endedByPeerId,
     send,

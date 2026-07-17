@@ -68,6 +68,14 @@ export interface HostWorld {
   leftoverStudentId: string | null;
   /** Pair-everyone had to repeat a pairing; shown in the rail, dismissible. */
   rematchNotice: string | null;
+  /**
+   * The teacher paused the whole activity. World-level on purpose — there is
+   * no per-chat pause (see DECISIONS.md). While true, tickWorld holds every
+   * clock (wait times, auto-end, the auto-match countdown) but keeps joins
+   * and lobby returns flowing; chats created during a pause are born frozen
+   * simply because the world is.
+   */
+  paused: boolean;
 }
 
 /** The members still actually in the room. */
@@ -265,20 +273,29 @@ export function pairEveryoneIn(
 /** One second of simulated classroom. */
 export function tickWorld(w: HostWorld, activity: HostedActivity): HostWorld {
   const settings = activity.settings;
-  let queue = w.queue.map((s) => ({ ...s, waitSeconds: s.waitSeconds + 1 }));
+  // While paused, every clock holds — wait times, auto-end, the auto-match
+  // countdown — so resume picks up exactly where the pause landed and never
+  // fires a burst of auto-matches. Gated per block, not an early return:
+  // joins and lobby returns below keep flowing (they aren't chat activity).
+  let queue = w.paused
+    ? w.queue
+    : w.queue.map((s) => ({ ...s, waitSeconds: s.waitSeconds + 1 }));
 
   // Per-chat auto-end clocks. At zero the chat ends with reason "timer" —
-  // students get the ⏰ "Time's up!" copy, never the generic one.
+  // students get the ⏰ "Time's up!" copy, never the generic one. A paused
+  // world's clocks don't move, so nothing can expire mid-pause.
   const expiring: HostedChat[] = [];
-  const chats = w.chats.map((chat) => {
-    if (chat.status !== "active" || chat.autoEndSecondsLeft === null) {
-      return chat;
-    }
-    const left = chat.autoEndSecondsLeft - 1;
-    if (left > 0) return { ...chat, autoEndSecondsLeft: left };
-    expiring.push(chat);
-    return chat;
-  });
+  const chats = w.paused
+    ? w.chats
+    : w.chats.map((chat) => {
+        if (chat.status !== "active" || chat.autoEndSecondsLeft === null) {
+          return chat;
+        }
+        const left = chat.autoEndSecondsLeft - 1;
+        if (left > 0) return { ...chat, autoEndSecondsLeft: left };
+        expiring.push(chat);
+        return chat;
+      });
 
   let wrappingUp = w.wrappingUp;
 
@@ -319,7 +336,9 @@ export function tickWorld(w: HostWorld, activity: HostedActivity): HostWorld {
     wrappingUp,
     joinPool,
     secondsUntilNextJoin,
-    secondsUntilAutoMatch: Math.max(0, w.secondsUntilAutoMatch - 1),
+    secondsUntilAutoMatch: w.paused
+      ? w.secondsUntilAutoMatch
+      : Math.max(0, w.secondsUntilAutoMatch - 1),
   };
 
   for (const chat of expiring) {
@@ -328,7 +347,7 @@ export function tickWorld(w: HostWorld, activity: HostedActivity): HostWorld {
 
   // Setting #4: waiting students past the threshold pair up on their own,
   // 1:1, skipping fresh rematches. One pair at a time so the rail reads.
-  if (settings.autoMatch && next.secondsUntilAutoMatch === 0) {
+  if (!w.paused && settings.autoMatch && next.secondsUntilAutoMatch === 0) {
     const pair = findAutoMatchPair(
       next.queue,
       settings.autoMatchSeconds,
@@ -426,5 +445,6 @@ export function seedWorld(activity: HostedActivity): HostWorld {
     secondsUntilAutoMatch: AUTO_MATCH_GAP_SECONDS,
     leftoverStudentId: null,
     rematchNotice: null,
+    paused: false,
   };
 }
