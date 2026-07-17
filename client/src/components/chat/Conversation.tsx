@@ -9,6 +9,7 @@ import type {
   PeerConnectionState,
 } from "@/types/chat";
 
+import { ChatPausedBanner } from "./ChatPausedBanner";
 import { PeerIsTyping } from "./PeerIsTyping";
 import { PeerReconnectBanner } from "./PeerReconnectBanner";
 
@@ -21,6 +22,8 @@ interface ConversationProps {
   offlinePeerId: string | null;
   /** Seconds left in the offline peer's reconnect window (null: no window). */
   reconnectSecondsLeft?: number | null;
+  /** The teacher's activity-wide pause: a banner floats over the feed. */
+  isPaused?: boolean;
   /** Distinct color (CSS var) per character id in this room. */
   characterColors: Map<string, string>;
 }
@@ -38,6 +41,7 @@ export function Conversation({
   peerState,
   offlinePeerId,
   reconnectSecondsLeft = null,
+  isPaused = false,
   characterColors,
 }: ConversationProps) {
   const byId = participantsById(participants);
@@ -66,8 +70,10 @@ export function Conversation({
       ref={feedRef}
       className="scroll-soft relative flex-1 overflow-y-auto px-3 py-3 text-[15px] leading-6 sm:px-4"
     >
-      {peerState !== "connected" && (
-        <div className="sticky top-0 z-10 -mx-3 mb-2 flex justify-center px-3 sm:-mx-4 sm:px-4">
+      {(isPaused || peerState !== "connected") && (
+        <div className="sticky top-0 z-10 -mx-3 mb-2 flex flex-col items-center gap-1.5 px-3 sm:-mx-4 sm:px-4">
+          {/* Pause on top of a frozen reconnect countdown: both can apply. */}
+          {isPaused && <ChatPausedBanner />}
           <PeerReconnectBanner
             peerState={peerState}
             peerName={offlineName}

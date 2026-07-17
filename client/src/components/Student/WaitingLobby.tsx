@@ -1,3 +1,5 @@
+import { Pause } from "lucide-react";
+
 import { TypingDots } from "@/components/chat/TypingDots";
 import { SectionLabel } from "@/components/ui/section-label";
 import type { Activity } from "@/types/activity";
@@ -6,6 +8,8 @@ interface WaitingLobbyProps {
   activity: Activity;
   /** The real name the student signed in with. */
   studentName: string;
+  /** The teacher paused the class: matching is on hold and the pill says so. */
+  isPaused?: boolean;
 }
 
 /**
@@ -13,7 +17,11 @@ interface WaitingLobbyProps {
  * teacher hasn't matched them with a partner yet. Bouncy and a little loud on
  * purpose — this screen's job is to build excitement for the chat.
  */
-export function WaitingLobby({ activity, studentName }: WaitingLobbyProps) {
+export function WaitingLobby({
+  activity,
+  studentName,
+  isPaused = false,
+}: WaitingLobbyProps) {
   return (
     <section className="flex w-full animate-in flex-col items-center gap-6 text-center duration-500 fade-in slide-in-from-bottom-4 motion-reduce:animate-none">
       <div className="space-y-2 pt-2">
@@ -21,18 +29,29 @@ export function WaitingLobby({ activity, studentName }: WaitingLobbyProps) {
           You're in, {studentName}! 🎉
         </h1>
         <p className="text-muted-foreground">
-          {activity.hostName} is picking who chats with who. When it's your
-          turn, the chat opens right here.
+          {isPaused
+            ? "Your teacher hit pause for a moment. When things start back up, your chat opens right here."
+            : `${activity.hostName} is picking who chats with who. When it's your turn, the chat opens right here.`}
         </p>
       </div>
 
-      <div
-        className="flex items-center gap-2.5 rounded-full border border-brand-grape/25 bg-brand-grape-soft px-4 py-2 text-sm font-semibold text-brand-grape-strong"
-        aria-live="polite"
-      >
-        Waiting for your match
-        <TypingDots dotClassName="bg-brand-mint" aria-hidden />
-      </div>
+      {isPaused ? (
+        <div
+          className="flex items-center gap-2.5 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800"
+          aria-live="polite"
+        >
+          <Pause aria-hidden className="size-4" />
+          Class is paused
+        </div>
+      ) : (
+        <div
+          className="flex items-center gap-2.5 rounded-full border border-brand-grape/25 bg-brand-grape-soft px-4 py-2 text-sm font-semibold text-brand-grape-strong"
+          aria-live="polite"
+        >
+          Waiting for your match
+          <TypingDots dotClassName="bg-brand-mint" aria-hidden />
+        </div>
+      )}
 
       <div className="w-full space-y-4 rounded-2xl border border-border bg-card p-5 text-left shadow-sm">
         <div>

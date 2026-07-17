@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
-import { ArrowRight, Handshake, Users, UserX } from "lucide-react";
+import { ArrowRight, Handshake, Pause, Play, Users, UserX } from "lucide-react";
 
 import { DemoBanner } from "@/components/demo/DemoBanner";
 import { DemoControlsPanel, EventButton } from "@/components/demo/DemoControls";
@@ -79,6 +79,9 @@ export function JoinActivityPage() {
   // Mirrors the chat engine's ended flag up here so the stage (and with it
   // the page title) can tell chatting from ended.
   const [chatEnded, setChatEnded] = useState(false);
+  // The teacher's activity-wide pause, mocked at page level so it survives
+  // lobby ⇄ chat ⇄ ended. A real backend pushes this later.
+  const [classPaused, setClassPaused] = useState(false);
 
   const activity = joinCodeParam
     ? findActivityByCode(joinCodeParam)
@@ -139,15 +142,17 @@ export function JoinActivityPage() {
 
   // The demo lobby's fallback: after a short wait the pretend teacher pairs
   // the student unprompted (random 1:1 or group). Demo activity only — on a
-  // real activity a real teacher does this, via the backend, later.
+  // real activity a real teacher does this, via the backend, later. A paused
+  // class pairs nobody; the timer restarts fresh on resume (fine for a demo).
   const startMatchRef = useLatestRef(startMatch);
   useEffect(() => {
-    if (stage !== "lobby" || activity?.joinCode !== DEMO_JOIN_CODE) return;
+    if (stage !== "lobby" || classPaused) return;
+    if (activity?.joinCode !== DEMO_JOIN_CODE) return;
     const timer = setTimeout(() => {
       startMatchRef.current(randomFrom(["duo", "group"] as const));
     }, scaledMs(DEMO_LOBBY_AUTO_MATCH_MS));
     return () => clearTimeout(timer);
-  }, [stage, activity, startMatchRef]);
+  }, [stage, classPaused, activity, startMatchRef]);
 
   // Shared-link arrivals with a bad code land on code entry with the code
   // filled in and the not-found message already showing.
@@ -218,15 +223,23 @@ export function JoinActivityPage() {
           scenarioKey={match.scenarioKey}
           onEndedChange={setChatEnded}
           onBackToLobby={backToLobby}
+          classPaused={classPaused}
+          onClassPausedChange={setClassPaused}
         />
       ) : stage === "lobby" && activity && session ? (
         <>
           <div className={cn(STUDENT_CARD_CLASS, "w-full p-5 sm:p-6")}>
-            <WaitingLobby activity={activity} studentName={session.name} />
+            <WaitingLobby
+              activity={activity}
+              studentName={session.name}
+              isPaused={classPaused}
+            />
           </div>
           <LobbyDemoControls
             onTeacherRemove={teacherRemovesStudent}
             onMatch={startMatch}
+            classPaused={classPaused}
+            onClassPausedChange={setClassPaused}
           />
         </>
       ) : (
@@ -337,9 +350,13 @@ export function JoinActivityPage() {
 function LobbyDemoControls({
   onTeacherRemove,
   onMatch,
+  classPaused,
+  onClassPausedChange,
 }: {
   onTeacherRemove: () => void;
   onMatch: (scenarioKey: ActivityChatScenarioKey) => void;
+  classPaused: boolean;
+  onClassPausedChange: (paused: boolean) => void;
 }) {
   return (
     <DemoControlsPanel
@@ -347,6 +364,9 @@ function LobbyDemoControls({
       caption="In a real activity, your teacher does this part."
     >
       <div className="grid grid-cols-2 gap-2">
+        {/* Pairing stays enabled while paused on purpose: a teacher can
+            still hand-pick matches mid-announcement, and the chat that
+            opens is born frozen. */}
         <EventButton
           onWorld
           onClick={() => onMatch("duo")}
@@ -360,6 +380,22 @@ function LobbyDemoControls({
           icon={<Users className="size-4" />}
         >
           Put me in a group of 3
+        </EventButton>
+        <EventButton
+          onWorld
+          onClick={() => onClassPausedChange(true)}
+          disabled={classPaused}
+          icon={<Pause className="size-4" />}
+        >
+          Teacher pauses the class
+        </EventButton>
+        <EventButton
+          onWorld
+          onClick={() => onClassPausedChange(false)}
+          disabled={!classPaused}
+          icon={<Play className="size-4" />}
+        >
+          Teacher resumes the class
         </EventButton>
         <div className="col-span-2">
           <EventButton

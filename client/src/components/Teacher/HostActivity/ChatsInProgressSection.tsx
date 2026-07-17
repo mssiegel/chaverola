@@ -68,8 +68,8 @@ export function ChatsInProgressSection({
           <EmptyState className="py-8">
             <p className="font-semibold text-foreground">Still paused</p>
             <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
-              The chats are over, but the class is still paused. Students in
-              the lobby stay unmatched until you resume.
+              The chats are over, but the class is still paused. Nobody gets
+              matched again until you resume.
             </p>
             <Button className="mt-4" onClick={onResumeAll}>
               <Play aria-hidden />

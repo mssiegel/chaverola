@@ -18,6 +18,12 @@ interface MessageComposerProps {
   onSend: (text: string) => void;
   /** Used to build a playful placeholder, e.g. "Talk as Cleopatra 👑…". */
   selfCharacterLabel?: string;
+  /**
+   * The teacher paused the class: typing, sending, and the emoji picker all
+   * lock, and the placeholder says why. The draft text is kept — it comes
+   * back untouched on resume.
+   */
+  disabled?: boolean;
 }
 
 /**
@@ -29,6 +35,7 @@ interface MessageComposerProps {
 export function MessageComposer({
   onSend,
   selfCharacterLabel,
+  disabled = false,
 }: MessageComposerProps) {
   const [value, setValue] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -74,7 +81,7 @@ export function MessageComposer({
 
   const handleSend = () => {
     const trimmed = value.trim();
-    if (!trimmed) return;
+    if (!trimmed || disabled) return;
     onSend(trimmed);
     setValue("");
     setPickerOpen(false);
@@ -102,21 +109,29 @@ export function MessageComposer({
           </div>
         )}
 
-        <div className="flex items-end gap-1.5 rounded-2xl border border-input bg-card px-1.5 py-1.5 shadow-sm transition-colors focus-within:border-brand-grape focus-within:ring-2 focus-within:ring-brand-grape/20">
+        <div
+          className={cn(
+            "flex items-end gap-1.5 rounded-2xl border border-input bg-card px-1.5 py-1.5 shadow-sm transition-colors",
+            disabled
+              ? "opacity-60"
+              : "focus-within:border-brand-grape focus-within:ring-2 focus-within:ring-brand-grape/20"
+          )}
+        >
           {/* Controlled so handleSend can close the picker programmatically.
               The three prevented Radix defaults keep today's focus behavior:
               opening must not move focus into the picker's search box,
               inserting (which refocuses the textarea) must not count as
               focus-outside and dismiss the picker mid-multi-insert, and
               closing must not yank focus back onto the smile button. */}
-          <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+          <Popover open={pickerOpen && !disabled} onOpenChange={setPickerOpen}>
             <PopoverTrigger asChild>
               <button
                 type="button"
                 aria-label="Add emoji"
+                disabled={disabled}
                 className={cn(
-                  "grid size-9 shrink-0 place-items-center self-end rounded-full transition-colors hover:bg-accent hover:text-foreground",
-                  pickerOpen
+                  "grid size-9 shrink-0 place-items-center self-end rounded-full transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground",
+                  pickerOpen && !disabled
                     ? "bg-accent text-foreground"
                     : "text-muted-foreground"
                 )}
@@ -144,18 +159,21 @@ export function MessageComposer({
             value={value}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
+            disabled={disabled}
             placeholder={
-              selfCharacterLabel
-                ? `Talk as ${selfCharacterLabel}…`
-                : "Type a message…"
+              disabled
+                ? "Paused. Hang tight…"
+                : selfCharacterLabel
+                  ? `Talk as ${selfCharacterLabel}…`
+                  : "Type a message…"
             }
-            className="max-h-16 flex-1 resize-none border-0 bg-transparent py-1.5 text-[15px] leading-6 text-foreground outline-none placeholder:text-muted-foreground"
+            className="max-h-16 flex-1 resize-none border-0 bg-transparent py-1.5 text-[15px] leading-6 text-foreground outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
           />
 
           <button
             type="button"
             onClick={handleSend}
-            disabled={!value.trim()}
+            disabled={disabled || !value.trim()}
             aria-label="Send message"
             className="grid size-10 shrink-0 place-items-center self-end rounded-full bg-primary text-primary-foreground shadow-sm transition-all hover:bg-brand-grape-strong active:scale-95 disabled:opacity-40 disabled:hover:bg-primary"
           >

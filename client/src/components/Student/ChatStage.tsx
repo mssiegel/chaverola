@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { GraduationCap, TimerOff } from "lucide-react";
+import { GraduationCap, Pause, Play, TimerOff } from "lucide-react";
 
 import { useChatDemo } from "@/components/chat/useChatDemo";
 import { ChatDemoControls } from "@/components/demo/ChatDemoControls";
@@ -20,6 +20,12 @@ interface ChatStageProps {
   /** Reports the chat ending / restarting so the page can derive its stage. */
   onEndedChange: (ended: boolean) => void;
   onBackToLobby: () => void;
+  /**
+   * The teacher's activity-wide pause, owned by the page so it outlives this
+   * match (lobby ⇄ chat ⇄ ended). The demo triggers below flip it.
+   */
+  classPaused: boolean;
+  onClassPausedChange: (paused: boolean) => void;
 }
 
 /**
@@ -34,6 +40,8 @@ export function ChatStage({
   scenarioKey,
   onEndedChange,
   onBackToLobby,
+  classPaused,
+  onClassPausedChange,
 }: ChatStageProps) {
   // Built once per mount: the scenario is this match's identity, with the
   // signed-in student's real name behind their character.
@@ -46,6 +54,7 @@ export function ChatStage({
   // cross-tab sync with a teacher's live settings).
   const chat = useChatDemo(scenario, {
     autoEndSeconds: DEFAULT_ACTIVITY_SETTINGS.autoEndMinutes * 60,
+    isPaused: classPaused,
   });
 
   // Mock of the teacher's activity-level "reveal names" setting, until the
@@ -101,6 +110,25 @@ export function ChatStage({
               icon={<TimerOff className="size-4" />}
             >
               Auto-end timer fires
+            </EventButton>
+            {/* Deliberately not gated on isEnded: pause is world-level, so
+                flipping it from the ended screen sends the student back to a
+                paused (or resumed) lobby. */}
+            <EventButton
+              onWorld
+              onClick={() => onClassPausedChange(true)}
+              disabled={classPaused}
+              icon={<Pause className="size-4" />}
+            >
+              Teacher pauses the class
+            </EventButton>
+            <EventButton
+              onWorld
+              onClick={() => onClassPausedChange(false)}
+              disabled={!classPaused}
+              icon={<Play className="size-4" />}
+            >
+              Teacher resumes the class
             </EventButton>
           </>
         }

@@ -82,6 +82,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Character rows lead with the emoji avatar](#character-rows-lead-with-the-emoji-avatar)
   - [Setup sections each carry one brand accent; settings stays the quiet one](#setup-sections-each-carry-one-brand-accent-settings-stays-the-quiet-one)
 - [Teacher live activity page](#teacher-live-activity-page)
+  - [Pause is one world-level switch: chats freeze, clocks hold, matchmaking waits](#pause-is-one-world-level-switch-chats-freeze-clocks-hold-matchmaking-waits)
   - [The pairing rail carries the auto-match switch, and it IS the activity setting](#the-pairing-rail-carries-the-auto-match-switch-and-it-is-the-activity-setting)
   - [End all chats holds auto-match by turning the real setting off](#end-all-chats-holds-auto-match-by-turning-the-real-setting-off)
   - [A character in a live chat shows the Live dot, and its hint says who](#a-character-in-a-live-chat-shows-the-live-dot-and-its-hint-says-who)
@@ -1009,6 +1010,46 @@ _Implemented in
 ---
 
 ## Teacher live activity page
+
+### Pause is one world-level switch: chats freeze, clocks hold, matchmaking waits
+
+_2026-07-17_
+
+**Decision:** One **Pause all chats** button (confirm first, in the default
+color — pausing isn't destructive) sits next to End all chats; while paused
+the same slot is a one-tap **Resume**, no confirmation. There is **no
+per-chat pause**. Paused means: no new messages anywhere (student input
+disabled, a banner over the transcript — still readable, never a full-screen
+takeover), per-chat auto-end clocks hold, the auto-match countdown and the
+queue's wait times hold, reconnect windows hold, and the lobby tells students
+the class is paused. Still moving: joining, returning to the lobby, manual
+pairing (a chat started mid-pause is born frozen), ending chats, and a
+student's own Leave/End — never trap a student in a frozen room. **End all
+chats clears the pause** (the round is over; the next starts unpaused);
+ending a single chat doesn't, so a paused room that empties out keeps a
+Resume button in the section's empty state. The pause button itself only
+appears while live chats exist — with an empty room, holding students is the
+auto-match switch's job.
+
+**Why:** Founder call (2026-07-17): "eyes up front" needs one switch, not
+per-room bookkeeping — a teacher will never want to pause a single chat.
+Wait times freeze with everything else so resume can't fire a burst of
+auto-matches for students who silently crossed the threshold during a long
+announcement, and a pause never eats chat time. Rejected: a third
+`ChatStatus` value — it would imply per-chat pause exists and break the
+active/ended distinction. Pause is a boolean beside the status (`isPaused`
+in the ChatRoomState contract); a real backend broadcasts one activity-wide
+event, and `isEnded` always wins over `isPaused`.
+
+_Implemented in
+[hostWorld](client/src/components/Teacher/HostActivity/hostWorld.ts) and
+[useHostActivityDemo](client/src/components/Teacher/HostActivity/useHostActivityDemo.ts)
+(teacher engine),
+[useChatDemo](client/src/components/chat/useChatDemo.ts) (student engine),
+[ChatsInProgressSection](client/src/components/Teacher/HostActivity/ChatsInProgressSection.tsx)
+(the buttons), and
+[ChatPausedBanner](client/src/components/chat/ChatPausedBanner.tsx) (the
+student banner)._
 
 ### The pairing rail carries the auto-match switch, and it IS the activity setting
 

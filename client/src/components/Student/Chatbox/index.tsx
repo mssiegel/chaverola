@@ -59,6 +59,7 @@ export function Chatbox({
     reconnectSecondsLeft,
     autoEndSecondsLeft,
     isEnded,
+    isPaused,
     endReason,
     endedByPeerId,
   } = chat;
@@ -122,7 +123,11 @@ export function Chatbox({
           !isEnded && (
             <div className="flex shrink-0 items-center gap-2">
               {autoEndSecondsLeft !== null && (
-                <AutoEndCountdown secondsLeft={autoEndSecondsLeft} onDark />
+                <AutoEndCountdown
+                  secondsLeft={autoEndSecondsLeft}
+                  onDark
+                  paused={isPaused}
+                />
               )}
               {/* On narrow widths the pill compresses to icon + "End" so the
                   clock fits without crowding the header. */}
@@ -161,6 +166,8 @@ export function Chatbox({
         peerState={isEnded ? "connected" : peerState}
         offlinePeerId={offlinePeerId}
         reconnectSecondsLeft={reconnectSecondsLeft}
+        // The ended screen supersedes the pause banner: isEnded wins.
+        isPaused={isPaused && !isEnded}
         characterColors={characterColors}
       />
 
@@ -179,6 +186,7 @@ export function Chatbox({
         <MessageComposer
           onSend={onSend}
           selfCharacterLabel={characterLabel(self)}
+          disabled={isPaused}
         />
       )}
 
