@@ -221,6 +221,14 @@ Run from the repo root:
 - **`index.tsx` means folder-as-component** (`Student/Chatbox/`, `Teacher/ChatCard/`):
   one component whose private sub-parts share the folder. The only barrel file is
   `mockData/index.ts` — don't add new barrels.
+- **Sticky inside a padded scroller:** Chrome insets `position: sticky`
+  offsets by the scroll container's own padding, so a `sticky top-0` child
+  rests below the container's clip line and scrolled content peeks through
+  the gap above it. Keep the scroller's top padding at zero (move it onto
+  the first child) so pinned elements sit flush — done for the host page's
+  pairing rail (`Teacher/HostActivity/index.tsx`). The chat feed's
+  pause/reconnect banner (`chat/Conversation.tsx`, `py-3` scroller) still
+  carries the minor 12px version of this gap.
 - **Mobile-first:** design and verify every screen at phone width.
 
 ## Working Rules for AI Agents

@@ -82,6 +82,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Character rows lead with the emoji avatar](#character-rows-lead-with-the-emoji-avatar)
   - [Setup sections each carry one brand accent; settings stays the quiet one](#setup-sections-each-carry-one-brand-accent-settings-stays-the-quiet-one)
 - [Teacher live activity page](#teacher-live-activity-page)
+  - [The pairing CTAs pin at the top of the desktop rail while the queue scrolls](#the-pairing-ctas-pin-at-the-top-of-the-desktop-rail-while-the-queue-scrolls)
   - [Pause is one world-level switch: chats freeze, clocks hold, matchmaking waits](#pause-is-one-world-level-switch-chats-freeze-clocks-hold-matchmaking-waits)
   - [The pairing rail carries the auto-match switch, and it IS the activity setting](#the-pairing-rail-carries-the-auto-match-switch-and-it-is-the-activity-setting)
   - [End all chats holds auto-match by turning the real setting off](#end-all-chats-holds-auto-match-by-turning-the-real-setting-off)
@@ -1010,6 +1011,31 @@ _Implemented in
 ---
 
 ## Teacher live activity page
+
+### The pairing CTAs pin at the top of the desktop rail while the queue scrolls
+
+_2026-07-17_
+
+**Decision:** On desktop, **Start their chat** and **Pair everyone 1:1** stay
+pinned at the top of the pairing rail's internal scroll while the teacher
+scrolls a long waiting list. Only those two buttons pin — the section title,
+the amber auto-match banner, and the helper text scroll away, and the
+auto-match switch stays at the panel's bottom, unpinned. On phones nothing
+pins: the section has no internal scroll there, and a teacher scrolling the
+page may be heading _past_ the pairing section, not through it.
+
+**Why:** Founder call (2026-07-17): with a full class waiting (~18 names)
+the two primary actions scrolled out of the card, and they should always be
+in reach. Rejected: pinning the whole header block (it eats half the card's
+height whenever the banner shows) and pinning the switch as a footer (the
+banner already offers a one-tap "Turn auto-match back on" when it matters).
+If this looks like the buttons "float" over the list mid-scroll, that's the
+point — don't unstick them.
+
+_Implemented in [PairingPanel.tsx](client/src/components/Teacher/HostActivity/PairingPanel.tsx);
+the rail's top padding moved onto its header in
+[index.tsx](client/src/components/Teacher/HostActivity/index.tsx) because
+Chrome insets sticky offsets by the scroll container's own padding._
 
 ### Pause is one world-level switch: chats freeze, clocks hold, matchmaking waits
 

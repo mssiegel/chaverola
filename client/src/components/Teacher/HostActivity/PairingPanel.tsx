@@ -123,7 +123,9 @@ export function PairingPanel({
         </EmptyState>
       ) : (
         <>
-          <div className="flex flex-col gap-2">
+          {/* lg: matches the host page's rail breakpoint — only the desktop
+              mount scrolls internally, so the CTAs pin there and nowhere else. */}
+          <div className="flex flex-col gap-2 lg:sticky lg:top-0 lg:z-10 lg:bg-card lg:pb-2">
             <Button
               onClick={onStartChat}
               disabled={selectedIds.length < 2}
@@ -142,12 +144,12 @@ export function PairingPanel({
               <UsersRound aria-hidden />
               Pair everyone 1:1
             </Button>
-            <p className="text-xs text-muted-foreground">
-              Tap two students to pair them
-              {maxGroupSize > 2 ? `, or up to ${maxGroupSize} for a group` : ""}
-              . Characters get dealt out randomly.
-            </p>
           </div>
+          <p className="-mt-2 text-xs text-muted-foreground lg:-mt-4">
+            Tap two students to pair them
+            {maxGroupSize > 2 ? `, or up to ${maxGroupSize} for a group` : ""}.
+            Characters get dealt out randomly.
+          </p>
 
           {rematchWarning && (
             <div
@@ -185,7 +187,7 @@ export function PairingPanel({
                 <li
                   key={student.id}
                   className={cn(
-                    "flex items-center gap-0.5 rounded-xl border p-1 transition-colors",
+                    "flex items-center gap-0.5 rounded-xl border p-1 transition-colors lg:scroll-mt-24",
                     selected
                       ? "border-brand-grape/50 bg-brand-grape-soft/60"
                       : "border-border bg-card",

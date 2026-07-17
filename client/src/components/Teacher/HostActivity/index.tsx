@@ -173,8 +173,11 @@ export function HostActivityDashboard({
           disappears at zero; students come back to it. */}
       <div className="lg:grid lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start lg:gap-6">
         <aside className="hidden lg:block">
-          <div className="scroll-soft sticky top-24 max-h-[calc(100dvh-7rem)] overflow-y-auto rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <div className="mb-4 flex items-center gap-3">
+          {/* Top padding sits on the header, not the scroller: the panel's
+              pinned CTAs stick to the scrollport top, and scroller padding
+              would hold them below the clip line with rows peeking through. */}
+          <div className="scroll-soft sticky top-24 max-h-[calc(100dvh-7rem)] overflow-y-auto rounded-2xl border border-border bg-card px-5 pb-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-3 pt-5">
               <AccentIconChip accent="grape" icon={UsersRound} />
               <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
                 Pair your students
