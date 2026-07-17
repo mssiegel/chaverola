@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { Check, Repeat2, Sparkles, UsersRound, X, Zap } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,9 @@ export function PairingPanel({
   onDismissHoldNotice,
 }: PairingPanelProps) {
   const selectionFull = selectedIds.length >= maxGroupSize;
+  // The host page renders this panel twice (desktop rail + the phones'
+  // collapsible section), so the switch id must be unique per instance.
+  const autoMatchSwitchId = useId();
 
   return (
     <div className="flex flex-col gap-4">
@@ -245,7 +249,7 @@ export function PairingPanel({
           )}
         />
         <label
-          htmlFor="pairing-auto-match"
+          htmlFor={autoMatchSwitchId}
           className="min-w-0 flex-1 cursor-pointer text-xs leading-relaxed text-muted-foreground"
         >
           {!autoMatchOn
@@ -255,7 +259,7 @@ export function PairingPanel({
               : `Auto-match is on: students pair up on their own after waiting ${autoMatchSeconds} seconds.`}
         </label>
         <Switch
-          id="pairing-auto-match"
+          id={autoMatchSwitchId}
           checked={autoMatchOn}
           onCheckedChange={onAutoMatchChange}
         />
