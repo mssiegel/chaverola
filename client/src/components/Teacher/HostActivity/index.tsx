@@ -172,11 +172,18 @@ export function HostActivityDashboard({
           teacher watches the lobby refill while monitoring chats. It never
           disappears at zero; students come back to it. */}
       <div className="lg:grid lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start lg:gap-6">
-        <aside className="hidden lg:block">
+        {/* Sticky lives on the aside (a grid item sticks within its full-height
+            grid area) and needs the grid's items-start — a stretched item has
+            no room to travel. top-28 clears the under-navbar bars (demo banner
+            / condensed waiting bar end ≈104-108px) with the usual 8px gap.
+            The 11rem cap is 7rem above (the stuck offset) + 4rem below (the
+            page's pb-16 tail): with the demo controls inside the chats column,
+            the rail then stays pinned for the page's entire scroll depth. */}
+        <aside className="sticky top-28 hidden lg:block">
           {/* Top padding sits on the header, not the scroller: the panel's
               pinned CTAs stick to the scrollport top, and scroller padding
               would hold them below the clip line with rows peeking through. */}
-          <div className="scroll-soft sticky top-24 max-h-[calc(100dvh-7rem)] overflow-y-auto rounded-2xl border border-border bg-card px-5 pb-5 shadow-sm">
+          <div className="scroll-soft max-h-[calc(100dvh-11rem)] overflow-y-auto rounded-2xl border border-border bg-card px-5 pb-5 shadow-sm">
             <div className="mb-4 flex items-center gap-3 pt-5">
               <AccentIconChip accent="grape" icon={UsersRound} />
               <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
@@ -221,30 +228,35 @@ export function HostActivityDashboard({
             chats={demo.completedChats}
             activity={activity}
           />
+
+          {/* Demo steering for what a real classroom would do on its own.
+              Inside the chats column (not below the grid) so the page ends
+              where the grid ends — that's what lets the rail stay stuck for
+              the whole scroll. Same visual spot on phones. */}
+          <DemoControlsPanel caption="A real class does all this by itself.">
+            <div className="grid grid-cols-2 gap-2 sm:max-w-md">
+              <EventButton
+                onClick={demo.triggerJoin}
+                disabled={!demo.canTriggerJoin}
+                icon={<UserPlus className="size-4" />}
+              >
+                A student joins
+              </EventButton>
+              <EventButton
+                onClick={demo.fastForwardClocks}
+                disabled={
+                  !demo.chatsInProgress.some(
+                    (c) => c.autoEndSecondsLeft !== null
+                  )
+                }
+                icon={<Timer className="size-4" />}
+              >
+                Fast-forward clocks
+              </EventButton>
+            </div>
+          </DemoControlsPanel>
         </div>
       </div>
-
-      {/* Demo steering for what a real classroom would do on its own. */}
-      <DemoControlsPanel caption="A real class does all this by itself.">
-        <div className="grid grid-cols-2 gap-2 sm:max-w-md">
-          <EventButton
-            onClick={demo.triggerJoin}
-            disabled={!demo.canTriggerJoin}
-            icon={<UserPlus className="size-4" />}
-          >
-            A student joins
-          </EventButton>
-          <EventButton
-            onClick={demo.fastForwardClocks}
-            disabled={
-              !demo.chatsInProgress.some((c) => c.autoEndSecondsLeft !== null)
-            }
-            icon={<Timer className="size-4" />}
-          >
-            Fast-forward clocks
-          </EventButton>
-        </div>
-      </DemoControlsPanel>
 
       <ConfirmDialog
         open={pendingAction !== null}
