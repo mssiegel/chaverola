@@ -124,17 +124,10 @@ export function PairingPanel({
       ) : (
         <>
           {/* lg: matches the host page's rail breakpoint — only the desktop
-              mount scrolls internally, so the CTAs pin there and nowhere else. */}
+              mount scrolls internally, so the CTAs pin there and nowhere else.
+              Order is deliberate: the confirm CTA sits second, adjacent to
+              the names the teacher just tapped. */}
           <div className="flex flex-col gap-2 lg:sticky lg:top-0 lg:z-10 lg:bg-card lg:pb-2">
-            <Button
-              onClick={onStartChat}
-              disabled={selectedIds.length < 2}
-              className="w-full"
-            >
-              <Sparkles aria-hidden />
-              Start their chat
-              {selectedIds.length >= 2 ? ` (${selectedIds.length})` : ""}
-            </Button>
             <Button
               variant="outline"
               onClick={onPairEveryone}
@@ -143,6 +136,15 @@ export function PairingPanel({
             >
               <UsersRound aria-hidden />
               Pair everyone 1:1
+            </Button>
+            <Button
+              onClick={onStartChat}
+              disabled={selectedIds.length < 2}
+              className="w-full"
+            >
+              <Sparkles aria-hidden />
+              Start their chat
+              {selectedIds.length >= 2 ? ` (${selectedIds.length})` : ""}
             </Button>
           </div>
           <p className="-mt-2 text-xs text-muted-foreground lg:-mt-4">

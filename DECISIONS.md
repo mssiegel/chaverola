@@ -82,6 +82,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Character rows lead with the emoji avatar](#character-rows-lead-with-the-emoji-avatar)
   - [Setup sections each carry one brand accent; settings stays the quiet one](#setup-sections-each-carry-one-brand-accent-settings-stays-the-quiet-one)
 - [Teacher live activity page](#teacher-live-activity-page)
+  - [Start their chat sits below Pair everyone 1:1, nearest the names](#start-their-chat-sits-below-pair-everyone-11-nearest-the-names)
   - [The pairing CTAs pin at the top of the desktop rail while the queue scrolls](#the-pairing-ctas-pin-at-the-top-of-the-desktop-rail-while-the-queue-scrolls)
   - [Pause is one world-level switch: chats freeze, clocks hold, matchmaking waits](#pause-is-one-world-level-switch-chats-freeze-clocks-hold-matchmaking-waits)
   - [The pairing rail carries the auto-match switch, and it IS the activity setting](#the-pairing-rail-carries-the-auto-match-switch-and-it-is-the-activity-setting)
@@ -1011,6 +1012,33 @@ _Implemented in
 ---
 
 ## Teacher live activity page
+
+### Start their chat sits below Pair everyone 1:1, nearest the names
+
+_2026-07-18_
+
+**Decision:** In the Pair-your-students panel's CTA cluster, **Pair
+everyone 1:1** renders first and **Start their chat** second, so the
+confirm button is the one adjacent to the student queue. The two buttons
+stay together in the cluster (still pinned at the top of the desktop rail,
+per
+[The pairing CTAs pin at the top of the desktop rail while the queue scrolls](#the-pairing-ctas-pin-at-the-top-of-the-desktop-rail-while-the-queue-scrolls)).
+Start keeps the solid-grape primary style and Pair everyone stays outline:
+the confirm going from disabled to filled purple as the second name is
+tapped is the "you can go now" signal, and its position doesn't change
+which button is primary.
+
+**Why:** Founder call (2026-07-18): the teacher's flow is scan the list,
+tap 2–4 names, then confirm — and with Start their chat on top, the button
+nearest the selecting finger was Pair everyone 1:1, a mis-click that throws
+away the selection and pairs the whole room. Rejected (tried, then pulled
+back the same day): moving Start below the queue and pinning it to the
+rail's bottom edge — closest possible to the names, but it split the two
+pairing actions to opposite ends of the card, and they belong side by side
+as one "pair students" control group.
+
+_Implemented in
+[PairingPanel.tsx](client/src/components/Teacher/HostActivity/PairingPanel.tsx)._
 
 ### The pairing CTAs pin at the top of the desktop rail while the queue scrolls
 
