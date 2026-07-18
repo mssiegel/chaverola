@@ -43,8 +43,8 @@ export function FounderNote() {
           </p>
           <p>
             The name comes from two Hebrew words: Chaver, which means friend,
-            and Olah, which means rising up. Friends raise each other up.
-            That's what I wanted this to be, so I put it right in the name.
+            and Olah, which means rising up. Friends raise each other up. That's
+            what I wanted this to be, so I put it right in the name.
           </p>
           <p>
             If you have questions, ideas, or just want to say hi, I'd love to
