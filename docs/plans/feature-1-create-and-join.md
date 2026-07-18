@@ -24,7 +24,7 @@ When a prompt is done, tick its checkbox here (same commit).
 - [x] Prompt 1 — Workspace prep + `shared/` + client shims
 - [x] Prompt 2 — The `server/` package with tests
 - [x] Prompt 3 — Docs, DECISIONS.md, stale-reference sweep
-- [ ] Prompt 4 — Deploy to Render + DNS + agent log access
+- [x] Prompt 4 — Deploy to Render + DNS + agent log access
 - [ ] Prompt 5 — Client wiring, student side
 - [ ] Prompt 6 — Client wiring, teacher side (the feature completes)
 - [ ] Prompt 7 — End-to-end verification + prod cutover

@@ -155,6 +155,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Transcripts wait: feature 1 only stores the teacher's email](#transcripts-wait-feature-1-only-stores-the-teachers-email)
   - [Considered and rejected for the backend: TanStack Query, dotenv, a hostKey stash, an npm conversion](#considered-and-rejected-for-the-backend-tanstack-query-dotenv-a-hostkey-stash-an-npm-conversion)
 - [Process & tooling](#process--tooling)
+  - [Agents read Render logs through the CLI, with the API key in `.env.local`](#agents-read-render-logs-through-the-cli-with-the-api-key-in-envlocal)
   - [The numbered doc standard is retired; technical docs live in `docs/`](#the-numbered-doc-standard-is-retired-technical-docs-live-in-docs)
   - [Features ship as prompt-doc plans in `docs/plans/`, one prompt per session](#features-ship-as-prompt-doc-plans-in-docsplans-one-prompt-per-session)
   - [Server tests cover only the safety invariants](#server-tests-cover-only-the-safety-invariants)
@@ -2640,6 +2641,24 @@ forever.
 ---
 
 ## Process & tooling
+
+### Agents read Render logs through the CLI, with the API key in `.env.local`
+
+_2026-07-19_
+
+**Decision:** Agent access to the production server's logs goes through
+the official Render CLI (`render logs`, non-interactive with
+`RENDER_API_KEY` read from the gitignored `.env.local`) rather than
+Render's hosted MCP server. The exact commands live in AGENTS.md →
+"Reading production logs".
+
+**Why:** Render API keys are broadly scoped — they grant access to every
+service the account can reach — so where the key lives matters more than
+the transport. With the CLI it sits in `.env.local`, which the repo
+already gitignores and every agent already knows not to commit; the MCP
+path would move it into per-agent config files, one more place to leak
+from and one per tool to keep in sync. The CLI is also tool-agnostic:
+anything that can run a shell can read the logs.
 
 ### The numbered doc standard is retired; technical docs live in `docs/`
 
