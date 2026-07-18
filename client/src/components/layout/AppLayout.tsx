@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { localePrefix } from "@/lib/locale";
 import { useHeroCtaPassed } from "@/lib/useHeroCtaPassed";
 import { cn } from "@/lib/utils";
+import { DEMO_JOIN_CODE } from "@/mockData";
 
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { LocaleLink } from "./LocaleLink";
@@ -15,7 +16,8 @@ import { LocaleLink } from "./LocaleLink";
  * (the only page with the hero CTA) — elsewhere it's just noise. The
  * student join flow doesn't use this shell at all; see StudentWorldLayout.
  * On the teacher's live host route the logo (the home link) is removed
- * entirely so it can't be clicked by accident mid-activity.
+ * entirely so it can't be clicked by accident mid-activity; the demo host
+ * page keeps it.
  *
  * On phones, the homepage navbar swaps modes as you scroll: while the hero's
  * own Join button is on screen the bar shows just the brand; once you scroll
@@ -29,17 +31,20 @@ export function AppLayout() {
 
   // Hosting a live activity: the brand link disappears so a stray click can't
   // yank the teacher off their running activity — see DECISIONS.md → "The
-  // brand home link disappears mid-chat and while hosting".
+  // brand home link disappears mid-chat and while hosting". The demo host
+  // page is exempt: nothing real is at stake there, so it keeps the brand
+  // as a way back to the homepage.
   const { pathname } = useLocation();
-  const hostingActivity = pathname
-    .slice(localePrefix(pathname).length)
-    .startsWith("/activity/host/");
+  const basePath = pathname.slice(localePrefix(pathname).length);
+  const hostingLiveActivity =
+    basePath.startsWith("/activity/host/") &&
+    basePath !== `/activity/host/${DEMO_JOIN_CODE}`;
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <header className="sticky top-0 z-20 border-b border-border/70 bg-background/80 backdrop-blur-sm">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-2 px-4 sm:h-16">
-          {!hostingActivity && (
+          {!hostingLiveActivity && (
             <LocaleLink
               to="/"
               className="rounded-lg transition-opacity hover:opacity-80"

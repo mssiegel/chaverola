@@ -1986,6 +1986,13 @@ sits empty — the student's name badge takes the brand pill's spot mid-chat
 (see
 [Mid-chat, the student's name is a corner badge](#mid-chat-the-students-name-is-a-corner-badge)).
 
+**Update (2026-07-18):** the **demo** host page (`/activity/host/1234`) is
+exempt — it keeps the clickable brand, logo and wordmark both, on phones
+too. Nothing real is at stake in the demo, and a visitor poking at it needs
+a way back to the homepage. (The homepage's scroll-away wordmark collapse
+doesn't apply here; that swap only exists to make room for the navbar Join
+CTA, which is homepage-only.) Real hosted activities are unchanged.
+
 _Implemented in [AppLayout](client/src/components/layout/AppLayout.tsx),
 [StudentWorldLayout](client/src/components/layout/StudentWorldLayout.tsx),
 and [JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._
