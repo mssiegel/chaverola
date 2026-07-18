@@ -72,9 +72,13 @@ function asBodyParserError(err: object): HttpError | undefined {
 
 export function buildApp(config: Config): express.Express {
   const app = express();
-  // Exactly one proxy (Render's) sits in front — needed so the rate
-  // limiters see real client IPs, not Render's.
-  app.set("trust proxy", 1);
+  // Three trusted hops sit in front on Render: the local sidecar socket,
+  // Render's internal proxy (a rotating 10.x address), and Cloudflare's
+  // edge — X-Forwarded-For arrives as [client, cloudflare, internal].
+  // Trusting fewer made req.ip the rotating internal hop, which silently
+  // fragmented the rate-limit buckets (found via non-monotonic RateLimit
+  // headers in prod). Trusting more would let clients forge XFF entries.
+  app.set("trust proxy", 3);
 
   app.use(helmet());
   app.use(

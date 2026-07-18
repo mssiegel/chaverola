@@ -90,8 +90,9 @@ Two platforms, split by package:
   `VITE_API_URL` — the API base URL, baked in at build time.
 - **Server → Render** (Virginia/US-East, free tier), reached at
   `api.chaverola.com`. One required env var: `NODE_ENV=production`
-  (Render injects `PORT` itself). _Not live yet — the service is set up
-  in feature-1 Prompt 4._
+  (Render injects `PORT` itself). Live since 2026-07-18, though the
+  client doesn't call it yet — that wiring is feature 1's remaining
+  prompts.
 
 Free-tier caveats worth knowing: the server spins down after ~15 idle
 minutes (the client pings `/healthz` on page mount to wake it early), and

@@ -159,7 +159,9 @@ Endpoints:
   limiters — it's the warm-up ping every visitor fires, and Render's health
   check.
 
-Rate limits (`express-rate-limit`, `trust proxy: 1`), sized for 600 users
+Rate limits (`express-rate-limit`, `trust proxy: 3` — socket + Render
+internal + Cloudflare edge; found in Prompt 4 when `1` keyed the limiters
+on Render's rotating internal hop), sized for 600 users
 behind one school NAT — keep the sizing math in a code comment:
 
 - `POST /activities`: **60 / 15 min / IP** (20 teachers starting class at
@@ -306,7 +308,7 @@ Read first: the API contract section above, `shared/src/*`,
    hard-coded `1234 → 404`, host route registered before the joinCode route.
 9. `src/app.ts` — `buildApp(config)` returning the app **without
    listening** (supertest target; Socket.IO-era reuse). Order:
-   `trust proxy: 1` → helmet → cors (`credentials: false`,
+   `trust proxy: 3` → helmet → cors (`credentials: false`,
    `maxAge: 86400`) → pino-http → `/healthz` (returns
    `{ ok: true, commit: process.env.RENDER_GIT_COMMIT }`, mounted before
    limiters) → rate limiters → `express.json({ limit: "16kb" })` →

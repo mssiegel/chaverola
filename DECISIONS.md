@@ -2441,7 +2441,8 @@ for an old client to corrupt. The dedicated `api.` subdomain also makes
 an `/api` path prefix redundant. If a public API ever ships, introduce
 `/v1` then.
 
-_Recorded in [docs/api.md](docs/api.md); DNS lands in feature-1 Prompt 4._
+_Recorded in [docs/api.md](docs/api.md); the DNS landed 2026-07-18 with
+the Prompt 4 deploy._
 
 ### Teachers set up at class start, and a warm-up ping hides the cold start
 

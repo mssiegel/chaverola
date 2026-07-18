@@ -7,7 +7,8 @@ This file is the canonical source of guidance for all AI agents (Claude Code, Cu
 Every UI surface is built, mock-driven, and lives in its real flow (demo
 URLs exist but only as redirects). `server/` is a real Express 5 API
 implementing the create-and-join contract ([docs/api.md](docs/api.md)) —
-runnable locally, not yet deployed, and not yet called by the client
+live at `https://api.chaverola.com` (Render, free tier), but not yet
+called by the client
 (the client wiring lands with feature 1's remaining prompts; see
 [docs/plans/feature-1-create-and-join.md](docs/plans/feature-1-create-and-join.md)).
 The demo flows are a **permanent product surface** — the homepage links to
@@ -310,6 +311,22 @@ Run from the repo root:
   `chaverola` project — `vercel logs <deployment-url>` tails a deployment,
   `vercel ls` lists recent deployments (also the way to grab a real
   preview hostname, e.g. for the server's CORS regex).
-- **Render (server):** not deployed yet. Agent log access (Render CLI or
-  MCP, with the API key in gitignored `.env.local`) is set up in feature-1
-  Prompt 4 — document the exact command here when it lands.
+- **Render (server):** the Render CLI (`render.exe`, installed next to the
+  Vercel CLI) reads `RENDER_API_KEY` from the environment — the key lives
+  in the gitignored `.env.local` at the repo root. Load it, then query the
+  service (`chaverola-api`, id `srv-d9ducu3bc2fs73esrr8g`):
+
+  ```powershell
+  $env:RENDER_API_KEY = (Get-Content .env.local |
+    Select-String '^RENDER_API_KEY=').Line -replace '^RENDER_API_KEY=', ''
+  render logs --resources srv-d9ducu3bc2fs73esrr8g --limit 50 -o text --confirm
+  ```
+
+  Add `--tail` to stream, `--text <substring>` to filter; `-o json` for
+  structured entries (each line is the server's pino JSON). `render
+services -o json --confirm` lists services; `render deploys list
+srv-d9ducu3bc2fs73esrr8g -o json --confirm` shows deploy history. The
+  active workspace is saved once per machine (`render workspace set
+tea-d8f90l0g4nts738mebhg -o json --confirm` if it's ever missing). We
+  chose the CLI over Render's hosted MCP server so the key stays in
+  `.env.local` instead of inside agent config.

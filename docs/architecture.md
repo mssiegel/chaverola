@@ -49,7 +49,8 @@ a push doesn't affect `@chaverola/client`.
 - **Vercel** builds only `client/` (Root Directory `client`, with
   source-files-outside-root enabled so `shared/` resolves). The client
   reaches the API through `VITE_API_URL`, baked at build time.
-- **Render** runs the server (setup lands in feature-1 Prompt 4). The
+- **Render** runs the server (service `chaverola-api`, live since
+  2026-07-18; build filters keep client-only pushes from deploying it). The
   build command installs with pnpm and runs `tsc --noEmit` as the deploy
   gate; at runtime **tsx executes the TypeScript source directly** — there
   is no emit step anywhere. Render injects `PORT` and
@@ -71,7 +72,8 @@ a push doesn't affect `@chaverola/client`.
 the order is load-bearing:
 
 ```text
-trust proxy (1)          Render's proxy; limiters must see real client IPs
+trust proxy (3)          socket + Render internal + Cloudflare edge; the
+                         limiters must see real client IPs, not Render's
 → helmet                 security headers
 → cors                   credentials: false, preflight cached 24h
 → pino-http              structured request logs
