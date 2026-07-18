@@ -56,14 +56,14 @@ a push doesn't affect `@chaverola/client`.
   is no emit step anywhere. Render injects `PORT` and
   `RENDER_GIT_COMMIT` (echoed by `/healthz`); Node's version comes from
   the root `.nvmrc`.
-- **Free-tier consequences:** Render documents free instances as spinning
-  down after ~15 idle minutes. In practice (observed 2026-07-19) the
-  configured Health Check Path has Render hitting `/healthz` every ~5s,
-  which keeps the instance warm through long external-idle stretches —
-  but that's unofficial behavior, so the client's warm-up ping to
-  `/healthz` stays as the guaranteed way to hide a cold start. Every
-  server deploy or restart wipes all live activities — so server-touching
-  pushes are avoided during school hours.
+- **Free-tier consequences:** the instance spins down when idle. Measured
+  2026-07-19: SIGTERM came ~30 minutes after the last real request
+  (Render documents ~15; their own health-check pings don't count as
+  traffic and don't delay it), and a single `/healthz` hit woke it in
+  ~33 seconds — boot to `listening` took ~11s of that. The client's
+  warm-up ping on page mount hides this cold start. Every server deploy
+  or restart wipes all live activities — so server-touching pushes are
+  avoided during school hours.
 - **CORS** allows `chaverola.com`, `www.chaverola.com`, Vercel preview
   hostnames (`chaverola-*-moshe-siegels-projects.vercel.app`), and
   localhost outside production (`server/src/config.ts`). CORS is

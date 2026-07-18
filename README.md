@@ -94,13 +94,12 @@ Two platforms, split by package:
   client doesn't call it yet — that wiring is feature 1's remaining
   prompts.
 
-Free-tier caveats worth knowing: Render documents free services as
-spinning down after ~15 idle minutes — in practice the configured health
-check has kept ours warm, but neither behavior is guaranteed, so the
-client still pings `/healthz` on page mount to wake it early. Activities
-live **in memory only** — every server deploy or restart wipes live
-classes, so avoid server-touching pushes during school hours. Details in
-[docs/architecture.md](docs/architecture.md).
+Free-tier caveats worth knowing: the server spins down when idle
+(observed: ~30 minutes after the last real request; a single hit wakes it
+in ~33 seconds, which the client's `/healthz` ping on page mount hides),
+and activities live **in memory only** — every server deploy or restart
+wipes live classes, so avoid server-touching pushes during school hours.
+Details in [docs/architecture.md](docs/architecture.md).
 
 ## Documentation
 
