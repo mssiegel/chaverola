@@ -14,7 +14,6 @@ import {
   type SetupProblem,
 } from "@/lib/activitySetup";
 import { useLocaleNavigate } from "@/lib/locale";
-import { cn } from "@/lib/utils";
 import { mockGenerateJoinCode } from "@/mockData";
 
 import { AboutYouFields } from "./AboutYouFields";
@@ -189,42 +188,40 @@ export function ActivitySetupForm() {
           <SettingsSection settings={form.settings} onChange={patchSettings} />
         </div>
 
-        {/* Desktop rail: the live lobby preview with the Host action right
-            under it — fill on the left, watch it land on the right. */}
+        {/* Desktop rail: the live lobby preview — fill on the left, watch it
+            land on the right. The Host action lives in the bottom dock. */}
         <aside className="hidden lg:block">
-          <div className="sticky top-20 flex flex-col gap-5">
+          <div className="sticky top-20">
             <LobbyPreview
               hostName={form.hostName}
               scene={form.scene}
               characters={form.characters}
             />
-            <div className="flex flex-col gap-2.5">
-              <HostCta hintClassName="text-sm" />
-            </div>
           </div>
         </aside>
       </div>
 
-      {/* Docked Host bar below lg: the action stays in thumb reach, which
-          pays off when a returning teacher rehosts an already-filled draft. */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-background/85 backdrop-blur-sm lg:hidden">
-        <div className="mx-auto w-full max-w-2xl px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <HostCta hintClassName="mt-2 text-xs" />
+      {/* Docked Host bar, the submit's one home at every breakpoint: thumb
+          reach on phones, and always in view on desktop — first-time teachers
+          working down the form column missed the old rail placement. */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-background/85 backdrop-blur-sm">
+        <div className="mx-auto w-full max-w-2xl px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:flex lg:max-w-5xl lg:flex-row-reverse lg:items-center lg:justify-between lg:gap-6">
+          <HostCta />
         </div>
       </div>
     </form>
   );
 }
 
-/** The one submit, rendered in both of its breakpoint homes (rail + dock). */
-function HostCta({ hintClassName }: { hintClassName: string }) {
+/** The one submit, living in the bottom dock at every breakpoint. */
+function HostCta() {
   return (
     <>
-      <Button type="submit" size="lg" className="w-full">
+      <Button type="submit" size="lg" className="w-full lg:w-auto">
         Host the Activity
         <ArrowRight className="size-4" />
       </Button>
-      <p className={cn("text-center text-muted-foreground", hintClassName)}>
+      <p className="mt-2 text-center text-xs text-muted-foreground lg:mt-0 lg:text-start lg:text-sm">
         Your join code shows up on the next screen.
       </p>
     </>

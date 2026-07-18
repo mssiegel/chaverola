@@ -78,7 +78,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Settings ship on, and a toggle's sub-control disables instead of hiding](#settings-ship-on-and-a-toggles-sub-control-disables-instead-of-hiding)
   - [The setup form's submit is solid grape](#the-setup-forms-submit-is-solid-grape)
   - [Wide screens get a live student-lobby preview beside the form](#wide-screens-get-a-live-student-lobby-preview-beside-the-form)
-  - [On phones, Host the Activity docks to the bottom edge](#on-phones-host-the-activity-docks-to-the-bottom-edge)
+  - [Host the Activity docks to the bottom edge at every breakpoint](#host-the-activity-docks-to-the-bottom-edge-at-every-breakpoint)
   - [Character rows lead with the emoji avatar](#character-rows-lead-with-the-emoji-avatar)
   - [Setup sections each carry one brand accent; settings stays the quiet one](#setup-sections-each-carry-one-brand-accent-settings-stays-the-quiet-one)
 - [Teacher live activity page](#teacher-live-activity-page)
@@ -928,8 +928,10 @@ _2026-07-14_
 **Decision:** From `lg` up, the setup form shares the page with a sticky
 "What students see" rail: a miniature of the real student lobby (the purple
 world, the "Waiting for your match" pill, the hosted-by / scene / roster-chip
-card) that re-renders from the draft on every keystroke, with the Host button
-and its join-code hint directly beneath it. It mirrors
+card) that re-renders from the draft on every keystroke. The rail is
+display-only — the Host action lives in
+[the bottom dock](#host-the-activity-docks-to-the-bottom-edge-at-every-breakpoint),
+not under the preview. It mirrors
 [WaitingLobby](client/src/components/Student/WaitingLobby.tsx)'s markup
 idioms rather than reusing the component — the lobby needs a finished
 `Activity` plus a student name, the preview renders a half-finished draft.
@@ -948,21 +950,30 @@ _Implemented in
 laid out in
 [ActivitySetupForm](client/src/components/Teacher/ActivitySetup/index.tsx)._
 
-### On phones, Host the Activity docks to the bottom edge
+### Host the Activity docks to the bottom edge at every breakpoint
 
-_2026-07-14_
+_2026-07-14 · widened to all breakpoints 2026-07-18_
 
-**Decision:** Below `lg`, the Host button and its join-code hint live in a
-fixed, blur-backed bar on the bottom edge, and the page carries matching
-bottom padding so the last section can always scroll clear of it. From `lg`
-up the same single action renders in the preview rail instead — it's one
-submit with two breakpoint homes, still never disabled, and an invalid tap
-still scrolls to the first problem from anywhere.
+**Decision:** The Host button and its join-code hint live in a fixed,
+blur-backed bar on the bottom edge at every width — the submit's only home.
+Below `lg` the bar stacks the full-width button over a centered hint; from
+`lg` up it widens to the page's content width and becomes a row, hint at the
+inline start and an auto-width button at the inline end (direction-safe, so
+the Hebrew locale mirrors it). The preview rail carries no button anymore.
+The page keeps matching bottom padding so the last section always scrolls
+clear, the submit is still never disabled, and an invalid tap still scrolls
+to the first problem from anywhere. The bar gets no entrance animation — a
+permanently visible bar holding the page's only solid-grape button is
+emphasis enough.
 
-**Why:** The draft deliberately survives hosting (the series use case), so a
-returning teacher opens an already-filled form — the docked bar makes "host
-it again" one tap with no scroll to the bottom. It also keeps the
-always-tappable submit in thumb reach the whole way down the form.
+**Why:** Originally phones-only, for thumb reach and the one-tap rehost
+(the draft survives hosting for the series use case). Widened to desktop
+(product-owner call, 2026-07-18) because a first-time teacher works down the
+form column and can miss the rail CTA entirely: their eyes never leave the
+left column, the button blended into the purple preview above it, and the
+form column just ended with no cue about what to do next. A bottom bar stays
+in view and crosses the reading path the whole way down, and one home for
+the CTA avoids two identical primary buttons on one screen.
 
 _Implemented in
 [ActivitySetupForm](client/src/components/Teacher/ActivitySetup/index.tsx)._

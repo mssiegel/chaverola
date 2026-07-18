@@ -5,8 +5,9 @@ import { usePageTitle } from "@/lib/usePageTitle";
 /**
  * `/activity/create` — the teacher sets up an activity on one scrolling form
  * and hosts it. See DECISIONS.md → "Teacher activity setup" for the rules
- * behind the form's shape and behavior. Below `lg` the Host action lives in
- * a docked bottom bar, so the page carries extra bottom padding for it.
+ * behind the form's shape and behavior. The Host action lives in a docked
+ * bottom bar at every breakpoint, so the page carries extra bottom padding
+ * for it.
  */
 export function CreateActivityPage() {
   usePageTitle("Set Up Your Activity");
@@ -24,7 +25,7 @@ export function CreateActivityPage() {
         <div className="absolute top-72 right-1/4 size-56 rounded-full bg-brand-sun/10 blur-3xl" />
       </div>
 
-      <div className="mx-auto w-full max-w-2xl px-4 pt-8 pb-36 sm:pt-10 lg:max-w-5xl lg:pb-12">
+      <div className="mx-auto w-full max-w-2xl px-4 pt-8 pb-36 sm:pt-10 lg:max-w-5xl">
         <header className="mb-6 sm:mb-8">
           <Badge>For teachers</Badge>
           <h1 className="mt-3 text-3xl font-semibold text-foreground sm:text-4xl">
