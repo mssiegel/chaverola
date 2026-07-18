@@ -17,6 +17,9 @@ importers:
 
   client:
     dependencies:
+      '@chaverola/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@fontsource/fredoka':
         specifier: ^5.2.10
         version: 5.2.10
@@ -120,6 +123,12 @@ importers:
       vitest:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.1.1)(vite@8.1.4(@types/node@26.1.1)(jiti@2.7.0))
+
+  shared:
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
 
 packages:
 

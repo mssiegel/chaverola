@@ -21,7 +21,7 @@ To run a prompt, tell the agent:
 
 When a prompt is done, tick its checkbox here (same commit).
 
-- [ ] Prompt 1 — Workspace prep + `shared/` + client shims
+- [x] Prompt 1 — Workspace prep + `shared/` + client shims
 - [ ] Prompt 2 — The `server/` package with tests
 - [ ] Prompt 3 — Docs, DECISIONS.md, stale-reference sweep
 - [ ] Prompt 4 — Deploy to Render + DNS + agent log access

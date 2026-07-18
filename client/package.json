@@ -1,5 +1,5 @@
 {
-  "name": "client",
+  "name": "@chaverola/client",
   "private": true,
   "version": "0.0.0",
   "license": "MIT",
@@ -13,6 +13,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@chaverola/shared": "workspace:*",
     "@fontsource/fredoka": "^5.2.10",
     "@fontsource/nunito": "^5.2.7",
     "@radix-ui/react-dialog": "^1.1.19",

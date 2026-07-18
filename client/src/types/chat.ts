@@ -1,19 +1,14 @@
 /*
   Shared chat domain types. Used by the student chatbox and the teacher's chat
-  cards — both follow the same chatbox conventions.
+  cards — both follow the same chatbox conventions. `Character` crossed into
+  @chaverola/shared (it's part of the wire contract); it's re-exported here so
+  import sites stay put. The rest deliberately hasn't: `Participant` needs a
+  realName privacy split before it ever crosses a wire.
 */
 
-export interface Character {
-  id: string;
-  /** Display name, e.g. "Caesar's ghost". */
-  name: string;
-  /**
-   * A single emoji shown with the name, e.g. "👻". Optional: the teacher
-   * decides per character whether it gets one, and every label simply
-   * drops it when absent (see lib/characterLabel).
-   */
-  emoji?: string;
-}
+import type { Character } from "@chaverola/shared";
+
+export type { Character };
 
 export interface Participant {
   id: string;

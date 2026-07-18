@@ -1,11 +1,14 @@
+import { DEMO_JOIN_CODE } from "@chaverola/shared";
 import type { Activity } from "@/types/activity";
 
 /*
   The one mock activity behind the student join flow. Per the project brief,
   the demo join code `1234` always works; every other code is "not found".
+  DEMO_JOIN_CODE itself lives in @chaverola/shared (the server refuses to
+  issue or answer for it) and is re-exported here.
 */
 
-export const DEMO_JOIN_CODE = "1234";
+export { DEMO_JOIN_CODE };
 
 /**
  * The name waiting in the demo's name field, so demo entries (the homepage's

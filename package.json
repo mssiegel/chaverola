@@ -5,16 +5,19 @@
   "description": "Chaverola — a fun, game-like multiplayer classroom chat activity.",
   "license": "MIT",
   "type": "module",
+  "packageManager": "pnpm@11.9.0",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "dev": "pnpm --filter client dev",
-    "build": "pnpm --filter client build",
-    "preview": "pnpm --filter client preview",
-    "typecheck": "pnpm --filter client typecheck",
-    "lint": "pnpm --filter client lint",
-    "test": "pnpm --filter client test",
+    "dev": "pnpm --parallel --filter @chaverola/client --filter @chaverola/server dev",
+    "dev:client": "pnpm --filter @chaverola/client dev",
+    "dev:server": "pnpm --filter @chaverola/server dev",
+    "build": "pnpm --filter @chaverola/client build",
+    "preview": "pnpm --filter @chaverola/client preview",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

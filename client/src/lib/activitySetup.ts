@@ -1,3 +1,14 @@
+import {
+  AUTO_END_MINUTES,
+  AUTO_MATCH_SECONDS,
+  DEFAULT_ACTIVITY_SETTINGS,
+  EMAIL_PATTERN,
+  MAX_CHARACTERS,
+  MIN_CHARACTERS,
+  NAME_MAX_CHARS,
+  SCENE_MAX_WORDS,
+} from "@chaverola/shared";
+import type { StepperBounds } from "@chaverola/shared";
 import type { ActivitySettings, HostedActivity } from "@/types/activity";
 import type { Character } from "@/types/chat";
 
@@ -10,53 +21,30 @@ import {
 import { clampChars, clampWords } from "./text";
 
 /*
-  Everything behind the teacher's setup form that isn't UI: the field caps,
-  the in-progress draft (sessionStorage — survives a refresh on a flaky
-  classroom device, gone when the tab closes), validation for the
-  always-tappable Host button, and the hand-off of the finished activity to
-  the live host page. See DECISIONS.md → "Teacher activity setup".
+  Everything behind the teacher's setup form that isn't UI: the in-progress
+  draft (sessionStorage — survives a refresh on a flaky classroom device,
+  gone when the tab closes), validation for the always-tappable Host button,
+  and the hand-off of the finished activity to the live host page. The field
+  caps themselves live in @chaverola/shared (the server enforces the same
+  numbers) and are re-exported here so form imports stay put. See
+  DECISIONS.md → "Teacher activity setup".
 */
 
-export const MIN_CHARACTERS = 2;
-export const MAX_CHARACTERS = 4;
+export {
+  AUTO_END_MINUTES,
+  AUTO_MATCH_SECONDS,
+  DEFAULT_ACTIVITY_SETTINGS,
+  EMAIL_PATTERN,
+  MAX_CHARACTERS,
+  MIN_CHARACTERS,
+  NAME_MAX_CHARS,
+  SCENE_MAX_WORDS,
+};
+export type { StepperBounds };
 
-/** Character names and the hosted-by name — both render in tight chrome. */
-export const NAME_MAX_CHARS = 30;
 /** The caps' quiet counters appear only this close to the limit. */
 export const NAME_COUNTER_FROM = 25;
-
-export const SCENE_MAX_WORDS = 20;
 export const SCENE_COUNTER_FROM = 16;
-
-export interface StepperBounds {
-  min: number;
-  max: number;
-  step: number;
-  default: number;
-}
-
-export const AUTO_END_MINUTES: StepperBounds = {
-  min: 1,
-  max: 30,
-  step: 1,
-  default: 7,
-};
-
-export const AUTO_MATCH_SECONDS: StepperBounds = {
-  min: 5,
-  max: 120,
-  step: 5,
-  default: 20,
-};
-
-export const DEFAULT_ACTIVITY_SETTINGS: ActivitySettings = {
-  revealNames: true,
-  autoEndChats: true,
-  autoEndMinutes: AUTO_END_MINUTES.default,
-  rematchWarning: true,
-  autoMatch: true,
-  autoMatchSeconds: AUTO_MATCH_SECONDS.default,
-};
 
 /** One character row as drafted — may be empty or half-filled while typing. */
 export type CharacterDraft = Omit<Character, "id">;
@@ -190,8 +178,6 @@ export interface SetupProblem {
   field: SetupField;
   message: string;
 }
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Everything that blocks hosting, in top-to-bottom form order — the form
