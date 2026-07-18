@@ -82,6 +82,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Character rows lead with the emoji avatar](#character-rows-lead-with-the-emoji-avatar)
   - [Setup sections each carry one brand accent; settings stays the quiet one](#setup-sections-each-carry-one-brand-accent-settings-stays-the-quiet-one)
 - [Teacher live activity page](#teacher-live-activity-page)
+  - [A rematch only counts when it's an exact rerun for everyone in it](#a-rematch-only-counts-when-its-an-exact-rerun-for-everyone-in-it)
   - [Start their chat sits below Pair everyone 1:1, nearest the names](#start-their-chat-sits-below-pair-everyone-11-nearest-the-names)
   - [The pairing CTAs pin at the top of the desktop rail while the queue scrolls](#the-pairing-ctas-pin-at-the-top-of-the-desktop-rail-while-the-queue-scrolls)
   - [Pause is one world-level switch: chats freeze, clocks hold, matchmaking waits](#pause-is-one-world-level-switch-chats-freeze-clocks-hold-matchmaking-waits)
@@ -1033,6 +1034,46 @@ _Implemented in
 
 ## Teacher live activity page
 
+### A rematch only counts when it's an exact rerun for everyone in it
+
+_2026-07-18_
+
+**Decision:** Every rematch feature shares one definition of "rematch": a
+selection or pairing counts only when **every** student in it just came from a
+chat made up of exactly the other students in it. A partial overlap is not a
+rematch. Concretely:
+
+- The selection heads-up fires only on an exact rerun, and names the whole
+  group ("Maya, Ella, and Noa just chatted together…"). It still never blocks.
+- "Pair everyone 1:1" and auto-match prefer **fully fresh** partners (no
+  overlap with either student's previous chat), fall back to partial repeats
+  silently, and **never create an exact rerun**. Auto-match just waits;
+  Pair everyone repairs a stranded exact pair by swapping members with a
+  pairing it already made, so only a queue consisting of exactly that pair
+  (or an exact trio) is left in line — with a dismissible notice saying why.
+- That left-in-line notice shows even when the rematch-warning setting is
+  off: it explains why the button visibly left students unpaired, which is
+  behavior, not advice. Only the heads-up is gated by the setting.
+
+**Why:** Founder call (2026-07-18), with the defining example: Bob chats
+Rachel, then Bob chats Shlomo. Pairing Bob and Rachel now is a repeat for
+Rachel but not for Bob — his last chat was Shlomo — so nobody in the new pair
+would be rerunning their own last chat, and warning about it reads as a false
+alarm. Leaving an unresolvable exact pair waiting was chosen over
+force-pairing them with a notice (founder call, same day): the teacher can
+still pair them manually, and the heads-up covers that path. This narrows the
+trigger conditions in
+[The rematch warning remembers one round, and never blocks](#the-rematch-warning-remembers-one-round-and-never-blocks)
+and
+[Pair everyone avoids fresh rematches, and seats the odd one out when it can](#pair-everyone-avoids-fresh-rematches-and-seats-the-odd-one-out-when-it-can);
+the one-round memory and never-blocking are unchanged.
+
+_Implemented in
+[hostWorld.ts](client/src/components/Teacher/HostActivity/hostWorld.ts)
+(`isExactRematchIn`, `pairEveryoneIn`, `findAutoMatchPair`), with the
+heads-up in
+[index.tsx](client/src/components/Teacher/HostActivity/index.tsx)._
+
 ### Start their chat sits below Pair everyone 1:1, nearest the names
 
 _2026-07-18_
@@ -1324,6 +1365,12 @@ by hand — pairing the same two kids twice in a row when a swap was
 available reads as a bug. The newest joiner (not the longest-waiting) is
 the one left over because wait time is the queue's fairness currency.
 
+**Update (2026-07-18):** the forced-repeat fallback is gone — per
+[A rematch only counts when it's an exact rerun for everyone in it](#a-rematch-only-counts-when-its-an-exact-rerun-for-everyone-in-it),
+partial repeats now pair silently and an exact rerun is never created; an
+unresolvable exact pair or trio stays in line with a notice. The odd-count
+handling is unchanged.
+
 _Implemented in `pairEveryone` in
 [useHostActivityDemo](client/src/components/Teacher/HostActivity/useHostActivityDemo.ts)._
 
@@ -1342,6 +1389,12 @@ already met once tonight" stops being interesting after a round — a
 whole-activity memory would eventually flag every possible pair. Never
 blocking keeps the teacher in charge: sometimes a rematch is exactly the
 point (continuing a scene).
+
+**Update (2026-07-18):** the trigger narrowed — the warning now fires only
+when the selection is an exact rerun of everyone's previous chat, not when
+any two selected students overlap. See
+[A rematch only counts when it's an exact rerun for everyone in it](#a-rematch-only-counts-when-its-an-exact-rerun-for-everyone-in-it).
+The one-round memory and never-blocking stand.
 
 _Implemented in
 [useHostActivityDemo](client/src/components/Teacher/HostActivity/useHostActivityDemo.ts)

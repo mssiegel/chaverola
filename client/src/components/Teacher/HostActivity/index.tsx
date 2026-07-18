@@ -11,7 +11,7 @@ import { CollapsibleSection, CountPill } from "./CollapsibleSection";
 import { CompletedChatsSection } from "./CompletedChatsSection";
 import { confirmCopy, type PendingAction } from "./confirmCopy";
 import { HostHeader } from "./HostHeader";
-import type { WaitingStudent } from "./hostWorld";
+import { listNames } from "./hostWorld";
 import { JoiningInstructions } from "./JoiningInstructions";
 import { LiveSettingsPanel } from "./LiveSettingsPanel";
 import { PairingPanel } from "./PairingPanel";
@@ -80,23 +80,22 @@ export function HostActivityDashboard({
     );
   };
 
-  // Setting #3: the rematch heads-up fires the moment a selected combo
-  // repeats the previous round — and never blocks anything.
+  // Setting #3: the rematch heads-up fires only when the selection would be
+  // an exact rerun — every selected student's previous chat was exactly the
+  // others. A partial overlap pairs silently, and nothing is ever blocked.
   let rematchWarning: string | null = null;
-  if (activity.settings.rematchWarning) {
-    const selected = validSelectedIds
-      .map((id) => demo.waiting.find((s) => s.id === id))
-      .filter((s): s is WaitingStudent => s !== undefined);
-    outer: for (let i = 0; i < selected.length; i++) {
-      for (let j = i + 1; j < selected.length; j++) {
-        const a = selected[i]!;
-        const b = selected[j]!;
-        if (demo.wereLastPartners(a.id, b.id)) {
-          rematchWarning = `${a.realName} and ${b.realName} just chatted with each other. You can still pair them, this is only a heads-up.`;
-          break outer;
-        }
-      }
-    }
+  if (
+    activity.settings.rematchWarning &&
+    validSelectedIds.length >= 2 &&
+    demo.isExactRematch(validSelectedIds)
+  ) {
+    // `validSelectedIds` is derived from `demo.waiting`, so the lookup holds.
+    const names = validSelectedIds.map(
+      (id) => demo.waiting.find((s) => s.id === id)!.realName
+    );
+    rematchWarning = `${listNames(names)} just chatted ${
+      names.length === 2 ? "with each other" : "together"
+    }. You can still pair them, this is only a heads-up.`;
   }
 
   const startSelectedChat = () => {

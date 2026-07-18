@@ -7,6 +7,7 @@ import {
   AUTO_MATCH_GAP_SECONDS,
   createChat,
   findAutoMatchPair,
+  isExactRematchIn,
   pairEveryoneIn,
   tickWorld,
   type HostWorld,
@@ -92,8 +93,46 @@ describe("createChat", () => {
   });
 });
 
+describe("isExactRematchIn", () => {
+  it("is true only when every member's previous chat was exactly this group", () => {
+    expect(isExactRematchIn({ a: ["b"], b: ["a"] }, ["a", "b"])).toBe(true);
+    expect(
+      isExactRematchIn({ a: ["b", "c"], b: ["a", "c"], c: ["a", "b"] }, [
+        "a",
+        "b",
+        "c",
+      ])
+    ).toBe(true);
+  });
+
+  it("stays false when one member has moved on — Bob chats Rachel, then Shlomo", () => {
+    // Rachel's previous chat was exactly Bob, but Bob's wasn't Rachel.
+    expect(
+      isExactRematchIn({ bob: ["shlomo"], rachel: ["bob"] }, ["bob", "rachel"])
+    ).toBe(false);
+  });
+
+  it("does not count a pair carved out of a previous group", () => {
+    expect(isExactRematchIn({ a: ["b", "c"], b: ["a", "c"] }, ["a", "b"])).toBe(
+      false
+    );
+  });
+
+  it("is false for a swapped group member, a missing memory, or a single id", () => {
+    expect(
+      isExactRematchIn({ a: ["b", "c"], b: ["a", "c"], d: ["x", "y"] }, [
+        "a",
+        "b",
+        "d",
+      ])
+    ).toBe(false);
+    expect(isExactRematchIn({ a: ["b"] }, ["a", "b"])).toBe(false);
+    expect(isExactRematchIn({ a: ["b"] }, ["a"])).toBe(false);
+  });
+});
+
 describe("findAutoMatchPair", () => {
-  it("skips fresh rematches and students who have not waited long enough", () => {
+  it("prefers fresh partners and skips students who have not waited long enough", () => {
     const pair = findAutoMatchPair(
       [student("a", 30), student("b", 30), student("c", 30)],
       20,
@@ -103,6 +142,34 @@ describe("findAutoMatchPair", () => {
 
     expect(
       findAutoMatchPair([student("a", 30), student("b", 5)], 20, {})
+    ).toBeNull();
+  });
+
+  it("prefers a fully fresh pair even over a one-directional repeat", () => {
+    const pair = findAutoMatchPair(
+      [student("a", 30), student("b", 30), student("c", 30)],
+      20,
+      { b: ["a"] }
+    );
+    expect(pair!.map((s) => s.id)).toEqual(["a", "c"]);
+  });
+
+  it("falls back to a repeat as long as it is not an exact rerun", () => {
+    // Bob's previous chat was Shlomo, so Bob+Rachel is not a rerun for him.
+    const pair = findAutoMatchPair(
+      [student("bob", 30), student("rachel", 30)],
+      20,
+      { bob: ["shlomo"], rachel: ["bob"] }
+    );
+    expect(pair!.map((s) => s.id)).toEqual(["bob", "rachel"]);
+  });
+
+  it("never re-pairs an exact rematch", () => {
+    expect(
+      findAutoMatchPair([student("a", 30), student("b", 30)], 20, {
+        a: ["b"],
+        b: ["a"],
+      })
     ).toBeNull();
   });
 });
@@ -139,18 +206,102 @@ describe("pairEveryoneIn", () => {
     expect(w.leftoverStudentId).toBeNull();
   });
 
-  it("calls out a forced rematch instead of blocking it", () => {
+  it("leaves an exact-rematch pair in line instead of re-pairing them", () => {
     const queue = [student("a"), student("b")];
     const lastPartners = { a: ["b"], b: ["a"] };
-    const warned = pairEveryoneIn(world({ queue, lastPartners }), activity());
-    expect(warned.chats).toHaveLength(1);
-    expect(warned.rematchNotice).toContain("Student A and Student B");
+    const w = pairEveryoneIn(world({ queue, lastPartners }), activity());
+    expect(w.chats).toHaveLength(0);
+    expect(w.queue.map((s) => s.id)).toEqual(["a", "b"]);
+    expect(w.rematchNotice).toContain("Student A and Student B");
 
-    const quiet = pairEveryoneIn(
+    // The notice explains why the button left them in line, so unlike the
+    // heads-up it shows even with the rematch warning setting off.
+    const settingOff = pairEveryoneIn(
       world({ queue, lastPartners }),
       activity(2, { rematchWarning: false })
     );
-    expect(quiet.rematchNotice).toBeNull();
+    expect(settingOff.chats).toHaveLength(0);
+    expect(settingOff.rematchNotice).toContain("Student A and Student B");
+  });
+
+  it("pairs a partial repeat silently — it is not an exact rerun", () => {
+    const w = pairEveryoneIn(
+      world({
+        queue: [student("a"), student("b")],
+        lastPartners: { b: ["a"] },
+      }),
+      activity()
+    );
+    expect(w.chats).toHaveLength(1);
+    expect(w.rematchNotice).toBeNull();
+  });
+
+  it("repairs a stranded exact pair by swapping with an earlier pairing", () => {
+    const w = pairEveryoneIn(
+      world({
+        queue: ["a", "b", "c", "d"].map((id) => student(id)),
+        lastPartners: { c: ["d"], d: ["c"] },
+      }),
+      activity()
+    );
+    expect(w.chats).toHaveLength(2);
+    expect(w.queue).toHaveLength(0);
+    expect(w.rematchNotice).toBeNull();
+    for (const chat of w.chats) {
+      expect(chat.participants.map((p) => p.id).sort()).not.toEqual(["c", "d"]);
+    }
+  });
+
+  it("repairs a stranded exact pair through the leftover when that is all there is", () => {
+    const w = pairEveryoneIn(
+      world({
+        queue: ["a", "b", "c"].map((id) => student(id)),
+        lastPartners: { a: ["b"], b: ["a"] },
+      }),
+      activity(2)
+    );
+    expect(w.chats).toHaveLength(1);
+    expect(w.chats[0]!.participants.map((p) => p.id).sort()).toEqual([
+      "a",
+      "c",
+    ]);
+    expect(w.queue.map((s) => s.id)).toEqual(["b"]);
+    expect(w.leftoverStudentId).toBe("b");
+    expect(w.rematchNotice).toBeNull();
+  });
+
+  it("repairs an exact-rematch trio by trading a member with a pair", () => {
+    const w = pairEveryoneIn(
+      world({
+        queue: ["a", "b", "c", "d", "e"].map((id) => student(id)),
+        lastPartners: { c: ["d", "e"], d: ["c", "e"], e: ["c", "d"] },
+      }),
+      activity(3)
+    );
+    expect(w.chats).toHaveLength(2);
+    expect(w.queue).toHaveLength(0);
+    expect(w.rematchNotice).toBeNull();
+    const sizes = w.chats.map((c) => c.participants.length).sort();
+    expect(sizes).toEqual([2, 3]);
+    const trioChat = w.chats.find((c) => c.participants.length === 3)!;
+    expect(trioChat.participants.map((p) => p.id).sort()).not.toEqual([
+      "c",
+      "d",
+      "e",
+    ]);
+  });
+
+  it("leaves an exact-rematch trio in line when the queue is only them", () => {
+    const w = pairEveryoneIn(
+      world({
+        queue: ["c", "d", "e"].map((id) => student(id)),
+        lastPartners: { c: ["d", "e"], d: ["c", "e"], e: ["c", "d"] },
+      }),
+      activity(3)
+    );
+    expect(w.chats).toHaveLength(0);
+    expect(w.queue).toHaveLength(3);
+    expect(w.rematchNotice).toContain("Student C, Student D, and Student E");
   });
 });
 

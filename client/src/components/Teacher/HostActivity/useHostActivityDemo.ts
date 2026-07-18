@@ -22,9 +22,9 @@ import {
   pairEveryoneIn,
   RETURN_MAX_SECONDS,
   RETURN_MIN_SECONDS,
+  isExactRematchIn,
   seedWorld,
   tickWorld,
-  wereLastPartnersIn,
   type HostedChat,
   type HostWorld,
   type WaitingStudent,
@@ -52,7 +52,8 @@ export interface HostActivityDemo {
   leftoverStudentId: string | null;
   rematchNotice: string | null;
   dismissRematchNotice: () => void;
-  wereLastPartners: (aId: string, bId: string) => boolean;
+  /** True when this exact group was everyone's previous chat. */
+  isExactRematch: (ids: string[]) => boolean;
   startChat: (studentIds: string[]) => void;
   pairEveryone: () => void;
   endChat: (chatId: string) => void;
@@ -320,8 +321,7 @@ export function useHostActivityDemo(
     rematchNotice: world.rematchNotice,
     dismissRematchNotice: () =>
       commit({ ...worldRef.current, rematchNotice: null }),
-    wereLastPartners: (aId, bId) =>
-      wereLastPartnersIn(world.lastPartners, aId, bId),
+    isExactRematch: (ids) => isExactRematchIn(world.lastPartners, ids),
     startChat,
     pairEveryone,
     endChat,

@@ -85,12 +85,50 @@ export function activeChatMembers(chat: HostedChat): Participant[] {
   );
 }
 
-export function wereLastPartnersIn(
+function wereLastPartnersIn(
   lastPartners: Record<string, string[]>,
   aId: string,
   bId: string
 ): boolean {
   return lastPartners[aId]?.includes(bId) ?? false;
+}
+
+/** Fresh both ways: neither student's previous chat included the other. */
+function isFreshPair(
+  lastPartners: Record<string, string[]>,
+  aId: string,
+  bId: string
+): boolean {
+  return (
+    !wereLastPartnersIn(lastPartners, aId, bId) &&
+    !wereLastPartnersIn(lastPartners, bId, aId)
+  );
+}
+
+/**
+ * True only when EVERY member's previous chat was exactly this group. A
+ * partial overlap — Bob's last chat was Rachel, but Rachel has chatted since —
+ * doesn't count: nobody would be rerunning their own last round.
+ */
+export function isExactRematchIn(
+  lastPartners: Record<string, string[]>,
+  ids: string[]
+): boolean {
+  if (ids.length < 2) return false;
+  return ids.every((id) => {
+    const last = lastPartners[id];
+    return (
+      last !== undefined &&
+      last.length === ids.length - 1 &&
+      ids.every((other) => other === id || last.includes(other))
+    );
+  });
+}
+
+/** "A and B" / "A, B, and C" — shared by the heads-up and the rail notice. */
+export function listNames(names: string[]): string {
+  if (names.length <= 2) return names.join(" and ");
+  return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]}`;
 }
 
 /**
@@ -178,7 +216,11 @@ export function endChatIn(
   };
 }
 
-/** First queue pair that has waited long enough and isn't a fresh rematch. */
+/**
+ * First queue pair that has waited long enough: fully fresh partners when any
+ * exist, then anyone who wouldn't be rerunning their own last chat exactly.
+ * An exact-rematch pair is never made — they wait for someone new.
+ */
 export function findAutoMatchPair(
   queue: WaitingStudent[],
   thresholdSeconds: number,
@@ -188,19 +230,28 @@ export function findAutoMatchPair(
   for (let i = 0; i < ready.length; i++) {
     for (let j = i + 1; j < ready.length; j++) {
       // Both loop indexes are within bounds.
-      const a = ready[i]!;
-      const b = ready[j]!;
-      if (!wereLastPartnersIn(lastPartners, a.id, b.id)) return [a, b];
+      if (isFreshPair(lastPartners, ready[i]!.id, ready[j]!.id)) {
+        return [ready[i]!, ready[j]!];
+      }
+    }
+  }
+  for (let i = 0; i < ready.length; i++) {
+    for (let j = i + 1; j < ready.length; j++) {
+      if (!isExactRematchIn(lastPartners, [ready[i]!.id, ready[j]!.id])) {
+        return [ready[i]!, ready[j]!];
+      }
     }
   }
   return null;
 }
 
 /**
- * Pair the whole queue at once: greedy in queue order, preferring anyone who
- * isn't a fresh rematch; only when nobody fresh is left does a pair repeat —
- * and that pair gets called out in `rematchNotice` instead of silently
- * rematched. An odd queue seats the last three as a group when the activity
+ * Pair the whole queue at once: greedy in queue order, preferring fully fresh
+ * partners, then anyone who wouldn't be rerunning their own previous chat
+ * exactly. An exact rematch is never created — a stranded pair gets repaired
+ * by one swap with a pairing already made, and only when the queue IS exactly
+ * that pair (or an exact trio) do they stay in line, with `rematchNotice`
+ * saying why. An odd queue seats the last three as a group when the activity
  * has a 3rd character; otherwise the newest joiner stays first in line as
  * `leftoverStudentId`.
  */
@@ -210,6 +261,7 @@ export function pairEveryoneIn(
 ): HostWorld {
   if (w.queue.length < 2) return w;
 
+  const lp = w.lastPartners;
   const pool = [...w.queue];
   let leftover: WaitingStudent | null = null;
   let trio: WaitingStudent[] | null = null;
@@ -224,48 +276,103 @@ export function pairEveryoneIn(
     }
   }
 
-  const pairs: { a: WaitingStudent; b: WaitingStudent; forced: boolean }[] = [];
+  const pairs: [WaitingStudent, WaitingStudent][] = [];
   while (pool.length >= 2) {
     const a = pool.shift()!;
-    let index = pool.findIndex(
-      (b) => !wereLastPartnersIn(w.lastPartners, a.id, b.id)
-    );
-    const forced = index === -1;
-    if (forced) index = 0;
-    const b = pool.splice(index, 1)[0]!;
-    pairs.push({ a, b, forced });
+    let index = pool.findIndex((b) => isFreshPair(lp, a.id, b.id));
+    if (index === -1) {
+      index = pool.findIndex((b) => !isExactRematchIn(lp, [a.id, b.id]));
+    }
+    if (index === -1) {
+      // Exactness is mutual and one round deep, so a can only be exact with
+      // one student — the pool is down to a's previous 1:1 partner.
+      pool.unshift(a);
+      break;
+    }
+    pairs.push([a, pool.splice(index, 1)[0]!]);
+  }
+
+  // A stranded pair's memories are pinned to each other, so seating either
+  // of them with ANYONE else can't be an exact rerun — one swap always fixes
+  // it. Only a queue of exactly these two has nobody to swap with.
+  let stuck: WaitingStudent[] = [];
+  if (pool.length === 2) {
+    const [x, y] = pool as [WaitingStudent, WaitingStudent];
+    const donor = pairs.pop();
+    if (donor) {
+      const [p, q] = donor;
+      const freshCount = (m: [WaitingStudent, WaitingStudent][]) =>
+        m.filter(([s, t]) => isFreshPair(lp, s.id, t.id)).length;
+      const straight: [WaitingStudent, WaitingStudent][] = [
+        [x, p],
+        [y, q],
+      ];
+      const crossed: [WaitingStudent, WaitingStudent][] = [
+        [x, q],
+        [y, p],
+      ];
+      pairs.push(
+        ...(freshCount(crossed) > freshCount(straight) ? crossed : straight)
+      );
+    } else if (trio) {
+      // Trade a trio seat: the trio takes x, and the traded member pairs
+      // with y — neither result can be an exact rerun.
+      const traded = trio.pop()!;
+      trio.push(x);
+      pairs.push([traded, y]);
+    } else if (leftover) {
+      const seated = isFreshPair(lp, x.id, leftover.id) ? x : y;
+      const waits = seated === x ? y : x;
+      pairs.push([seated, leftover]);
+      leftover = waits;
+    } else {
+      stuck = [x, y];
+    }
+  }
+
+  if (
+    trio &&
+    isExactRematchIn(
+      lp,
+      trio.map((s) => s.id)
+    )
+  ) {
+    const donor = pairs.pop();
+    if (donor) {
+      // Swapping any one member breaks the trio's exactness, and the traded
+      // member's two-person memory can't exactly match a pair.
+      const [p, q] = donor;
+      const traded = trio.pop()!;
+      trio.push(p);
+      pairs.push([q, traded]);
+    } else {
+      stuck = trio;
+      trio = null;
+    }
   }
 
   let next = w;
-  const forcedPairs: string[] = [];
-  for (const { a, b, forced } of pairs) {
+  for (const [a, b] of pairs) {
     next = createChat(next, [a.id, b.id], activity);
-    if (forced) forcedPairs.push(`${a.realName} and ${b.realName}`);
   }
   if (trio) {
-    const trioHasRematch = trio.some((a, i) =>
-      trio
-        .slice(i + 1)
-        .some((b) => wereLastPartnersIn(w.lastPartners, a.id, b.id))
-    );
     next = createChat(
       next,
       trio.map((s) => s.id),
       activity
     );
-    if (trioHasRematch) {
-      forcedPairs.push(
-        `the group of ${trio.map((s) => s.realName.split(" ")[0]).join(", ")}`
-      );
-    }
   }
 
   return {
     ...next,
     leftoverStudentId: leftover?.id ?? null,
+    // Unlike the heads-up, this isn't gated on the rematchWarning setting:
+    // it explains why the button visibly left students in line.
     rematchNotice:
-      activity.settings.rematchWarning && forcedPairs.length > 0
-        ? `${forcedPairs.join(", and ")} just chatted together, but there was no other way to pair everyone.`
+      stuck.length > 0
+        ? `${listNames(stuck.map((s) => s.realName))} just chatted ${
+            stuck.length === 2 ? "with each other" : "together"
+          }, so they're still in line.`
         : null,
   };
 }
@@ -346,7 +453,7 @@ export function tickWorld(w: HostWorld, activity: HostedActivity): HostWorld {
   }
 
   // Setting #4: waiting students past the threshold pair up on their own,
-  // 1:1, skipping fresh rematches. One pair at a time so the rail reads.
+  // 1:1, never as an exact rerun. One pair at a time so the rail reads.
   if (!w.paused && settings.autoMatch && next.secondsUntilAutoMatch === 0) {
     const pair = findAutoMatchPair(
       next.queue,
