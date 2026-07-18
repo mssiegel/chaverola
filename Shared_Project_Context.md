@@ -23,7 +23,10 @@ You may take **loose** inspiration from Frempco.com, but do **not** copy it.
 
 ## Scope of This Project
 
-- **UI and UX only, with animations/transitions. No backend logic.**
+- **UI and UX first, with animations/transitions.** The client was built
+  UI-only against mock data; since 2026-07-17 the backend is being wired in
+  feature by feature (plans in [docs/plans/](docs/plans/)) — the rules below
+  still govern the demo surfaces, which stay mock-driven forever.
 - All pages, buttons, and clickable elements must be functional using demo events, mock
   data, and real navigation — **nothing should be a dead end.**
 - All mock/demo data lives in dedicated mockData files (e.g., `client/src/mockData/`).
@@ -40,7 +43,8 @@ You may take **loose** inspiration from Frempco.com, but do **not** copy it.
 - Use the latest stable npm versions of all libraries unless there's a good reason not to.
 - **Monorepo using pnpm workspaces.** Root contains:
   - `client/` — the app (a workspace package)
-  - `server/` — empty for now except a `.gitkeep`
+  - `server/` — the Express 5 API (see [docs/architecture.md](docs/architecture.md))
+  - `shared/` — the wire contract both sides import
 
 - Prettier config lives at [`.prettierrc`](.prettierrc) in the repo root — that
   file is the single source of truth for formatting.

@@ -83,6 +83,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Setup sections each carry one brand accent; settings stays the quiet one](#setup-sections-each-carry-one-brand-accent-settings-stays-the-quiet-one)
 - [Teacher live activity page](#teacher-live-activity-page)
   - [A rematch only counts when it's an exact rerun for everyone in it](#a-rematch-only-counts-when-its-an-exact-rerun-for-everyone-in-it)
+  - [Real activities hide the live-settings panel until edit sync ships](#real-activities-hide-the-live-settings-panel-until-edit-sync-ships)
   - [Start their chat sits below Pair everyone 1:1, nearest the names](#start-their-chat-sits-below-pair-everyone-11-nearest-the-names)
   - [The pairing CTAs pin at the top of the desktop rail while the queue scrolls](#the-pairing-ctas-pin-at-the-top-of-the-desktop-rail-while-the-queue-scrolls)
   - [Pause is one world-level switch: chats freeze, clocks hold, matchmaking waits](#pause-is-one-world-level-switch-chats-freeze-clocks-hold-matchmaking-waits)
@@ -142,7 +143,21 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Clicking to a new page opens it at the top](#clicking-to-a-new-page-opens-it-at-the-top)
   - [`/demo`, `/demo/teacher`, and `/demo/student` are thin redirects, never pages](#demo-demoteacher-and-demostudent-are-thin-redirects-never-pages)
   - [The temporary `/demo/*` routes are gone — every surface lives in its real flow](#the-temporary-demo-routes-are-gone--every-surface-lives-in-its-real-flow)
+- [Backend & API](#backend--api)
+  - [The backend is Express 5 on Render's free tier — REST now, Socket.IO later](#the-backend-is-express-5-on-renders-free-tier--rest-now-socketio-later)
+  - [The API lives at `api.chaverola.com` from day one, with no `/api/v1` prefix](#the-api-lives-at-apichaverolacom-from-day-one-with-no-apiv1-prefix)
+  - [Teachers set up at class start, and a warm-up ping hides the cold start](#teachers-set-up-at-class-start-and-a-warm-up-ping-hides-the-cold-start)
+  - [Nothing persists: activities live in memory for 12 hours, and deploys wipe them](#nothing-persists-activities-live-in-memory-for-12-hours-and-deploys-wipe-them)
+  - [Host access is a URL capability — the hostKey — not an account](#host-access-is-a-url-capability--the-hostkey--not-an-account)
+  - [The wire contract is handwritten types in `shared/`; zod validates on the server only](#the-wire-contract-is-handwritten-types-in-shared-zod-validates-on-the-server-only)
+  - [Rate limits assume a whole school behind one IP, and join-code enumeration is accepted](#rate-limits-assume-a-whole-school-behind-one-ip-and-join-code-enumeration-is-accepted)
+  - [Create is not idempotent in v1: a lost response can orphan one activity](#create-is-not-idempotent-in-v1-a-lost-response-can-orphan-one-activity)
+  - [Transcripts wait: feature 1 only stores the teacher's email](#transcripts-wait-feature-1-only-stores-the-teachers-email)
+  - [Considered and rejected for the backend: TanStack Query, dotenv, a hostKey stash, an npm conversion](#considered-and-rejected-for-the-backend-tanstack-query-dotenv-a-hostkey-stash-an-npm-conversion)
 - [Process & tooling](#process--tooling)
+  - [The numbered doc standard is retired; technical docs live in `docs/`](#the-numbered-doc-standard-is-retired-technical-docs-live-in-docs)
+  - [Features ship as prompt-doc plans in `docs/plans/`, one prompt per session](#features-ship-as-prompt-doc-plans-in-docsplans-one-prompt-per-session)
+  - [Server tests cover only the safety invariants](#server-tests-cover-only-the-safety-invariants)
   - [`?fast` compresses the demo clocks — dev builds only, and never to zero](#fast-compresses-the-demo-clocks--dev-builds-only-and-never-to-zero)
   - [Verification climbs a ladder: typecheck, then tests, then the browser](#verification-climbs-a-ladder-typecheck-then-tests-then-the-browser)
   - [The repo `memory/` folder is gone — its notes live in AGENTS.md](#the-repo-memory-folder-is-gone--its-notes-live-in-agentsmd)
@@ -285,7 +300,8 @@ session in one tab, so a chat URL could never be opened, shared, or restored.
 Kahoot and Blooket players likewise sit on one URL from name entry to the final
 screen. Distinct URLs pay off where pages are addressable and revisitable —
 the teacher side — and the route table reflects that (`/activity/create`,
-`/activity/host/:joinCode`).
+`/activity/host/:joinCode` — whose param becomes `:hostKey` when real host
+links land, feature-1 Prompt 6).
 
 _Implemented in
 [JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx); routes in
@@ -808,6 +824,15 @@ tap-Host-to-find-the-problem coherent: no error can hide on a previous step.
 A disabled submit button is a dead end that explains nothing; an
 always-tappable one turns every failed tap into directions.
 
+**Update (2026-07-18):** the hand-off in the last sentence of the decision
+is mock-era plumbing with a scheduled replacement (feature-1 Prompts 5–6):
+the server becomes the only join-code issuer (`mockGenerateJoinCode` is
+deleted), the `chaverola.hostedActivity` stash goes away — the private
+host URL is the durable hand-off instead — and a valid tap POSTs to the
+API, then navigates to `/activity/host/:hostKey`. Everything else here
+(one scrolling form, never-disabled submit, tap-to-find-the-problem) is
+unchanged.
+
 _Implemented in
 [ActivitySetupForm](client/src/components/Teacher/ActivitySetup/index.tsx)
 with validation in [activitySetup](client/src/lib/activitySetup.ts)._
@@ -1075,6 +1100,28 @@ _Implemented in
 heads-up in
 [index.tsx](client/src/components/Teacher/HostActivity/index.tsx)._
 
+### Real activities hide the live-settings panel until edit sync ships
+
+_2026-07-17_
+
+**Decision:** When teachers host real activities (from feature-1
+Prompt 6), the host page's live-settings panel does not render. It stays
+fully functional on the `1234` demo, and it returns for real activities
+with the edit-sync feature — a real settings-edit endpoint plus
+propagation to students.
+
+**Why:** Founder call. There is no edit endpoint yet, so on a real
+activity the panel could only change the teacher's local copy —
+invisible to students and gone on refresh. That's teacher/student
+split-brain: a teacher who flips "reveal names" off would believe the
+mystery holds while students still get the reveal. A control that
+silently does nothing is worse than no control.
+
+_Scheduled in
+[feature-1 Prompt 6](docs/plans/feature-1-create-and-join.md); the panel
+lives in
+[Teacher/HostActivity](client/src/components/Teacher/HostActivity/)._
+
 ### Start their chat sits below Pair everyone 1:1, nearest the names
 
 _2026-07-18_
@@ -1258,7 +1305,9 @@ _Implemented in
 
 _2026-07-15_
 
-**Decision:** `/activity/host/:joinCode` is designed on the assumption that
+**Decision:** The host page (`/activity/host/:joinCode` today; its param
+becomes `:hostKey` with real activities — the rule doesn't change) is
+designed on the assumption that
 **no student ever sees it**. Unlike Kahoot, the teacher never projects or
 shares this screen; anything students need (the pin, instructions) the
 teacher relays out loud or writes on the board. The joining-instructions
@@ -1537,6 +1586,14 @@ no matching stash **redirects to `/activity/host/1234`**.
 always agree — and the pin must actually work on `/activity/join`. Showing
 a dead activity page for a stale link (an old code opened in a new tab)
 would put a pin on screen that rejects every student who types it.
+
+**Update (2026-07-18):** this redirect has a scheduled end (feature-1
+Prompt 6): once real host links exist (`/activity/host/:hostKey`), an
+unknown key becomes a friendly not-found — the redirect is right only
+while every live code is fake and a dead link can't exist. The
+`chaverola.hostedActivity` stash goes away in the same prompt. See
+[When the backend arrives: real activities get strictly real, and `1234` stays the only demo](#when-the-backend-arrives-real-activities-get-strictly-real-and-1234-stays-the-only-demo),
+point (3).
 
 _Implemented in
 [HostActivityPage](client/src/pages/teacher/HostActivityPage.tsx)._
@@ -1971,8 +2028,9 @@ AppLayout, the ChaverolaPill in the student world — is a link home, and it is
 **removed entirely** (not just made non-clickable) on two screens: while a
 student has a chat on screen (the chatting **and** just-ended stages, until
 they tap back to the lobby), and on the teacher's live host page
-(`/activity/host/:joinCode`). The language switcher stays and keeps its
-end-aligned spot via `ms-auto`.
+(`/activity/host/:joinCode`; the param becomes `:hostKey` with real
+activities — the rule follows the page, not the param). The language
+switcher stays and keeps its end-aligned spot via `ms-auto`.
 
 **Why:** Product-owner call. One stray tap on the brand would dump the user
 on the homepage: for a student that kills a live conversation (chat state is
@@ -2208,6 +2266,13 @@ side a behavior belongs to — a wrong guess looks broken in both directions:
 real students mixed with pretend ones, or a teacher's dead link opening
 someone else's demo.
 
+**Update (2026-07-18):** point (1)'s server half is real: the server never
+mints `1234` and 404s any lookup of it unconditionally — it doesn't even
+know the demo exists, so a compromised server can't impersonate it.
+`mockGenerateJoinCode` itself is deleted in feature-1 Prompt 6, when the
+server becomes the only join-code issuer. Points (2)–(4) land with
+Prompts 5–6.
+
 _The client-side seams are the engine hooks
 ([useChatDemo.ts](client/src/components/chat/useChatDemo.ts),
 [useHostActivityDemo.ts](client/src/components/Teacher/HostActivity/useHostActivityDemo.ts))
@@ -2332,7 +2397,316 @@ _Routes live in [App.tsx](client/src/App.tsx)._
 
 ---
 
+## Backend & API
+
+### The backend is Express 5 on Render's free tier — REST now, Socket.IO later
+
+_2026-07-17_
+
+**Decision:** The server is Express 5 + TypeScript, deployed as a single
+instance on Render (Virginia/US-East), on the **free tier** until traffic
+justifies paying. REST covers the out-of-session lifecycle (create an
+activity, look one up); everything inside a live session — queue,
+matching, chat, the teacher's live view — arrives in later features over
+Socket.IO attached to the same HTTP server. The server keeps a hard seam
+for that: `app.ts` builds the Express app without listening, and
+`index.ts` wraps it in `http.createServer` (never `app.listen()`), which
+is exactly where Socket.IO attaches later.
+
+**Why:** Founder call (2026-07-17). Boring, battle-tested pieces for a v1
+whose hard part (realtime) is still ahead; Express 5 finally forwards
+async throws to error middleware, which keeps handlers thin. The free
+tier's spin-down and deploy-wipe are accepted trade-offs with their own
+entries (the warm-up ping, the in-memory lifecycle). US East sits well
+for both US schools and transatlantic latency.
+
+_Implemented in [app.ts](server/src/app.ts) and
+[index.ts](server/src/index.ts); topology in
+[docs/architecture.md](docs/architecture.md)._
+
+### The API lives at `api.chaverola.com` from day one, with no `/api/v1` prefix
+
+_2026-07-17_
+
+**Decision:** The API's base URL is `https://api.chaverola.com` (a CNAME
+to the Render host) from the very first deploy, and endpoint paths are
+unversioned — `/activities`, not `/api/v1/activities`.
+
+**Why:** Founder call. Baking the real domain in from the start means
+`VITE_API_URL` never churns through onrender.com hostnames. URL
+versioning protects clients you don't control; Chaverola has one
+first-party client in the same repo, the contract is compile-checked
+through `shared/`, and all data is ephemeral — there is nothing durable
+for an old client to corrupt. The dedicated `api.` subdomain also makes
+an `/api` path prefix redundant. If a public API ever ships, introduce
+`/v1` then.
+
+_Recorded in [docs/api.md](docs/api.md); DNS lands in feature-1 Prompt 4._
+
+### Teachers set up at class start, and a warm-up ping hides the cold start
+
+_2026-07-17_
+
+**Decision:** The product assumes teachers create activities **at the
+start of class** — no accounts, setup takes under a minute — so the
+client fires a fire-and-forget `GET /healthz` when the homepage, the
+create page, or the join page mounts. `/healthz` sits before the rate
+limiters on purpose: the ping every visitor fires (and Render's health
+check) never burns limiter budget.
+
+**Why:** Founder call. The free-tier instance spins down after ~15 idle
+minutes and takes tens of seconds to wake; without the ping, the first
+teacher of the morning would submit a form into a sleeping server. With
+it, the server wakes while the teacher is still typing. The client-side
+mounts land with the wiring prompts (feature-1 Prompts 5–6); the
+patience copy on pending buttons covers the case where the ping loses
+the race.
+
+_Server side in [app.ts](server/src/app.ts)._
+
+### Nothing persists: activities live in memory for 12 hours, and deploys wipe them
+
+_2026-07-17_
+
+**Decision:** No database. Activities live in in-memory Maps on the
+single server instance: a 12-hour TTL refreshed **only** by hostKey
+lookups (student lookups and code enumeration never keep an activity
+alive), a sweep every 10 minutes, and a hard cap of 4,000 concurrent
+activities. Restarts and deploys wipe every live class — accepted for
+v1, with the working rule: **avoid server-touching pushes during school
+hours**.
+
+**Why:** Founder call. An activity is inherently ephemeral — it exists
+for one class period and is worthless the next morning — so durability
+would buy nothing anyone needs yet, at the cost of schema, migrations,
+and hosting. The hostKey-only TTL refresh makes the lifetime match
+reality: an activity lives exactly as long as its teacher keeps the host
+page open, and a crawler enumerating join codes can't immortalize
+garbage.
+
+_Implemented in
+[activityStore.ts](server/src/store/activityStore.ts)._
+
+### Host access is a URL capability — the hostKey — not an account
+
+_2026-07-17_
+
+**Decision:** Creating an activity returns the `joinCode` (for students)
+plus `hostKey = crypto.randomBytes(18).toString("base64url")` — 24
+characters, 144 bits. The host page becomes `/activity/host/:hostKey`
+(feature-1 Prompt 6): shareable with an assistant teacher, **never
+stored client-side, never a field of `HostedActivity`** (it exists only
+as the create response's own `hostKey` member, and the host GET doesn't
+echo it back). A join code structurally cannot unlock the host route —
+four digits never match the key pattern, and the host route 404s any
+4-digit param. CORS is explicitly **not** the security boundary (curl
+ignores CORS); the hostKey is.
+
+**Why:** Founder call. No accounts is a core product promise, so the
+URL itself must be the credential — and at 144 bits it's unguessable in
+a way a login would only complicate. Losing the URL loses the activity;
+accepted, because activities are ephemeral and `teacherEmail` is the
+future recovery channel (a localStorage stash was rejected — see the
+considered-and-rejected entry).
+
+_Implemented in [activityStore.ts](server/src/store/activityStore.ts),
+[projections.ts](server/src/store/projections.ts), and
+[activities.ts](server/src/routes/activities.ts); the
+joinCode-never-unlocks-host rule is an executable test in
+[activities.test.ts](server/src/routes/activities.test.ts)._
+
+### The wire contract is handwritten types in `shared/`; zod validates on the server only
+
+_2026-07-17_
+
+**Decision:** `@chaverola/shared` holds the canonical wire contract as
+handwritten TypeScript interfaces (moved verbatim from the client, doc
+comments kept) plus every shared limit and constant; the package is
+buildless and zero-dependency. zod exists only in `server/`, and the
+create schema is pinned with
+`createActivityRequestSchema satisfies z.ZodType<CreateActivityRequest>`
+— any drift between schema and contract is a compile error. The client
+keeps its friendly per-field form validation and never imports zod. The
+packages carry scoped names `@chaverola/{client,server,shared}`, which
+lets Vercel skip builds that don't affect the client.
+
+**Why:** Founder call. Generating types from zod schemas would make zod
+the contract's source of truth and pull it toward the client bundle;
+handwritten interfaces stay readable, keep their doc comments, and the
+`satisfies` pin buys the same drift protection generation would.
+pnpm's strict `node_modules` keeps zod structurally unreachable from
+the client, so the boundary can't erode by accident.
+
+_Implemented in [shared/src/](shared/src/) and
+[schemas/activity.ts](server/src/schemas/activity.ts)._
+
+### Rate limits assume a whole school behind one IP, and join-code enumeration is accepted
+
+_2026-07-17_
+
+**Decision:** Every per-IP limit is sized from one assumption: a school
+NAT can put **20 simultaneous classes × 30 students = 600 users on one
+IP**. So: `POST /activities` at 60 per 15 minutes (20 teachers starting
+class at once, ×3 headroom); GET lookups (the joinCode and hostKey
+routes share one limiter) at 1,200 per 5 minutes (600 students × ~2
+lookups in a join burst, ×2 headroom). Known residual exposure: one IP
+can sweep all 9,000 codes in ~37 minutes — accepted, because the
+student projection is public-by-assumption (join code, host name,
+characters, scenario: what's on the classroom board anyway), while
+`teacherEmail`, `settings`, and the hostKey are never in it. 429s reuse
+the shared error envelope with code `capacity` — the `ApiErrorCode`
+union has no rate-limit member on purpose (the client treats every
+non-2xx the same), and the 429-vs-503 status keeps the two capacity
+cases distinguishable.
+
+**Why:** Founder call on the scale assumption (2026-07-17). Sizing per
+IP without it would lock out exactly the customer the product wants — a
+school where many classes join at once. The enumeration exposure is
+handled by making the enumerable data safe rather than the enumeration
+impossible: the projection leaks nothing sensitive, and enumeration
+can't even keep activities alive (student lookups never refresh the
+TTL).
+
+_Sizing math commented in [app.ts](server/src/app.ts); the privacy
+allowlist is pinned by
+[projections.test.ts](server/src/store/projections.test.ts)._
+
+### Create is not idempotent in v1: a lost response can orphan one activity
+
+_2026-07-17_
+
+**Decision:** `POST /activities` carries no idempotency key. If the
+response is lost after the server processed the create (say, a
+connection drop during a cold start), a retry mints a second activity;
+the first sits unused until the 12-hour TTL reaps it. Accepted for v1.
+The client's half of the bargain (feature-1 Prompt 6): the submit stays
+disabled until the request settles — no short client-side timeout that
+would invite an automatic retry.
+
+**Why:** Founder call. Idempotency machinery (client-minted keys, a
+dedup window in the store) is real complexity, and the worst case here
+is one orphaned in-memory record that expires on its own — nothing
+leaks, and with a 4,000 cap against 8,999 codes an orphan can't
+meaningfully crowd anyone out.
+
+_Recorded for
+[feature-1 Prompt 6](docs/plans/feature-1-create-and-join.md)._
+
+### Transcripts wait: feature 1 only stores the teacher's email
+
+_2026-07-17_
+
+**Decision:** The optional `teacherEmail` collected at setup is stored
+(and exposed only in the host projection) but nothing is sent yet.
+Transcript email ships in a later feature via **Nodemailer + a Gmail
+app password** as a stopgap, isolated behind a single send module so
+swapping to a real provider (Resend or similar) touches one file.
+
+**Why:** Founder call. Collecting the email now costs one optional
+field and means the send feature works for teachers from day one of
+_its_ launch; building sending now would block feature 1 on deliverability
+plumbing. The Gmail stopgap is free and fine at MVP volume — the
+one-module isolation is what keeps it disposable.
+
+_Storage in [activityStore.ts](server/src/store/activityStore.ts);
+host-only exposure pinned by
+[projections.test.ts](server/src/store/projections.test.ts)._
+
+### Considered and rejected for the backend: TanStack Query, dotenv, a hostKey stash, an npm conversion
+
+_2026-07-17_
+
+**Decision:** Recorded so they aren't re-litigated (founder calls,
+2026-07-17):
+
+1. **TanStack Query** — the client will make three fetch calls; the
+   lean-deps rule wins. A hand-rolled typed `api.ts` is the whole layer.
+2. **dotenv** — dev needs zero env vars (port defaults to 3001, CORS
+   defaults to localhost) and Render injects prod env, so there is
+   nothing for it to load.
+3. **A localStorage hostKey stash** for lost-URL recovery — on a shared
+   classroom computer it would hand the next user the teacher view.
+   `teacherEmail` is the future recovery channel.
+4. **Converting the workspace to npm** — the repo is already pnpm
+   workspaces; a conversion is churn with no benefit, and pnpm's strict
+   `node_modules` is load-bearing for the zod boundary.
+
+**Why:** Each rejection is the same shape: the alternative solves a
+problem this repo doesn't have yet, at the cost of a dependency, a
+secret-handling surface, or a privacy hole it would have to carry
+forever.
+
+---
+
 ## Process & tooling
+
+### The numbered doc standard is retired; technical docs live in `docs/`
+
+_2026-07-18_
+
+**Decision:** `PROJECT_DOCUMENTATION_STANDARD.md` — a friend's template
+prescribing a numbered doc flow (Product Vision → Change Log) — is
+deleted without ever being adopted; git history keeps it. Technical
+documentation lives in `docs/` as plainly named files:
+[docs/architecture.md](docs/architecture.md),
+[docs/api.md](docs/api.md) (the API contract's canonical home, kept
+current per feature), and feature plans under
+[docs/plans/](docs/plans/).
+
+**Why:** Founder call (made in the feature-1 plan). The template spent
+its whole life saying "don't scaffold these yet," and when the backend
+finally arrived, the docs the repo actually needed didn't match its
+shape — two files that describe the real system beat nine that follow a
+method. The living docs named in AGENTS.md remain the source of truth.
+
+### Features ship as prompt-doc plans in `docs/plans/`, one prompt per session
+
+_2026-07-18_
+
+**Decision:** A feature spanning several work sessions gets a plan
+document in `docs/plans/` (the first:
+[feature-1-create-and-join.md](docs/plans/feature-1-create-and-join.md)):
+shared-context sections (the founder's architecture decisions, the wire
+contract) followed by numbered prompts, each sized for **one agent
+session**, each ending green (typecheck + tests + its own verification)
+with **one commit straight to `main`** and its checkbox ticked in the
+same commit. Prompts run in order, and ordering constraints are stated
+in the doc itself. This is the delivery pattern for future features.
+
+**Why:** Founder + agent working pattern, proven on feature 1. Each
+prompt leaves prod deployable, so nothing ever blocks on a half-done
+feature; the checkboxes make progress resumable across sessions; and
+the shared-context sections keep every session working from the same
+recorded decisions instead of re-deriving (or re-litigating) them.
+Unlike the deleted Fable prompt series (see
+[The Fable prompt series document was deleted, not archived](#the-fable-prompt-series-document-was-deleted-not-archived)),
+a plan doc holds decisions and pointers, not a duplicate of the brief —
+and decisions still graduate into this file as their prompts land.
+
+### Server tests cover only the safety invariants
+
+_2026-07-17_
+
+**Decision:** The server suite is two small files: a projection test
+pinning the **exact key allowlists** of both projections (the student
+projection never carries `teacherEmail`, `settings`, or the hostKey),
+and four route cases (happy-path create, student projection over the
+wire, the `1234` reservation, joinCode-never-unlocks-host). TTL/sweep,
+capacity, the dense join-code fallback, 429s, CORS, and body-parser
+mapping are deliberately untested — curl smoke and the browser pass
+cover them.
+
+**Why:** Founder call, extending
+[Testing stays small while the app is UI-only: logic tests, no DOM](#testing-stays-small-while-the-app-is-ui-only-logic-tests-no-dom)
+to the server while the product is an MVP. The tested invariants are
+the ones whose failure would be **silent and harmful** — a privacy leak
+has no visual symptom, so only a pinned allowlist catches a stray
+spread. The untested paths fail loudly in smoke, and while the routes
+and store are still churning, a broad suite would fight every change.
+
+_Implemented in
+[projections.test.ts](server/src/store/projections.test.ts) and
+[activities.test.ts](server/src/routes/activities.test.ts)._
 
 ### `?fast` compresses the demo clocks — dev builds only, and never to zero
 
@@ -2436,6 +2810,12 @@ silent; component markup still churns with every design pass and would make
 every change fight a wall of snapshots. Revisit the policy when `server/`
 becomes real — the engine contract swap is exactly when these tests earn
 their keep.
+
+**Update (2026-07-18):** `server/` is real, and the policy extends to it
+rather than ending — see
+[Server tests cover only the safety invariants](#server-tests-cover-only-the-safety-invariants).
+The client-side revisit still waits for the engine contract swap (the
+realtime feature).
 
 _Config in [vitest.config.ts](client/vitest.config.ts)._
 

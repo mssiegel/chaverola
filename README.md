@@ -8,9 +8,11 @@ really talking to. Only the teacher sees real names, and can reveal them at the 
 **Live site:** [chaverola.com](https://chaverola.com) (every push to `main` deploys
 automatically via Vercel).
 
-> **Scope note:** This repository is **UI/UX only** (with animations/transitions) — no
-> backend logic. Every screen is driven by mock data and demo events, and nothing is a
-> dead end. See [Shared_Project_Context.md](Shared_Project_Context.md) for the full brief.
+> **Scope note:** Every screen of the client is built and driven by mock data
+> and demo events — nothing is a dead end. The backend (`server/`) is real and
+> runnable but not yet deployed or wired to the client; that wiring is
+> feature 1, in progress. See [Shared_Project_Context.md](Shared_Project_Context.md)
+> for the full brief and [docs/plans/](docs/plans/) for the current feature plan.
 
 > **AI agents:** read [AGENTS.md](AGENTS.md) before doing any work, and check
 > [DECISIONS.md](DECISIONS.md) for the area you're touching — behavior that looks like a
@@ -23,22 +25,26 @@ This is a **pnpm workspaces** monorepo.
 ```text
 chaverola/
 ├─ client/     # the app — React 19 + TypeScript + Vite + Tailwind v4 + ShadCN
-├─ server/     # empty for now (placeholder)
+├─ server/     # the API — Express 5 + TypeScript, in-memory store
+├─ shared/     # the wire contract both sides import (types + constants)
+├─ docs/       # technical docs: architecture, API contract, feature plans
 ├─ Shared_Project_Context.md          # the source-of-truth project brief
 ├─ AGENTS.md                          # guidance for AI agents / contributors
-├─ DECISIONS.md                       # product/UX decisions and their reasoning
-└─ PROJECT_DOCUMENTATION_STANDARD.md  # structure future docs must follow
+└─ DECISIONS.md                       # product/UX decisions and their reasoning
 ```
 
 ## Getting started
 
 ```bash
 pnpm install        # install all workspace dependencies
-pnpm dev            # run the client dev server (Vite)
+pnpm dev            # run the client (Vite) and the server (port 3001) together
 ```
 
-Then open the URL Vite prints. The demo join code **`1234`** always works,
-and `/demo` jumps you straight into the running teacher demo.
+Then open the URL Vite prints. The demo join code **`1234`** always works
+(fully client-simulated — no server needed), and `/demo` jumps you straight
+into the running teacher demo. `pnpm dev:client` / `pnpm dev:server` run
+either side alone; the server needs no env vars in dev
+(see `server/.env.example`).
 
 | Route                      | What it shows                                                           |
 | -------------------------- | ----------------------------------------------------------------------- |
@@ -55,20 +61,43 @@ now). Routes are canonical: don't invent new ones beyond the project brief's tab
 
 ## Common scripts (run from the repo root)
 
-| Command             | Description                              |
-| ------------------- | ---------------------------------------- |
-| `pnpm dev`          | Start the client dev server              |
-| `pnpm build`        | Type-check and build the client for prod |
-| `pnpm preview`      | Preview the production build             |
-| `pnpm typecheck`    | Type-check the client                    |
-| `pnpm lint`         | Lint the client with ESLint              |
-| `pnpm test`         | Run the unit tests (Vitest)              |
-| `pnpm format`       | Format the whole repo with Prettier      |
-| `pnpm format:check` | Check formatting without writing         |
+| Command             | Description                                       |
+| ------------------- | ------------------------------------------------- |
+| `pnpm dev`          | Start the client and server dev servers together  |
+| `pnpm dev:client`   | Start just the client (Vite)                      |
+| `pnpm dev:server`   | Start just the server (tsx watch, port 3001)      |
+| `pnpm build`        | Type-check and build the client for prod          |
+| `pnpm preview`      | Preview the client's production build             |
+| `pnpm typecheck`    | Type-check every package (client, server, shared) |
+| `pnpm lint`         | Lint every package with ESLint                    |
+| `pnpm test`         | Run the unit tests in every package (Vitest)      |
+| `pnpm format`       | Format the whole repo with Prettier               |
+| `pnpm format:check` | Check formatting without writing                  |
 
-The test suite is deliberately small while the app is UI-only: pure-logic
-tests over the validators and the host page's world model, no DOM. See
-DECISIONS.md → "Testing stays small while the app is UI-only".
+The test suites are deliberately small while the product is an MVP: on the
+client, pure-logic tests over the validators and the host page's world
+model (no DOM); on the server, just the safety invariants — projection
+privacy, the hostKey boundary, the `1234` reservation. See DECISIONS.md →
+the "Testing stays small" entries.
+
+## Deployment
+
+Two platforms, split by package:
+
+- **Client → Vercel.** Every push to `main` deploys to
+  [chaverola.com](https://chaverola.com) (Root Directory `client`; pushes
+  that don't touch the client are skipped automatically). One env var:
+  `VITE_API_URL` — the API base URL, baked in at build time.
+- **Server → Render** (Virginia/US-East, free tier), reached at
+  `api.chaverola.com`. One required env var: `NODE_ENV=production`
+  (Render injects `PORT` itself). _Not live yet — the service is set up
+  in feature-1 Prompt 4._
+
+Free-tier caveats worth knowing: the server spins down after ~15 idle
+minutes (the client pings `/healthz` on page mount to wake it early), and
+activities live **in memory only** — every server deploy or restart wipes
+live classes, so avoid server-touching pushes during school hours. Details
+in [docs/architecture.md](docs/architecture.md).
 
 ## Documentation
 
@@ -82,6 +111,6 @@ Read in this order:
 3. [DECISIONS.md](DECISIONS.md) — product, UX, and business decisions with their
    reasoning, grouped by area. Check it before changing behavior that looks odd, and add
    an entry when a new decision is made.
-4. [PROJECT_DOCUMENTATION_STANDARD.md](PROJECT_DOCUMENTATION_STANDARD.md) — the
-   structure future documentation must follow. Skip it until `server/` work
-   begins; it describes docs that deliberately don't exist yet.
+4. [docs/architecture.md](docs/architecture.md) and [docs/api.md](docs/api.md) — the
+   technical docs: how the packages fit together and the canonical API contract.
+   Feature plans live in [docs/plans/](docs/plans/).
