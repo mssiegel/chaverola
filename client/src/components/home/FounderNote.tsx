@@ -42,10 +42,9 @@ export function FounderNote() {
             lesson they retell at dinner.
           </p>
           <p>
-            The name is a mash-up of Chaver, the Hebrew word for friend, and
-            Crayola, which I've always associated with being a kid and making
-            things. Friendship plus crayons felt about right for what I wanted
-            this to be.
+            The name comes from two Hebrew words: Chaver, which means friend,
+            and Olah, which means rising up. Friends raise each other up.
+            That's what I wanted this to be, so I put it right in the name.
           </p>
           <p>
             If you have questions, ideas, or just want to say hi, I'd love to

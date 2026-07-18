@@ -130,6 +130,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [The navbar has one CTA: Join an Activity](#the-navbar-has-one-cta-join-an-activity)
   - [Navbar: CTA label shortens on phones; language switcher swaps in place](#navbar-cta-label-shortens-on-phones-language-switcher-swaps-in-place)
 - [Branding & page titles](#branding--page-titles)
+  - [The name's story is Chaver + Olah ("rising up"), not Chaver + Crayola](#the-names-story-is-chaver--olah-rising-up-not-chaver--crayola)
   - [Page titles read "&lt;Page&gt; | Chaverola", page name first](#page-titles-read-ltpagegt--chaverola-page-name-first)
 - [Demo flows & demo furniture](#demo-flows--demo-furniture)
   - [The student demo skips the code screen and joins you as Rachel](#the-student-demo-skips-the-code-screen-and-joins-you-as-rachel)
@@ -2075,6 +2076,25 @@ _Implemented in [AppLayout](client/src/components/layout/AppLayout.tsx) and
 ---
 
 ## Branding & page titles
+
+### The name's story is Chaver + Olah ("rising up"), not Chaver + Crayola
+
+_2026-07-18_
+
+**Decision:** The founder's note explains "Chaverola" as a blend of Chaver
+(Hebrew for friend) and Olah, glossed as "rising up": friends raise each other
+up. This replaces the earlier Chaver + Crayola (friendship plus crayons) story.
+The gloss is deliberately the neutral "rising up" rather than the founder's
+original phrasing "he rises up" — olah (עוֹלָה) is grammatically the feminine
+form ("oleh" is masculine), and Hebrew-literate readers would catch the
+mismatch. The spelling stays Olah because it matches the "-ola" ending of the
+name.
+
+**Why:** Founder call. The rising-up meaning is the product's actual thesis
+(friends raising each other up), where Crayola was only a mood. Any copy that
+retells the name's origin should use this story.
+
+_Implemented in [FounderNote.tsx](client/src/components/home/FounderNote.tsx)._
 
 ### Page titles read "&lt;Page&gt; | Chaverola", page name first
 
