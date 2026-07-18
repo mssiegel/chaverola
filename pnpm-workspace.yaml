@@ -2,3 +2,7 @@ packages:
   - "client"
   - "server"
   - "shared"
+allowBuilds:
+  # esbuild's install script wires up its platform binary; tsx (the
+  # server's runtime) needs it.
+  esbuild: true
