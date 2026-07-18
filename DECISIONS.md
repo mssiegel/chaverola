@@ -954,12 +954,13 @@ laid out in
 
 _2026-07-14 · widened to all breakpoints 2026-07-18_
 
-**Decision:** The Host button and its join-code hint live in a fixed,
-blur-backed bar on the bottom edge at every width — the submit's only home.
-Below `lg` the bar stacks the full-width button over a centered hint; from
-`lg` up it widens to the page's content width and becomes a row, hint at the
-inline start and an auto-width button at the inline end (direction-safe, so
-the Hebrew locale mirrors it). The preview rail carries no button anymore.
+**Decision:** The Host button lives in a fixed, blur-backed bar on the
+bottom edge at every width — the submit's only home, and the bar's only
+content. Below `lg` the button fills the bar; from `lg` up the bar mirrors
+the page grid so the button spans exactly the form column, card-edge to
+card-edge, with the rail column left empty. The preview rail carries no
+button anymore. The old "Your join code shows up on the next screen." hint
+is gone at every width — it restated what the next screen shows immediately.
 The page keeps matching bottom padding so the last section always scrolls
 clear, the submit is still never disabled, and an invalid tap still scrolls
 to the first problem from anywhere. The bar gets no entrance animation — a
@@ -973,7 +974,11 @@ form column and can miss the rail CTA entirely: their eyes never leave the
 left column, the button blended into the purple preview above it, and the
 form column just ended with no cue about what to do next. A bottom bar stays
 in view and crosses the reading path the whole way down, and one home for
-the CTA avoids two identical primary buttons on one screen.
+the CTA avoids two identical primary buttons on one screen. The first cut
+put an auto-width button at the bar's end with the hint across from it —
+still miss-able (product-owner call, 2026-07-18): a corner button reads as
+secondary, while one spanning the form column reads as the page's primary
+action, and cutting the hint leaves nothing competing with it.
 
 _Implemented in
 [ActivitySetupForm](client/src/components/Teacher/ActivitySetup/index.tsx)._

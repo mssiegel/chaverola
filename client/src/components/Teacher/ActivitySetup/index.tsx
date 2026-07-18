@@ -203,27 +203,17 @@ export function ActivitySetupForm() {
 
       {/* Docked Host bar, the submit's one home at every breakpoint: thumb
           reach on phones, and always in view on desktop — first-time teachers
-          working down the form column missed the old rail placement. */}
+          working down the form column missed the old rail placement. The bar
+          mirrors the page grid so the button spans exactly the form column,
+          card-edge to card-edge. */}
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-background/85 backdrop-blur-sm">
-        <div className="mx-auto w-full max-w-2xl px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:flex lg:max-w-5xl lg:flex-row-reverse lg:items-center lg:justify-between lg:gap-6">
-          <HostCta />
+        <div className="mx-auto w-full max-w-2xl px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:grid lg:max-w-5xl lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10">
+          <Button type="submit" size="lg" className="w-full">
+            Host the Activity
+            <ArrowRight className="size-4" />
+          </Button>
         </div>
       </div>
     </form>
-  );
-}
-
-/** The one submit, living in the bottom dock at every breakpoint. */
-function HostCta() {
-  return (
-    <>
-      <Button type="submit" size="lg" className="w-full lg:w-auto">
-        Host the Activity
-        <ArrowRight className="size-4" />
-      </Button>
-      <p className="mt-2 text-center text-xs text-muted-foreground lg:mt-0 lg:text-start lg:text-sm">
-        Your join code shows up on the next screen.
-      </p>
-    </>
   );
 }
