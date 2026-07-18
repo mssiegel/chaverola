@@ -59,7 +59,7 @@ export function FounderNote() {
 
         <div className="mt-7 border-t border-border pt-5 text-center">
           <a
-            href="mailto:siegel.moshes@gmail.com"
+            href="mailto:siegel.moshes@gmail.com?subject=Thoughts%20on%20Chaverola&body=Hi%20Moshe%2C%0A%0A"
             className="inline-flex items-center gap-2 font-semibold text-brand-grape underline-offset-2 hover:underline"
           >
             <Mail className="size-4.5" />
