@@ -201,14 +201,20 @@ export function ActivitySetupForm() {
         </aside>
       </div>
 
-      {/* Docked Host bar, the submit's one home at every breakpoint: thumb
-          reach on phones, and always in view on desktop — first-time teachers
-          working down the form column missed the old rail placement. The bar
-          mirrors the page grid so the button spans exactly the form column,
-          card-edge to card-edge. */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-background/85 backdrop-blur-sm">
-        <div className="mx-auto w-full max-w-2xl px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:grid lg:max-w-5xl lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10">
-          <Button type="submit" size="lg" className="w-full">
+      {/* The docked submit, its one home at every breakpoint — first-time
+          teachers working down the form column missed the old rail placement.
+          Phones get a blur-backed bottom bar in thumb reach; on desktop the
+          bar chrome goes (a full-width shelf behind a column-wide button
+          looked lopsided) and the button floats shadowed off the bottom edge,
+          card-edge to card-edge with the form column. The strip itself is
+          pointer-events-none there so it never blocks the page behind it. */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-background/85 backdrop-blur-sm lg:pointer-events-none lg:border-t-0 lg:bg-transparent lg:backdrop-blur-none">
+        <div className="mx-auto w-full max-w-2xl px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:grid lg:max-w-5xl lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10 lg:pt-0 lg:pb-5">
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full lg:pointer-events-auto lg:shadow-lg"
+          >
             Host the Activity
             <ArrowRight className="size-4" />
           </Button>

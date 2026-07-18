@@ -954,18 +954,19 @@ laid out in
 
 _2026-07-14 · widened to all breakpoints 2026-07-18_
 
-**Decision:** The Host button lives in a fixed, blur-backed bar on the
-bottom edge at every width — the submit's only home, and the bar's only
-content. Below `lg` the button fills the bar; from `lg` up the bar mirrors
-the page grid so the button spans exactly the form column, card-edge to
-card-edge, with the rail column left empty. The preview rail carries no
-button anymore. The old "Your join code shows up on the next screen." hint
-is gone at every width — it restated what the next screen shows immediately.
-The page keeps matching bottom padding so the last section always scrolls
-clear, the submit is still never disabled, and an invalid tap still scrolls
-to the first problem from anywhere. The bar gets no entrance animation — a
-permanently visible bar holding the page's only solid-grape button is
-emphasis enough.
+**Decision:** The Host button is fixed to the bottom edge at every width —
+the submit's only home. Below `lg` it fills a blur-backed, top-bordered
+bar in thumb reach. From `lg` up there is no bar: the button floats
+shadowed just off the bottom edge, spanning exactly the form column
+(card-edge to card-edge, via the same grid as the page), and the fixed
+strip that positions it is `pointer-events-none` so it never blocks the
+page behind it. The preview rail carries no button anymore. The old "Your
+join code shows up on the next screen." hint is gone at every width — it
+restated what the next screen shows immediately. The page keeps matching
+bottom padding so the last section always scrolls clear, the submit is
+still never disabled, and an invalid tap still scrolls to the first
+problem from anywhere. No entrance animation — a permanently visible
+solid-grape button is emphasis enough.
 
 **Why:** Originally phones-only, for thumb reach and the one-tap rehost
 (the draft survives hosting for the series use case). Widened to desktop
@@ -978,7 +979,10 @@ the CTA avoids two identical primary buttons on one screen. The first cut
 put an auto-width button at the bar's end with the hint across from it —
 still miss-able (product-owner call, 2026-07-18): a corner button reads as
 secondary, while one spanning the form column reads as the page's primary
-action, and cutting the hint leaves nothing competing with it.
+action, and cutting the hint leaves nothing competing with it. The desktop
+bar chrome went last (product-owner call, 2026-07-18): once the button
+stopped at the form column's edge, the full-viewport border and blur read
+as an empty shelf running on across the rail column.
 
 _Implemented in
 [ActivitySetupForm](client/src/components/Teacher/ActivitySetup/index.tsx)._
