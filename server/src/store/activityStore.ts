@@ -8,6 +8,8 @@ import type {
 } from "@chaverola/shared";
 
 import { capacity } from "../lib/httpErrors";
+import { clearAllSeatTimers, createSeatState } from "../live/seats";
+import type { ActivitySeats } from "../live/seats";
 
 /*
   The whole persistence layer: two in-memory Maps on a single instance.
@@ -29,6 +31,9 @@ export interface StoredActivity {
   settings: ActivitySettings;
   createdAt: number;
   lastSeenAt: number;
+  /** The live lobby's seats — server-internal, never projected (the
+   *  explicit-literal rule in projections.ts keeps it out by construction). */
+  seats: ActivitySeats;
 }
 
 /** A validated create request, post-zod: trimmed, blanks already omitted. */
@@ -97,9 +102,18 @@ function isExpired(record: StoredActivity, now: number): boolean {
   return now - record.lastSeenAt > TTL_MS;
 }
 
+/** The socket layer registers here so all three removal paths (the sweep +
+ *  both lazy-expiry lookups) reach it. Never import io into this module. */
+let activityRemovedListener: ((record: StoredActivity) => void) | undefined;
+
+export function onActivityRemoved(cb: (record: StoredActivity) => void): void {
+  activityRemovedListener = cb;
+}
+
 function remove(record: StoredActivity): void {
   byJoinCode.delete(record.joinCode);
   byHostKey.delete(record.hostKey);
+  activityRemovedListener?.(record);
 }
 
 export function createActivity(
@@ -126,6 +140,7 @@ export function createActivity(
     settings: input.settings,
     createdAt: now,
     lastSeenAt: now,
+    seats: createSeatState(),
   };
   if (input.scenario !== undefined) record.scenario = input.scenario;
   if (input.teacherEmail !== undefined)
@@ -152,7 +167,8 @@ export function getByJoinCode(
 }
 
 /** Host lookup — the only TTL refresh: an activity stays alive exactly as
- *  long as a teacher keeps its host page open (it refetches). */
+ *  long as a teacher keeps its host page open (the page's one fetch and the
+ *  lobby's ~5-min teacher keep-alive both come through here). */
 export function getByHostKey(
   hostKey: string,
   now = Date.now()
@@ -179,6 +195,8 @@ export function startSweep(): void {
 }
 
 export function resetForTests(): void {
+  for (const record of byJoinCode.values()) clearAllSeatTimers(record);
   byJoinCode.clear();
   byHostKey.clear();
+  activityRemovedListener = undefined;
 }

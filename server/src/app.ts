@@ -3,6 +3,7 @@ import express from "express";
 import type { NextFunction, Request, Response } from "express";
 import { rateLimit } from "express-rate-limit";
 import helmet from "helmet";
+import type { Logger } from "pino";
 import { pinoHttp } from "pino-http";
 
 import type { ApiErrorResponse } from "@chaverola/shared";
@@ -70,7 +71,9 @@ function asBodyParserError(err: object): HttpError | undefined {
   }
 }
 
-export function buildApp(config: Config): express.Express {
+/** `logger` is the process-wide pino instance shared with the socket layer
+ *  (index.ts); tests omit it and pino-http makes its own. */
+export function buildApp(config: Config, logger?: Logger): express.Express {
   const app = express();
   // Three trusted hops sit in front on Render: the local sidecar socket,
   // Render's internal proxy (a rotating 10.x address), and Cloudflare's
@@ -84,7 +87,7 @@ export function buildApp(config: Config): express.Express {
   app.use(
     cors({ origin: config.corsOrigins, credentials: false, maxAge: 86400 })
   );
-  app.use(pinoHttp({ autoLogging: config.nodeEnv !== "test" }));
+  app.use(pinoHttp({ logger, autoLogging: config.nodeEnv !== "test" }));
 
   // Before the limiters: this is the warm-up ping every visitor fires and
   // Render's health check — neither should burn limiter budget.

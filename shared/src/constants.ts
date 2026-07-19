@@ -12,6 +12,10 @@ export const MAX_CHARACTERS = 4;
 /** Character names and the hosted-by name — both render in tight chrome. */
 export const NAME_MAX_CHARS = 30;
 
+/** A student's own name at the join gate — the form and the socket layer's
+ *  fresh-join validation read the same cap. */
+export const STUDENT_NAME_MAX_CHARS = 40;
+
 export const SCENE_MAX_WORDS = 20;
 /** Hard byte-ish backstop for the scene (the word cap is the real limit). */
 export const SCENE_MAX_CHARS = 500;

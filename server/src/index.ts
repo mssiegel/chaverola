@@ -1,27 +1,35 @@
 import http from "node:http";
 
+import { pino } from "pino";
+
 import { buildApp } from "./app";
 import { readConfig } from "./config";
+import { attachLobby } from "./live/lobby";
 import { startSweep } from "./store/activityStore";
 
 /*
-  The only side-effectful file, and the Socket.IO seam: a later feature
-  attaches `new SocketIOServer(server, ...)` to this http.Server — which is
-  why it's http.createServer(app) and never app.listen().
+  The only side-effectful file. One pino logger serves both layers —
+  pino-http for Express, the lobby for sockets (engine.io bypasses Express,
+  so pino-http never sees a handshake). The http.Server seam exists exactly
+  so attachLobby can wrap it — app.ts stays listen-free.
 */
 
 const config = readConfig();
-const server = http.createServer(buildApp(config));
+const logger = pino();
+const server = http.createServer(buildApp(config, logger));
+const io = attachLobby(server, config, logger);
 
 startSweep();
 
 server.listen(config.port, "0.0.0.0", () => {
-  console.log(`@chaverola/server listening on port ${config.port}`);
+  logger.info(`@chaverola/server listening on port ${config.port}`);
 });
 
-// Render sends SIGTERM on every deploy. Stop accepting connections, let
-// in-flight requests finish, exit. Nothing to flush — the store is
-// in-memory by design and deploys wipe it.
+// Render sends SIGTERM on every deploy. io.close() is the single owner of
+// shutdown: it disconnects every socket AND closes the attached http.Server
+// (Socket.IO v4) — a bare server.close() would never finish while WebSocket
+// connections stay open. Nothing to flush — the store is in-memory by
+// design and deploys wipe it.
 process.on("SIGTERM", () => {
-  server.close(() => process.exit(0));
+  io.close(() => process.exit(0));
 });
