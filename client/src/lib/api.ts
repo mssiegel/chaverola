@@ -30,10 +30,29 @@ export type ApiResult<T> =
  * in prod would strand every real call while the demo kept working, which
  * is exactly the kind of breakage nobody notices for a week.
  */
+// U+FEFF, built from its code point so no invisible literal hides in this
+// file's own source.
+const BOM_PATTERN = new RegExp(String.fromCharCode(0xfeff), "g");
+
 function resolveApiBaseUrl(): string {
-  const configured = import.meta.env.VITE_API_URL;
-  // Trailing slashes would double up when paths are appended.
-  if (configured) return configured.replace(/\/+$/, "");
+  // Scrub BOMs and stray whitespace before anything else: the value reaches
+  // the build through shells and dashboard paste boxes, and an invisible
+  // character up front makes the URL relative — every call then 404s
+  // against our own domain while the demo keeps working. Prompt 7's prod
+  // pass caught exactly that: a Windows pipe into `vercel env add` had
+  // prefixed a UTF-8 BOM. Trailing slashes would double up when paths are
+  // appended.
+  const configured = import.meta.env.VITE_API_URL?.replace(BOM_PATTERN, "")
+    .trim()
+    .replace(/\/+$/, "");
+  if (configured) {
+    try {
+      new URL(configured);
+    } catch {
+      throw new Error(`VITE_API_URL is not an absolute URL: "${configured}"`);
+    }
+    return configured;
+  }
   if (import.meta.env.DEV) return "http://localhost:3001";
   throw new Error(
     "VITE_API_URL is not set. Production builds must bake in the API base URL (see client/.env.example)."
