@@ -27,6 +27,11 @@ function isTerminal(presence: LobbyPresence): boolean {
   return presence === "removed" || presence === "ended" || presence === "full";
 }
 
+/** How long the socket outlives its cleanup so the lobby:leave flushes in
+ *  its own segment before the close (see the cleanup comment). Real time,
+ *  never scaled — live socket timing is never compressed. */
+const LEAVE_FLUSH_MS = 300;
+
 function buildStudentAuth(
   joinCode: string,
   session: StudentSession | null
@@ -165,8 +170,16 @@ export function useLobbyPresence({
       // the intentional exit, so the seat goes immediately. On an already
       // dead socket the emit is a harmless no-op.
       socket.emit("lobby:leave");
-      socket.disconnect();
       socket.removeAllListeners();
+      // The disconnect must NOT follow the emit in the same flush: the
+      // socket.io server drops any packet it processes after the
+      // disconnect, and over wifi the leave and close frames coalesce
+      // into one read — the leave silently dies and the seat rides the
+      // 2-minute grace (caught on a real phone, 2026-07-19). The gap puts
+      // the leave in its own segment, well ahead of the close. If another
+      // socket resumes the seat inside this window, the currentSocketId
+      // guard makes the late leave a no-op.
+      setTimeout(() => socket.disconnect(), LEAVE_FLUSH_MS);
       setPresence("connected");
       setRetrying(false);
     };

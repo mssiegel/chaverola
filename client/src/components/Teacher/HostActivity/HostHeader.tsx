@@ -23,6 +23,9 @@ export function HostHeader({
 }) {
   const heroStatRef = useRef<HTMLDivElement>(null);
   const [statOffScreen, setStatOffScreen] = useState(false);
+  // Real activities can't pair anyone until matching ships, so the hero
+  // stat's action line must not suggest it (the demo keeps the full promise).
+  const isDemo = activity.joinCode === DEMO_JOIN_CODE;
 
   useEffect(() => {
     const el = heroStatRef.current;
@@ -69,7 +72,9 @@ export function HostHeader({
               ? noStudentsYet
                 ? "Share the pin below and they'll pop up here."
                 : "The queue refills as chats wrap up."
-              : "Pair them up below, or let auto-match handle it."}
+              : isDemo
+                ? "Pair them up below, or let auto-match handle it."
+                : "They're in and waiting. More names pop up below as students join."}
           </p>
         </div>
       </div>
@@ -79,7 +84,7 @@ export function HostHeader({
           accessibility tree. On the demo activity the sticky DemoBanner owns
           the under-navbar band, so this bar stands down there (the desktop
           pairing rail still shows the count). */}
-      {statOffScreen && activity.joinCode !== DEMO_JOIN_CODE && (
+      {statOffScreen && !isDemo && (
         <div
           aria-hidden
           className="fixed inset-x-0 top-14 z-10 animate-in border-b border-border/70 bg-background/90 backdrop-blur-sm duration-200 fade-in slide-in-from-top-2 motion-reduce:animate-none sm:top-16"

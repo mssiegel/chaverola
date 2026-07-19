@@ -14,8 +14,17 @@ import {
   type WaitingStudent,
 } from "./hostWorld";
 
-function student(id: string, waitSeconds = 30): WaitingStudent {
-  return { id, realName: `Student ${id.toUpperCase()}`, waitSeconds };
+function student(
+  id: string,
+  waitSeconds = 30,
+  connection: WaitingStudent["connection"] = "connected"
+): WaitingStudent {
+  return {
+    id,
+    realName: `Student ${id.toUpperCase()}`,
+    waitSeconds,
+    connection,
+  };
 }
 
 function world(overrides: Partial<HostWorld>): HostWorld {
@@ -302,6 +311,39 @@ describe("pairEveryoneIn", () => {
     expect(w.chats).toHaveLength(0);
     expect(w.queue).toHaveLength(3);
     expect(w.rematchNotice).toContain("Student C, Student D, and Student E");
+  });
+});
+
+describe("reconnecting students are unmatchable", () => {
+  // The founder rule (2026-07-19): a dropped student's seat survives its
+  // grace window but no matching path may touch them — only Remove.
+  it("auto-match skips them", () => {
+    const pair = findAutoMatchPair(
+      [student("a", 30, "reconnecting"), student("b", 30), student("c", 30)],
+      20,
+      {}
+    );
+    expect(pair!.map((s) => s.id)).toEqual(["b", "c"]);
+  });
+
+  it("pair-everyone leaves them in line", () => {
+    const w = pairEveryoneIn(
+      world({
+        queue: [student("a"), student("b"), student("c", 30, "reconnecting")],
+      }),
+      activity()
+    );
+    expect(w.chats).toHaveLength(1);
+    expect(w.queue.map((s) => s.id)).toEqual(["c"]);
+    // Not the pair-everyone leftover — just unmatchable for now.
+    expect(w.leftoverStudentId).toBeNull();
+  });
+
+  it("createChat refuses to seat them, whoever asks", () => {
+    const w = world({
+      queue: [student("a", 30, "reconnecting"), student("b")],
+    });
+    expect(createChat(w, ["a", "b"], activity())).toBe(w);
   });
 });
 

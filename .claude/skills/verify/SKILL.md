@@ -159,6 +159,16 @@ live-settings ~1s typing debounce is never scaled.
   server is the fast way to force a real disconnect. Also note the lobby
   socket resumes seats across refreshes: to observe a fresh join, use a
   new browser context (fresh sessionStorage), not a reload.
+- **Localhost hides emit-then-disconnect races.** Over loopback the two
+  writes land in separate TCP reads and everything works; over real wifi
+  they coalesce into ONE read, and socket.io's server silently drops an
+  event it processes in the same tick as the disconnect (the phone pass
+  caught `lobby:leave` dying this way, 2026-07-19). A last-words-then-close
+  path is only proven by a real device on the LAN — or by checking the
+  server log for the event actually dispatching (`student left`), not just
+  the UI reacting. The lobby's disconnect logs carry a `reason` field:
+  "client namespace disconnect" = the client chose to close, "transport
+  close"/ping timeout = the connection died.
 
 ## Production
 

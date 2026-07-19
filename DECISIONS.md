@@ -88,6 +88,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Character rows lead with the emoji avatar](#character-rows-lead-with-the-emoji-avatar)
   - [Setup sections each carry one brand accent; settings stays the quiet one](#setup-sections-each-carry-one-brand-accent-settings-stays-the-quiet-one)
 - [Teacher live activity page](#teacher-live-activity-page)
+  - [The chat sections hide entirely on real activities until matching ships](#the-chat-sections-hide-entirely-on-real-activities-until-matching-ships)
   - [Real host pages show an honest placeholder instead of pairing controls](#real-host-pages-show-an-honest-placeholder-instead-of-pairing-controls)
   - [A dropped student keeps their seat for 2 minutes, marked and unmatchable](#a-dropped-student-keeps-their-seat-for-2-minutes-marked-and-unmatchable)
   - [When the teacher's connection drops, the queue dims under a reconnecting banner](#when-the-teachers-connection-drops-the-queue-dims-under-a-reconnecting-banner)
@@ -1240,6 +1241,29 @@ _Implemented in
 
 ## Teacher live activity page
 
+### The chat sections hide entirely on real activities until matching ships
+
+_2026-07-19_
+
+**Decision:** Until matching ships, a real activity's host page renders no
+"Chats in progress" and no "Completed chats" section. The page is the header
+with the waiting count, the joining instructions, the settings panel, and
+the live "Who's joined" queue with its matching-is-coming note. The demo
+keeps both sections; they return to real pages with feature 3.
+
+**Why:** Founder call (2026-07-19, the prompt-3 session). The sections'
+empty states invite actions the page can't take yet ("Pair two students in
+the queue…" above a Pair everyone button), and two permanently empty boxes
+under a note that already says matching is coming read as broken rather
+than honest. The rejected alternative — keeping them with forward-looking
+copy — previews the eventual layout but charges every real class
+screen-space for it today.
+
+_Implemented in
+[`Teacher/HostActivity/index.tsx`](client/src/components/Teacher/HostActivity/index.tsx);
+the sibling call for the pairing controls is
+[Real host pages show an honest placeholder instead of pairing controls](#real-host-pages-show-an-honest-placeholder-instead-of-pairing-controls)._
+
 ### Real host pages show an honest placeholder instead of pairing controls
 
 _2026-07-19_
@@ -1277,6 +1301,15 @@ part of the decision: the window starts at _detected_ disconnect (a dark
 phone sends no close frame, so detection rides Socket.IO's ping cycle,
 roughly 45 seconds), and a short server-side broadcast delay (~4s) keeps a
 student's page refresh from flashing the row.
+
+Only an in-app exit removes the seat instantly: browser back to the code
+screen (back-as-reset), sign-out, or a teacher remove. Leaving the site any
+other way — closing the tab, the home button, back-swiping out of a tab
+that opened the lobby as a deep link — sends no signal the client can trust
+apart from the socket dying, so it rides this same grace window. That is
+not a missing leave event (it tripped up the founder's own phone pass,
+2026-07-19): the browser offers no reliable way to tell "left for good"
+from "refreshing" or "phone went dark" at page teardown.
 
 **Why:** Founder call (feature-2 planning). Phones go dark constantly
 mid-class and wake moments later — dropping the seat instantly would churn

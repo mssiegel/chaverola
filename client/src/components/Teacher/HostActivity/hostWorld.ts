@@ -1,3 +1,5 @@
+import type { LobbyConnectionState } from "@chaverola/shared";
+
 import { nextId, randInt, shuffled } from "@/lib/random";
 import { HOST_SEED_CHATS, HOST_STUDENT_NAMES } from "@/mockData";
 import type { HostedActivity } from "@/types/activity";
@@ -31,6 +33,14 @@ export interface WaitingStudent {
   realName: string;
   /** Seconds since they entered (or came back to) the queue. */
   waitSeconds: number;
+  /**
+   * "reconnecting" marks a dropped student whose seat is in its grace
+   * window. The row dims but the clock keeps ticking (the seat is still
+   * theirs), and they are fully unmatchable — excluded from auto-match,
+   * pair-everyone, and manual selection alike (founder call, 2026-07-19);
+   * the row's only action is Remove.
+   */
+  connection: LobbyConnectionState;
 }
 
 /** One chat as the host page tracks it. `participants[].id` is the student id. */
@@ -155,7 +165,11 @@ export function createChat(
   studentIds: string[],
   activity: HostedActivity
 ): HostWorld {
-  const members = w.queue.filter((s) => studentIds.includes(s.id));
+  // A reconnecting student can't be seated, whoever asks — the structural
+  // backstop for the unmatchable rule on WaitingStudent.connection.
+  const members = w.queue.filter(
+    (s) => studentIds.includes(s.id) && s.connection === "connected"
+  );
   if (members.length < 2) return w;
   const chat: HostedChat = {
     id: nextId("host-chat"),
@@ -226,7 +240,9 @@ export function findAutoMatchPair(
   thresholdSeconds: number,
   lastPartners: Record<string, string[]>
 ): [WaitingStudent, WaitingStudent] | null {
-  const ready = queue.filter((s) => s.waitSeconds >= thresholdSeconds);
+  const ready = queue.filter(
+    (s) => s.connection === "connected" && s.waitSeconds >= thresholdSeconds
+  );
   for (let i = 0; i < ready.length; i++) {
     for (let j = i + 1; j < ready.length; j++) {
       // Both loop indexes are within bounds.
@@ -259,10 +275,11 @@ export function pairEveryoneIn(
   w: HostWorld,
   activity: HostedActivity
 ): HostWorld {
-  if (w.queue.length < 2) return w;
-
   const lp = w.lastPartners;
-  const pool = [...w.queue];
+  // Reconnecting students stay in line, untouched — unmatchable while
+  // their seat rides out the grace window.
+  const pool = w.queue.filter((s) => s.connection === "connected");
+  if (pool.length < 2) return w;
   let leftover: WaitingStudent | null = null;
   let trio: WaitingStudent[] | null = null;
   if (pool.length % 2 === 1) {
@@ -417,7 +434,14 @@ export function tickWorld(w: HostWorld, activity: HostedActivity): HostWorld {
     return [{ ...entry, secondsUntilReturn: entry.secondsUntilReturn - 1 }];
   });
   if (returning.length > 0) {
-    queue = [...queue, ...returning.map((s) => ({ ...s, waitSeconds: 0 }))];
+    queue = [
+      ...queue,
+      ...returning.map((s) => ({
+        ...s,
+        waitSeconds: 0,
+        connection: "connected" as const,
+      })),
+    ];
   }
 
   // New students joining over time — they append at the bottom.
@@ -427,7 +451,10 @@ export function tickWorld(w: HostWorld, activity: HostedActivity): HostWorld {
     secondsUntilNextJoin -= 1;
     if (secondsUntilNextJoin <= 0) {
       const [joiner, ...rest] = joinPool;
-      queue = [...queue, { ...joiner!, waitSeconds: 0 }];
+      queue = [
+        ...queue,
+        { ...joiner!, waitSeconds: 0, connection: "connected" as const },
+      ];
       joinPool = rest;
       secondsUntilNextJoin = randInt(
         JOIN_GAP_MIN_SECONDS,
@@ -475,27 +502,6 @@ export function tickWorld(w: HostWorld, activity: HostedActivity): HostWorld {
   }
 
   return next;
-}
-
-/**
- * A world with nobody in it — real activities boot here. The engine still
- * ticks, but with an empty queue and an empty join pool nothing ever joins,
- * pairs, or chats on its own; students start flowing in when the realtime
- * feature replaces the simulation as the world's source.
- */
-export function emptyWorld(): HostWorld {
-  return {
-    queue: [],
-    chats: [],
-    wrappingUp: [],
-    lastPartners: {},
-    joinPool: [],
-    secondsUntilNextJoin: 0,
-    secondsUntilAutoMatch: AUTO_MATCH_GAP_SECONDS,
-    leftoverStudentId: null,
-    rematchNotice: null,
-    paused: false,
-  };
 }
 
 /** Boot the demo classroom: 2 chats going, 2 finished, 6 waiting, more coming. */
@@ -552,7 +558,9 @@ export function seedWorld(activity: HostedActivity): HostWorld {
     // Completed chats' students are already back in the queue — with their
     // rematch memory set, so the warning is demoable from the first tap.
     if (!active) {
-      students.forEach((s) => queue.push({ ...s, waitSeconds: 0 }));
+      students.forEach((s) =>
+        queue.push({ ...s, waitSeconds: 0, connection: "connected" })
+      );
     }
   }
 

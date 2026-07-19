@@ -13,10 +13,10 @@ import { HOST_CHATTER_LINES } from "@/mockData";
 import type { HostedActivity } from "@/types/activity";
 import { NOTICE_SENDER_ID } from "@/types/chat";
 
+import type { HostEngine, HostDemoTriggers } from "./hostEngine";
 import {
   activeChatMembers,
   createChat,
-  emptyWorld,
   endChatIn,
   JOIN_GAP_MAX_SECONDS,
   JOIN_GAP_MIN_SECONDS,
@@ -32,57 +32,30 @@ import {
 } from "./hostWorld";
 
 /*
-  The host page's world "engine": it simulates the whole round — students
+  The `1234` demo's world "engine": it simulates the whole round — students
   joining over time, the waiting queue, pairing (manual, pair-everyone, and
-  auto-match), per-chat auto-end clocks, chats that keep talking, and
-  quiet-exit removals. Everything a real backend will push later flows
-  through here; the components only render its state and call its actions.
-  The `1234` demo seeds a full pretend classroom; a real activity runs the
-  same engine over an EMPTY world (nobody can join until the realtime
-  feature arrives, so nothing ever moves on its own). The pure simulation
-  rules live in hostWorld.ts (same directory); this hook owns the React
-  state, the clocks, and the actions.
+  auto-match), per-chat auto-end clocks, chats that keep talking, wifi
+  blips, and quiet-exit removals. The components only render its state and
+  call its actions through the HostEngine contract (hostEngine.ts) — real
+  activities plug useHostActivityLive into the same seam, so this hook now
+  serves the demo classroom only. The pure simulation rules live in
+  hostWorld.ts (same directory); this hook owns the React state, the
+  clocks, and the actions.
 */
 
 const DRIP_INTERVAL_MS = 4200;
 
-export interface HostActivityDemo {
-  waiting: WaitingStudent[];
-  chatsInProgress: HostedChat[];
-  completedChats: HostedChat[];
-  studentsChattingCount: number;
-  /** Character ids used by a live chat right now — their rows can't be removed. */
-  characterIdsInUse: ReadonlySet<string>;
-  leftoverStudentId: string | null;
-  rematchNotice: string | null;
-  dismissRematchNotice: () => void;
-  /** True when this exact group was everyone's previous chat. */
-  isExactRematch: (ids: string[]) => boolean;
-  startChat: (studentIds: string[]) => void;
-  pairEveryone: () => void;
-  endChat: (chatId: string) => void;
-  endAllChats: () => void;
-  /** The teacher's world-level pause — never per chat. */
-  paused: boolean;
-  pauseAllChats: () => void;
-  resumeAllChats: () => void;
-  removeFromQueue: (studentId: string) => void;
-  removeFromChat: (chatId: string, studentId: string) => void;
-  /** Dev-only trigger: a student joins right now. */
-  triggerJoin: () => void;
-  canTriggerJoin: boolean;
-  /** Dev-only trigger: fast-forward every live clock (finale, then expiry). */
-  fastForwardClocks: () => void;
-}
+/** How long the demo's wifi-blip student stays marked before recovering.
+ *  Longer than the student demo's 4s blip on purpose: the teacher first has
+ *  to spot which row dimmed. */
+const WIFI_BLIP_MS = 6000;
+
+export interface HostActivityDemo extends HostEngine, HostDemoTriggers {}
 
 export function useHostActivityDemo(
-  activity: HostedActivity,
-  /** True only for the `1234` demo: seed the pretend classroom. */
-  seeded: boolean
+  activity: HostedActivity
 ): HostActivityDemo {
-  const [world, setWorld] = useState<HostWorld>(() =>
-    seeded ? seedWorld(activity) : emptyWorld()
-  );
+  const [world, setWorld] = useState<HostWorld>(() => seedWorld(activity));
 
   // Refs so timers and actions always read the freshest state — same idiom
   // as useChatDemo. `commit` updates worldRef eagerly so two actions in one
@@ -280,10 +253,43 @@ export function useHostActivityDemo(
     if (!joiner) return;
     commit({
       ...w,
-      queue: [...w.queue, { ...joiner, waitSeconds: 0 }],
+      queue: [
+        ...w.queue,
+        { ...joiner, waitSeconds: 0, connection: "connected" },
+      ],
       joinPool: rest,
       secondsUntilNextJoin: randInt(JOIN_GAP_MIN_SECONDS, JOIN_GAP_MAX_SECONDS),
     });
+  };
+
+  // The wifi-blip recovery timer; one blip at a time (the button disables
+  // while a student is marked), so a single handle is enough.
+  const blipTimeout = useRef<number | null>(null);
+  useEffect(() => {
+    return () => {
+      if (blipTimeout.current !== null) clearTimeout(blipTimeout.current);
+    };
+  }, []);
+
+  // Demo parity for the real lost-connection marking: a random waiting
+  // student drops for a few seconds and recovers. While marked they are
+  // unmatchable (hostWorld enforces it), exactly like a real dropped seat
+  // in its grace window.
+  const triggerWifiBlip = () => {
+    const w = worldRef.current;
+    const candidates = w.queue.filter((s) => s.connection === "connected");
+    if (candidates.length === 0) return;
+    const target = randomFrom(candidates);
+    const withConnection = (
+      queue: WaitingStudent[],
+      connection: WaitingStudent["connection"]
+    ) => queue.map((s) => (s.id === target.id ? { ...s, connection } : s));
+    commit({ ...w, queue: withConnection(w.queue, "reconnecting") });
+    blipTimeout.current = window.setTimeout(() => {
+      // The student may have been removed mid-blip; the map just no-ops.
+      const current = worldRef.current;
+      commit({ ...current, queue: withConnection(current.queue, "connected") });
+    }, scaledMs(WIFI_BLIP_MS));
   };
 
   // Stays enabled while paused on purpose: it only clamps numbers, and a
@@ -339,8 +345,14 @@ export function useHostActivityDemo(
     resumeAllChats,
     removeFromQueue,
     removeFromChat,
+    // The demo classroom is client-side — the teacher's link never drops.
+    connection: "connected",
     triggerJoin,
     canTriggerJoin: world.joinPool.length > 0,
     fastForwardClocks,
+    triggerWifiBlip,
+    canTriggerWifiBlip:
+      world.queue.some((s) => s.connection === "connected") &&
+      !world.queue.some((s) => s.connection === "reconnecting"),
   };
 }

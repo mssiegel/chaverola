@@ -11,6 +11,13 @@ import type { WaitingStudent } from "./hostWorld";
 
 export interface PairingPanelProps {
   waiting: WaitingStudent[];
+  /**
+   * Whether pairing exists here at all. The demo's simulated classroom says
+   * true and gets the full panel; a real activity says false until matching
+   * ships — rows keep exactly two affordances (the name+clock display and
+   * Remove), and a short note says matching is on the way.
+   */
+  pairing: boolean;
   /** Nobody has joined at all — a fresh real activity, not a busy round. */
   noStudentsYet: boolean;
   selectedIds: string[];
@@ -45,9 +52,14 @@ export interface PairingPanelProps {
  * Pairing is tap-to-select; characters are assigned randomly when the chat
  * starts (no assignment step). Each row's remove control is separate from
  * the select target so the two taps never collide. See DECISIONS.md.
+ *
+ * A student marked "reconnecting" renders dimmed with a lost-connection tag:
+ * their seat is riding out its grace window, the wait clock keeps ticking,
+ * and the only thing a teacher can do with them is Remove.
  */
 export function PairingPanel({
   waiting,
+  pairing,
   noStudentsYet,
   selectedIds,
   onToggleSelect,
@@ -73,11 +85,21 @@ export function PairingPanel({
 
   return (
     <div className="flex flex-col gap-4">
+      {/* The honest placeholder where the pairing controls will go — a real
+          activity can't match anyone yet, and this page must not pretend
+          otherwise (founder call, 2026-07-19). */}
+      {!pairing && (
+        <p className="rounded-xl bg-brand-grape-soft/50 px-3 py-2.5 text-sm text-muted-foreground">
+          Matching comes in the next update. Until then, this is your live list
+          of who's joined.
+        </p>
+      )}
+
       {/* Above the empty-state branch on purpose: right after End-all the
           queue is briefly empty while students wrap up, and this is exactly
           when the teacher needs to see the hold. The count is live — it
           climbs as students come back. */}
-      {showHoldNotice && (
+      {pairing && showHoldNotice && (
         <div
           role="status"
           className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800"
@@ -140,86 +162,80 @@ export function PairingPanel({
         )
       ) : (
         <>
-          {/* lg: matches the host page's rail breakpoint — only the desktop
-              mount scrolls internally, so the CTAs pin there and nowhere else.
-              Order is deliberate: the confirm CTA sits second, adjacent to
-              the names the teacher just tapped. */}
-          <div className="flex flex-col gap-2 lg:sticky lg:top-0 lg:z-10 lg:bg-card lg:pb-2">
-            <Button
-              variant="outline"
-              onClick={onPairEveryone}
-              disabled={waiting.length < 2}
-              className="w-full"
-            >
-              <UsersRound aria-hidden />
-              Pair everyone 1:1
-            </Button>
-            <Button
-              onClick={onStartChat}
-              disabled={selectedIds.length < 2}
-              className="w-full"
-            >
-              <Sparkles aria-hidden />
-              Start their chat
-              {selectedIds.length >= 2 ? ` (${selectedIds.length})` : ""}
-            </Button>
-          </div>
-          <p className="-mt-2 text-xs text-muted-foreground lg:-mt-4">
-            Tap two students to pair them
-            {maxGroupSize > 2 ? `, or up to ${maxGroupSize} for a group` : ""}.
-            Characters get dealt out randomly.
-          </p>
+          {pairing && (
+            <>
+              {/* lg: matches the host page's rail breakpoint — only the desktop
+                  mount scrolls internally, so the CTAs pin there and nowhere else.
+                  Order is deliberate: the confirm CTA sits second, adjacent to
+                  the names the teacher just tapped. */}
+              <div className="flex flex-col gap-2 lg:sticky lg:top-0 lg:z-10 lg:bg-card lg:pb-2">
+                <Button
+                  variant="outline"
+                  onClick={onPairEveryone}
+                  disabled={waiting.length < 2}
+                  className="w-full"
+                >
+                  <UsersRound aria-hidden />
+                  Pair everyone 1:1
+                </Button>
+                <Button
+                  onClick={onStartChat}
+                  disabled={selectedIds.length < 2}
+                  className="w-full"
+                >
+                  <Sparkles aria-hidden />
+                  Start their chat
+                  {selectedIds.length >= 2 ? ` (${selectedIds.length})` : ""}
+                </Button>
+              </div>
+              <p className="-mt-2 text-xs text-muted-foreground lg:-mt-4">
+                Tap two students to pair them
+                {maxGroupSize > 2
+                  ? `, or up to ${maxGroupSize} for a group`
+                  : ""}
+                . Characters get dealt out randomly.
+              </p>
 
-          {rematchWarning && (
-            <div
-              role="status"
-              className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800"
-            >
-              <Repeat2 aria-hidden className="mt-0.5 size-4 shrink-0" />
-              <span>{rematchWarning}</span>
-            </div>
-          )}
+              {rematchWarning && (
+                <div
+                  role="status"
+                  className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800"
+                >
+                  <Repeat2 aria-hidden className="mt-0.5 size-4 shrink-0" />
+                  <span>{rematchWarning}</span>
+                </div>
+              )}
 
-          {rematchNotice && (
-            <div
-              role="status"
-              className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800"
-            >
-              <Repeat2 aria-hidden className="mt-0.5 size-4 shrink-0" />
-              <span className="min-w-0 flex-1">{rematchNotice}</span>
-              <button
-                type="button"
-                onClick={onDismissRematchNotice}
-                aria-label="Dismiss"
-                className="grid size-6 shrink-0 place-items-center rounded-full text-amber-700 transition-colors hover:bg-amber-100"
-              >
-                <X className="size-3.5" />
-              </button>
-            </div>
+              {rematchNotice && (
+                <div
+                  role="status"
+                  className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800"
+                >
+                  <Repeat2 aria-hidden className="mt-0.5 size-4 shrink-0" />
+                  <span className="min-w-0 flex-1">{rematchNotice}</span>
+                  <button
+                    type="button"
+                    onClick={onDismissRematchNotice}
+                    aria-label="Dismiss"
+                    className="grid size-6 shrink-0 place-items-center rounded-full text-amber-700 transition-colors hover:bg-amber-100"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </div>
+              )}
+            </>
           )}
 
           <ul className="flex flex-col gap-1.5">
             {waiting.map((student) => {
-              const selected = selectedIds.includes(student.id);
+              const selected = pairing && selectedIds.includes(student.id);
               const isLeftover = student.id === leftoverStudentId;
-              return (
-                <li
-                  key={student.id}
-                  className={cn(
-                    "flex items-center gap-0.5 rounded-xl border p-1 transition-colors lg:scroll-mt-24",
-                    selected
-                      ? "border-brand-grape/50 bg-brand-grape-soft/60"
-                      : "border-border bg-card",
-                    isLeftover && !selected && "border-amber-300 bg-amber-50"
-                  )}
-                >
-                  <button
-                    type="button"
-                    onClick={() => onToggleSelect(student.id)}
-                    aria-pressed={selected}
-                    disabled={!selected && selectionFull}
-                    className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-accent/60 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
+              const dropped = student.connection === "reconnecting";
+              // Both tags never show at once — a dropped student can't be
+              // paired, so "first in line" would be an empty promise.
+              const rowContent = (
+                <>
+                  {pairing && (
                     <span
                       aria-hidden
                       className={cn(
@@ -231,18 +247,62 @@ export function PairingPanel({
                     >
                       {selected && <Check className="size-3" />}
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-                      {student.realName}
+                  )}
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                    {student.realName}
+                  </span>
+                  {isLeftover && !dropped && (
+                    <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                      first in line
                     </span>
-                    {isLeftover && (
-                      <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
-                        first in line
-                      </span>
-                    )}
-                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                      {formatWaitShort(student.waitSeconds)}
+                  )}
+                  {dropped && (
+                    <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                      lost connection
                     </span>
-                  </button>
+                  )}
+                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                    {formatWaitShort(student.waitSeconds)}
+                  </span>
+                </>
+              );
+              return (
+                <li
+                  key={student.id}
+                  className={cn(
+                    "flex items-center gap-0.5 rounded-xl border p-1 transition-colors lg:scroll-mt-24",
+                    selected
+                      ? "border-brand-grape/50 bg-brand-grape-soft/60"
+                      : "border-border bg-card",
+                    isLeftover &&
+                      !selected &&
+                      !dropped &&
+                      "border-amber-300 bg-amber-50"
+                  )}
+                >
+                  {pairing ? (
+                    <button
+                      type="button"
+                      onClick={() => onToggleSelect(student.id)}
+                      aria-pressed={selected}
+                      // A dropped student is unmatchable while their seat
+                      // rides out the grace window (founder call) — and the
+                      // disabled dim doubles as the row's marking.
+                      disabled={dropped || (!selected && selectionFull)}
+                      className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-accent/60 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {rowContent}
+                    </button>
+                  ) : (
+                    <div
+                      className={cn(
+                        "flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-1.5 text-left",
+                        dropped && "opacity-60"
+                      )}
+                    >
+                      {rowContent}
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={() => onRequestRemove(student)}
@@ -260,31 +320,35 @@ export function PairingPanel({
 
       {/* The matching control lives where the teacher watches the queue —
           it IS the activity setting, the same one Edit activity settings
-          shows, so the two switches can never disagree. */}
-      <div className="flex items-start gap-2 border-t border-border/70 pt-3">
-        <Zap
-          aria-hidden
-          className={cn(
-            "mt-0.5 size-3.5 shrink-0",
-            autoMatchOn ? "text-brand-mint" : "text-muted-foreground/50"
-          )}
-        />
-        <label
-          htmlFor={autoMatchSwitchId}
-          className="min-w-0 flex-1 cursor-pointer text-xs leading-relaxed text-muted-foreground"
-        >
-          {!autoMatchOn
-            ? "Auto-match is off: students wait here until you pair them."
-            : paused
-              ? "Auto-match is on hold while chats are paused."
-              : `Auto-match is on: students pair up on their own after waiting ${autoMatchSeconds} seconds.`}
-        </label>
-        <Switch
-          id={autoMatchSwitchId}
-          checked={autoMatchOn}
-          onCheckedChange={onAutoMatchChange}
-        />
-      </div>
+          shows, so the two switches can never disagree. Demo only until
+          matching ships: a real page must not offer a switch that promises
+          auto-pairing. */}
+      {pairing && (
+        <div className="flex items-start gap-2 border-t border-border/70 pt-3">
+          <Zap
+            aria-hidden
+            className={cn(
+              "mt-0.5 size-3.5 shrink-0",
+              autoMatchOn ? "text-brand-mint" : "text-muted-foreground/50"
+            )}
+          />
+          <label
+            htmlFor={autoMatchSwitchId}
+            className="min-w-0 flex-1 cursor-pointer text-xs leading-relaxed text-muted-foreground"
+          >
+            {!autoMatchOn
+              ? "Auto-match is off: students wait here until you pair them."
+              : paused
+                ? "Auto-match is on hold while chats are paused."
+                : `Auto-match is on: students pair up on their own after waiting ${autoMatchSeconds} seconds.`}
+          </label>
+          <Switch
+            id={autoMatchSwitchId}
+            checked={autoMatchOn}
+            onCheckedChange={onAutoMatchChange}
+          />
+        </div>
+      )}
     </div>
   );
 }

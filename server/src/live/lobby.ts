@@ -209,9 +209,9 @@ export function attachLobby(
         broadcastQueue(current);
       });
 
-      socket.on("disconnect", () => {
+      socket.on("disconnect", (reason) => {
         clearInterval(keepAlive);
-        log.info({ joinCode: data.joinCode }, "teacher disconnected");
+        log.info({ joinCode: data.joinCode, reason }, "teacher disconnected");
       });
       return;
     }
@@ -234,18 +234,27 @@ export function attachLobby(
       const current = getByJoinCode(data.joinCode);
       if (!current) return;
       const left = leaveSeat(current, socket.id);
-      if (left) broadcastQueue(current);
+      if (left) {
+        log.info(
+          { joinCode: data.joinCode, studentId: left.studentId },
+          "student left"
+        );
+        broadcastQueue(current);
+      }
     });
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", (reason) => {
       const current = getByJoinCode(data.joinCode);
       if (!current) return;
       // No-ops when another socket already resumed the seat (the
       // currentSocketId guard) — a stale disconnect must never arm timers.
       const dropped = markDisconnected(current, socket.id, Date.now());
       if (!dropped) return;
+      // The reason tells an intentional close ("client namespace
+      // disconnect") from a died transport ("transport close" / ping
+      // timeout) — load-bearing when diagnosing leaves that never arrived.
       log.info(
-        { joinCode: data.joinCode, studentId: dropped.studentId },
+        { joinCode: data.joinCode, studentId: dropped.studentId, reason },
         "student connection lost"
       );
       armDisconnectTimers(
