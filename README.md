@@ -11,9 +11,11 @@ automatically via Vercel).
 > **Scope note:** Every screen of the client is built and nothing is a dead
 > end. The backend (`server/`) is live at `api.chaverola.com`, and both
 > sides of the client call it: students resolve real join codes, teachers
-> create activities and host them at a private `hostKey` URL. Everything
-> inside a live session — matching, chat, the teacher's live view — is
-> still simulated until the realtime feature. See
+> create activities and host them at a private `hostKey` URL, and the
+> waiting lobby is live over Socket.IO — students appear in the teacher's
+> queue in real time, with reconnect handling built for classroom phones.
+> Matching and chat inside a session are still simulated until the next
+> feature. See
 > [Shared_Project_Context.md](Shared_Project_Context.md)
 > for the full brief and [docs/plans/](docs/plans/) for the current feature plan.
 
@@ -80,7 +82,8 @@ now). Routes are canonical: don't invent new ones beyond the project brief's tab
 The test suites are deliberately small while the product is an MVP: on the
 client, pure-logic tests over the validators and the host page's world
 model (no DOM); on the server, just the safety invariants — projection
-privacy, the hostKey boundary, the `1234` reservation. See DECISIONS.md →
+privacy, the hostKey boundary (REST and socket editions), the `1234`
+reservation, and the lobby's seat-resume race guard. See DECISIONS.md →
 the "Testing stays small" entries.
 
 ## Deployment
@@ -97,12 +100,16 @@ Two platforms, split by package:
   (Render injects `PORT` itself). Live since 2026-07-18; both the student
   join flow and the teacher create/host flow call it.
 
-Free-tier caveats worth knowing: the server spins down when idle
-(observed: ~30 minutes after the last real request; a single hit wakes it
-in ~33 seconds, which the client's `/healthz` ping on page mount hides),
-and activities live **in memory only** — every server deploy or restart
-wipes live classes, so avoid server-touching pushes during school hours.
-Details in [docs/architecture.md](docs/architecture.md).
+Free-tier caveats worth knowing: the server spins down when idle — but a
+connected class's Socket.IO heartbeats count as traffic, so spin-down
+only happens when nobody is connected (verified empirically; a single
+hit wakes a sleeping instance in ~33 seconds, which the client's
+`/healthz` ping on page mount hides). Activities live **in memory
+only** — every server deploy or restart wipes live classes, and since
+the live lobby that's visible: every connected student lands on an
+"activity ended" screen and the teacher's page falls back to not-found.
+Avoid server-touching pushes during school hours. Details in
+[docs/architecture.md](docs/architecture.md).
 
 ## Documentation
 

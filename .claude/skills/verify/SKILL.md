@@ -78,18 +78,27 @@ Useful, stable handles:
   condensed "waiting to chat" bar stands down for it — assert that bar
   only on real activities), seeded pretend classroom, demo steering panel.
   A REAL host page (24-char key) fetches over the API — expect a "Finding
-  your activity…" beat — and boots an empty, truthful world: queue shows
-  "No students yet", chats "No chats yet", no banner, no demo panel. The
+  your activity…" beat — and renders the LIVE page (feature 2): a teacher
+  socket connects (`/socket.io/` traffic — the demo has zero) and the
+  layout is NOT the demo grid: one full-width "Who's joined" section, an
+  honest matching-is-coming copy block instead of the pairing CTAs, and
+  no chat sections, no banner, no demo panel. Live queue rows are plain
+  rows — the `ul li button[aria-pressed]` tap-to-select and the desktop
+  pairing rail (`aside`) are DEMO-only — but the remove control is the
+  same everywhere: `button[aria-label="Remove <name> from the
+activity"]`. A dropped student's row dims with an amber "lost
+  connection" tag (allow the ~45s ping-cycle detection + 4s broadcast
+  delay); the teacher's own drop shows a `role="status"` "Reconnecting
+  to your class…" banner over the dimmed queue. The
   live-settings panel IS present on real activities, but its edits are
   local-only until edit-sync ships (they never reach student lobbies and a
   refresh refetches the server copy — expected, not a bug). Dead host
   links (garbage keys, stale 4-digit codes) render "That activity isn't
   running" with no demo redirect; an unreachable server renders "We can't
-  reach Chaverola" whose Try again refetches in place. The desktop pairing rail is
-  the `aside`; queue rows are `ul li button[aria-pressed]` (tap-to-select), each
-  row's remove control is `button[aria-label="Remove <name> from the
-activity"]`. Section headers are buttons whose `innerText` carries the
-  count pill (e.g. "Chats in progress 2"). All confirmations are one shared
+  reach Chaverola" whose Try again refetches in place.
+  Section headers are buttons whose `innerText` carries the
+  count pill (e.g. "Chats in progress 2" — chat sections demo-only for
+  now). All confirmations are one shared
   dialog: scope to `getByRole("dialog")`, match the title with
   `getByRole("heading")` (button labels repeat the title words), cancel is
   "Never mind". Live-settings edits propagate ~1s after typing pauses

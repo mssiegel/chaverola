@@ -34,7 +34,7 @@ When a prompt is done, tick its checkbox here (same commit).
 - [x] Prompt 2 — Client wiring, student side (lobby presence + reconnect)
 - [x] Prompt 3 — Client wiring, teacher side (the live queue; the feature
       completes)
-- [ ] Prompt 4 — Docs + stale-reference sweep
+- [x] Prompt 4 — Docs + stale-reference sweep
 - [ ] Prompt 5 — End-to-end production verification (feature 1's Prompt 7
       caught a prod-breaking bug; keep the tradition)
 

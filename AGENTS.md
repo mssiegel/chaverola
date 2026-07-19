@@ -6,28 +6,35 @@ This file is the canonical source of guidance for all AI agents (Claude Code, Cu
 
 Every UI surface is built and lives in its real flow (demo URLs exist but
 only as redirects). `server/` is a real Express 5 API implementing the
-create-and-join contract ([docs/api.md](docs/api.md)) — live at
-`https://api.chaverola.com` (Render, free tier), and **both sides of the
-client call it**: students resolve real codes through
-`GET /activities/:joinCode`, teachers create activities with
-`POST /activities` and host them at `/activity/host/:hostKey`. The demo
-code `1234` stays fully client-simulated, zero network. Feature 1 is
-**complete** — verified end to end on production 2026-07-19
-([docs/plans/feature-1-create-and-join.md](docs/plans/feature-1-create-and-join.md));
-everything inside a live session (matching, chat, the teacher's live
-view) stays simulated until the realtime feature.
+create-and-join contract plus the live-lobby socket contract
+([docs/api.md](docs/api.md)) — live at `https://api.chaverola.com`
+(Render, free tier), and **both sides of the client call it**: students
+resolve real codes through `GET /activities/:joinCode`, teachers create
+activities with `POST /activities` and host them at
+`/activity/host/:hostKey`. The demo code `1234` stays fully
+client-simulated, zero network. Feature 1 is **complete** — verified end
+to end on production 2026-07-19
+([docs/plans/feature-1-create-and-join.md](docs/plans/feature-1-create-and-join.md)).
+Feature 2's build is done through Prompt 4
+([docs/plans/feature-2-live-lobby.md](docs/plans/feature-2-live-lobby.md)):
+**the waiting queue is real over Socket.IO** — students in a real lobby
+hold live, resumable seats, and the teacher's host page renders the queue
+live with Remove acting on the real world (verified with real phones on
+the LAN; the production pass is the plan's final prompt). Matching and
+chat stay simulated until the next feature, so real host pages show an
+honest placeholder where the pairing controls would be.
 The demo flows are a **permanent product surface** — the homepage links to
 them and the founder pitches with them — not scaffolding; see the working
 rule below. The map:
 
-| Surface               | Route                                     | Where it lives                                                                                                                                                                                                                                                        |
-| --------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Homepage              | `/`                                       | `client/src/pages/HomePage.tsx` + `components/home/` — the hero chatbox and the teacher-view `ChatCard` mirror one live `useChatDemo` chat; demo section (`DemoSection.tsx`); founder's note with photo fallback                                                      |
-| Student join flow     | `/activity/join[/:joinCode]`              | `client/src/pages/student/JoinActivityPage.tsx` — code → name → lobby → chatting → ended, all on one URL; `components/Student/ChatStage.tsx` owns the chat stages, keyed per match                                                                                    |
-| Teacher setup         | `/activity/create`                        | `client/src/components/Teacher/ActivitySetup/` — form UI; the caps, draft persistence, validation, and the `POST /activities` request mapping live in `client/src/lib/activitySetup.ts`                                                                               |
-| Teacher live activity | `/activity/host/:hostKey`                 | `client/src/components/Teacher/HostActivity/` — engine `useHostActivityDemo.ts` + pure world model `hostWorld.ts`; live-edit draft model in `client/src/lib/hostActivity.ts`. `1234` seeds the demo classroom; real keys resolve via `lib/useHostedActivityLookup.ts` |
-| Demo entry URLs       | `/demo`, `/demo/teacher`, `/demo/student` | Thin locale-aware redirects in `client/src/App.tsx` — teacher entries land on `/activity/host/1234`, the student entry on `/activity/join/1234` (name prefilled); never pages of their own (see DECISIONS.md → "Routes & app structure")                              |
-| Not found             | `*`                                       | `client/src/pages/NotFoundPage.tsx`                                                                                                                                                                                                                                   |
+| Surface               | Route                                     | Where it lives                                                                                                                                                                                                                                                                                                                                                                                |
+| --------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Homepage              | `/`                                       | `client/src/pages/HomePage.tsx` + `components/home/` — the hero chatbox and the teacher-view `ChatCard` mirror one live `useChatDemo` chat; demo section (`DemoSection.tsx`); founder's note with photo fallback                                                                                                                                                                              |
+| Student join flow     | `/activity/join[/:joinCode]`              | `client/src/pages/student/JoinActivityPage.tsx` — code → name → lobby → chatting → ended, all on one URL; the real lobby's live seat is `useLobbyPresence.ts` beside it; `components/Student/ChatStage.tsx` owns the chat stages, keyed per match                                                                                                                                             |
+| Teacher setup         | `/activity/create`                        | `client/src/components/Teacher/ActivitySetup/` — form UI; the caps, draft persistence, validation, and the `POST /activities` request mapping live in `client/src/lib/activitySetup.ts`                                                                                                                                                                                                       |
+| Teacher live activity | `/activity/host/:hostKey`                 | `client/src/components/Teacher/HostActivity/` — the dashboard takes an injected `HostEngine` (`hostEngine.ts`): the demo engine `useHostActivityDemo.ts` + pure world model `hostWorld.ts` for `1234`, the live engine `useHostActivityLive.ts` (teacher socket) for real keys, which resolve via `lib/useHostedActivityLookup.ts`; live-edit draft model in `client/src/lib/hostActivity.ts` |
+| Demo entry URLs       | `/demo`, `/demo/teacher`, `/demo/student` | Thin locale-aware redirects in `client/src/App.tsx` — teacher entries land on `/activity/host/1234`, the student entry on `/activity/join/1234` (name prefilled); never pages of their own (see DECISIONS.md → "Routes & app structure")                                                                                                                                                      |
+| Not found             | `*`                                       | `client/src/pages/NotFoundPage.tsx`                                                                                                                                                                                                                                                                                                                                                           |
 
 Load-bearing flow facts (the reasoning for each is in DECISIONS.md):
 
@@ -41,13 +48,25 @@ Load-bearing flow facts (the reasoning for each is in DECISIONS.md):
   states (the host page's unreachable screen has a retry). The server is
   the only join-code issuer; an unknown host link gets a friendly
   not-found, never the old demo redirect. Real lobbies and host pages
-  show no demo furniture and never auto-pair; a real host world boots
-  empty until the realtime feature. Two teacher-side gotchas: the create
+  show no demo furniture and never auto-pair. Two teacher-side gotchas: the create
   submit deliberately has **no client-side timeout** (create isn't
   idempotent — a retry could mint a second activity), and live-settings
   edits on a real activity are **local-only** until edit-sync ships
   (founder call; students' lobbies keep the server's copy, refresh
   reverts — see DECISIONS.md).
+- The live lobby (feature 2): sockets connect at lobby entry (student,
+  `pages/student/useLobbyPresence.ts`) and host-page resolve (teacher,
+  `HostActivity/useHostActivityLive.ts`), both through the factory in
+  `lib/socket.ts` (`autoConnect: false`, auth callback — the demo stays
+  structurally zero-network). A dropped student keeps their seat for 2
+  minutes, marked "lost connection" and fully unmatchable; detection is
+  the ping cycle (~45s — a latency, not a bug), and only in-app exits
+  (back-as-reset, sign-out, teacher remove) drop the seat instantly —
+  closing the tab or leaving the site rides the grace window by design
+  (DECISIONS.md). Tripwire on the teacher side: the live engine imports
+  nothing from `hostWorld.ts` beyond types — `tickWorld` runs auto-match
+  and must never see a real student. Live socket timers never pass
+  through `scaledMs`; demo simulation always does.
 - The student flow renders navbar-free inside `StudentWorldLayout` (purple
   world, drifting doodles, brand pill that swaps for the student's name badge
   mid-chat); everything else sits under `AppLayout`, whose logo also hides on
@@ -110,8 +129,11 @@ Run from the repo root:
 - **Test:** `pnpm test` — `pnpm -r test`: the client suite
   (`client/vitest.config.ts`, plain node environment over the pure logic
   layer) plus the server suite (`server/src/**/*.test.ts` — the safety
-  invariants: projection privacy, the hostKey boundary, the `1234`
-  reservation). Both suites are deliberately small; see DECISIONS.md →
+  invariants: projection privacy — REST and socket payloads alike — the
+  hostKey boundary in both its REST and socket editions, the `1234`
+  reservation, a student socket's `queue:remove` being ignored, and the
+  seat-resume `currentSocketId` race guard in `live/lobby.test.ts`).
+  Both suites are deliberately small; see DECISIONS.md →
   "Testing stays small" entries before adding tests.
 - **Preview:** `pnpm preview` — serve the production build
 - **Format:** `pnpm format` / `pnpm format:check` — Prettier over the whole repo.

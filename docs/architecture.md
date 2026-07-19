@@ -67,14 +67,30 @@ paths (see Deploy topology).
   is no emit step anywhere. Render injects `PORT` and
   `RENDER_GIT_COMMIT` (echoed by `/healthz`); Node's version comes from
   the root `.nvmrc`.
-- **Free-tier consequences:** the instance spins down when idle. Measured
-  2026-07-19: SIGTERM came ~30 minutes after the last real request
-  (Render documents ~15; their own health-check pings don't count as
-  traffic and don't delay it), and a single `/healthz` hit woke it in
-  ~33 seconds — boot to `listening` took ~11s of that. The client's
-  warm-up ping on page mount hides this cold start. Every server deploy
-  or restart wipes all live activities — so server-touching pushes are
-  avoided during school hours.
+- **Free-tier consequences:** the instance spins down when idle, and the
+  spin-down rule is verified empirically (2026-07-19, the feature-2
+  Prompt 1 proof — results in
+  [the feature-2 plan](plans/feature-2-live-lobby.md)): the service
+  spins down ~15 minutes after the last inbound HTTP request _or_
+  inbound WebSocket message, per Render's 2026-02-24 changelog rule. A
+  connected Socket.IO client's heartbeat (a pong every ~25s) is an
+  inbound message, so **any connected class keeps the server awake** —
+  spin-down only happens when nobody is connected, which is exactly when
+  it's harmless. Render's own platform health checks
+  (`render-health-check: 1`) demonstrably do NOT count as traffic. Flip
+  side: a forgotten open tab keeps the instance up, bounded by the 12h
+  TTL sweep disconnecting everyone. A single `/healthz` hit wakes a
+  sleeping instance in ~33 seconds (boot to `listening` is ~11s of
+  that); the client's warm-up ping on page mount hides this cold start.
+  Every server deploy or restart wipes all live activities — and since
+  feature 2 that's loud, not silent: every connected student is kicked
+  to the "activity ended" screen and the teacher's page falls back to
+  not-found — so server-touching pushes are avoided during school hours.
+- **Cloudflare** fronts `api.chaverola.com`. It proxies WebSockets on
+  all plans, and its ~100s proxied idle timeout never triggers under
+  Socket.IO's 25s pings (the polling fallback's long-poll cycle also
+  fits). Observed in the Prompt 1 proof: a student socket held 20
+  minutes on the websocket transport straight through Cloudflare.
 - **CORS** allows `chaverola.com`, `www.chaverola.com`, Vercel preview
   hostnames (`chaverola-*-moshe-siegels-projects.vercel.app`), and
   localhost outside production (`server/src/config.ts`). CORS is
@@ -115,10 +131,75 @@ or the hostKey by construction. Tests pin the exact key lists.
 `app.ts` builds and returns the Express app **without listening** —
 supertest targets it directly. `index.ts` is the only side-effectful
 module: it wraps the app in `http.createServer(app)` (never
-`app.listen()`), starts the sweep timer, listens, and handles SIGTERM
-(Render sends it on every deploy). This seam is deliberate: the realtime
-feature attaches Socket.IO to that same `http.Server`, so the split never
-needs to move.
+`app.listen()`), attaches the lobby's Socket.IO server to that same
+`http.Server` (`attachLobby` in `server/src/live/lobby.ts` — the exact
+attachment the seam was built for; feature 2 filled it without moving
+anything), starts the sweep timer, listens, and handles SIGTERM (Render
+sends it on every deploy). The SIGTERM sequence matters with sockets
+open: `io.close()` is the **single owner** of shutdown — in Socket.IO v4
+it disconnects every socket AND closes the attached `http.Server`,
+whereas a bare `server.close()` would never finish while WebSocket
+connections stay open. Nothing is flushed — the store is in-memory by
+design and deploys wipe it.
+
+## Realtime: the live lobby
+
+Feature 2's Socket.IO layer (contract in `shared/src/socket.ts`,
+documented in [api.md → Socket events](api.md#socket-events)). The
+structural fact everything else follows from: **engine.io bypasses
+Express.** It intercepts `/socket.io/` on the `http.Server` before
+Express runs, so Express `cors()` never sees the handshake (CORS is the
+`Server` constructor's own option, fed the same `allowedOrigins()` from
+`config.ts`), `pino-http` logs nothing (the lobby logs through the same
+plain `pino` logger instance `index.ts` shares between both layers), and
+the rate limiters never fire (`MAX_STUDENTS_PER_ACTIVITY` is the socket
+layer's own abuse guard). `serveClient: false` — the client bundles its
+own.
+
+How the layer is put together (`server/src/live/`):
+
+- **`seats.ts` is the pure, io-free seat lifecycle** — testable without
+  sockets. Seats hang off the `StoredActivity` record (the activity's
+  lifecycle owns the seats' lifecycle), and the module owns the tricky
+  rules: fresh-join idempotence via the client-minted nonce (StrictMode
+  double-mounts, refresh races), duplicate-tab takeover (the newer
+  socket wins the seat), tombstones for removed students (so a removed
+  token gets the distinguishable `removed` rejection), the seat cap, and
+  the **`currentSocketId` guard** — disconnect handling and grace expiry
+  no-op unless the disconnecting socket still owns the seat, because on
+  a refresh the new socket can resume the seat before the old socket's
+  disconnect fires. Each seat owns up to two timers (broadcast delay +
+  grace), cleared on resume, leave, remove, and activity removal.
+- **Auth is connection-time middleware**, mirroring the REST route
+  guards: pattern-check then look up (`getByHostKey` refreshes the TTL,
+  `getByJoinCode` never does), `1234` rejected unconditionally, the
+  fresh-join name zod-validated against the shared cap. Every rejection
+  rides `connect_error` with its code before the socket ever connects —
+  student seating happens in the middleware too, so `full`/`removed`
+  reject there.
+- **Rooms and snapshots:** teacher sockets join a per-activity room and
+  get a `queue:snapshot` immediately on join; every seat change
+  broadcasts a fresh full snapshot to the room. Snapshots over deltas —
+  at ≤60 entries the bandwidth is nothing and the sync-bug surface is
+  zero. Students get only targeted emits (`lobby:welcome`,
+  `lobby:removed`, `activity:ended`), never a snapshot.
+- **The teacher socket is the TTL keep-alive:** while one is connected,
+  a ~5-minute `.unref()`ed interval calls `getByHostKey`, so a live
+  class can't expire at the 12h TTL mid-lesson. Student sockets never
+  refresh the TTL — enumeration must not keep activities alive.
+- **Activity death reaches the lobby through the store's
+  `onActivityRemoved` hook** — registered by `attachLobby`, called by
+  `remove()` on all three removal paths (the sweep and both lazy-expiry
+  lookups): clear per-seat timers, emit `activity:ended` to the
+  activity's students, disconnect everyone. The store never imports
+  `io`.
+- **One wire subtlety, learned on a real phone:** the server drops any
+  packet it processes in the same tick as that socket's disconnect, and
+  over real wifi an emit written back-to-back with a `disconnect()`
+  coalesces into one TCP read — so the client's `lobby:leave` flushes
+  alone and the disconnect trails 300ms behind
+  (`client/src/pages/student/useLobbyPresence.ts`). Localhost never
+  reproduces this; the frames arrive as separate reads there.
 
 ## In-memory lifecycle
 
@@ -126,10 +207,12 @@ There is no database. `server/src/store/activityStore.ts` holds two Maps
 (`byJoinCode`, `byHostKey`) sharing the same record objects — one record,
 two lookup paths.
 
-- **TTL 12 hours**, refreshed **only** by hostKey lookups: an activity
-  stays alive exactly as long as a teacher keeps the host page open.
-  Student lookups deliberately don't refresh, so enumerating join codes
-  can't keep activities alive.
+- **TTL 12 hours**, refreshed **only** by hostKey lookups — the host
+  page's fetch and, since feature 2, the connected teacher socket's
+  ~5-minute keep-alive: an activity stays alive exactly as long as a
+  teacher keeps the host page open. Student lookups and student sockets
+  deliberately don't refresh, so enumerating join codes can't keep
+  activities alive.
 - **Sweep every 10 minutes** (`startSweep`, called only from `index.ts`;
   the interval is `.unref()`ed so it never holds the process open).
   Lookups also delete-and-miss expired records between sweeps.
@@ -138,7 +221,10 @@ two lookup paths.
   fallback that stays uniform) never starves.
 - **Join code `1234` is never minted and never served** — it belongs to
   the client-simulated demo forever; the server 404s it unconditionally.
-- Restarts and deploys wipe everything. Accepted for v1.
+- Restarts and deploys wipe everything. Accepted for v1 — and honest
+  since feature 2: removal (sweep or lazy expiry) fires the store's
+  `onActivityRemoved` hook, so connected students get `activity:ended`
+  instead of a silent dead socket.
 
 ## Rate-limit sizing
 

@@ -242,8 +242,10 @@ components. When the student's connection drops, the pill swaps to a
 reconnecting variant (same mechanism as the paused pill), so the lobby never
 lies about the connection either.
 
-_Planned in [the feature-2 plan](docs/plans/feature-2-live-lobby.md)
-(Prompt 2)._
+_Implemented in
+[WaitingLobby](client/src/components/Student/WaitingLobby.tsx) (the
+`connection` pill variant), driven by
+[useLobbyPresence](client/src/pages/student/useLobbyPresence.ts)._
 
 ### Two students can share a name; the queue tells them apart
 
@@ -260,8 +262,10 @@ the worst possible moment — a kid joining while the class waits. The
 anonymity design means other students never see the names anyway, so
 uniqueness buys nothing on the student side.
 
-_Planned in [the feature-2 plan](docs/plans/feature-2-live-lobby.md)
-(Prompt 1)._
+_Implemented in [seats.ts](server/src/live/seats.ts) (server-minted ids;
+no name-uniqueness check anywhere) and
+[PairingPanel.tsx](client/src/components/Teacher/HostActivity/PairingPanel.tsx)
+(rows keyed and removed by id, never by name)._
 
 ### A wiped server ends the class honestly on the student's screen
 
@@ -284,8 +288,12 @@ exist. The seat token is what distinguishes "this code was never real" from
 the session immediately would destroy the very evidence the ended screen
 renders from.
 
-_Planned in [the feature-2 plan](docs/plans/feature-2-live-lobby.md)
-(Prompt 2); extends
+_Implemented in
+[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx) (the
+ended stage, both the socket and REST-404-with-token paths) over
+[useLobbyPresence](client/src/pages/student/useLobbyPresence.ts); the
+server side notifies through the store's removal hook in
+[lobby.ts](server/src/live/lobby.ts). Extends
 [Real codes resolve over the API, and only a resolved miss signs anyone out](#real-codes-resolve-over-the-api-and-only-a-resolved-miss-signs-anyone-out)._
 
 ### Real codes resolve over the API, and only a resolved miss signs anyone out
@@ -1284,8 +1292,10 @@ controls — "students pair up on their own after waiting 20 seconds" is a
 promise the page cannot keep yet, and the switch it explains edits a setting
 nothing consumes.
 
-_Planned in [the feature-2 plan](docs/plans/feature-2-live-lobby.md)
-(Prompt 3)._
+_Implemented in
+[PairingPanel.tsx](client/src/components/Teacher/HostActivity/PairingPanel.tsx)
+(the `pairing` prop) and the live branch of
+[HostActivity/index.tsx](client/src/components/Teacher/HostActivity/index.tsx)._
 
 ### A dropped student keeps their seat for 2 minutes, marked and unmatchable
 
@@ -1319,8 +1329,12 @@ immediately burns the chat's own 2-minute reconnect window, so unmatchable is
 the only honest state. Two minutes deliberately matches that chat window —
 one reconnect concept across the whole product.
 
-_Planned in [the feature-2 plan](docs/plans/feature-2-live-lobby.md)
-(Prompts 1 and 3); the chat-side window lives in
+_Implemented in [seats.ts](server/src/live/seats.ts) (the grace +
+broadcast-delay timers and the `currentSocketId` guard),
+[PairingPanel.tsx](client/src/components/Teacher/HostActivity/PairingPanel.tsx)
+(the marked row), and the `connection` filters in
+[hostWorld.ts](client/src/components/Teacher/HostActivity/hostWorld.ts)
+(unmatchable — pinned by tests); the chat-side window lives in
 [A disconnected peer gets 2 minutes to come back, and the student watches the clock](#a-disconnected-peer-gets-2-minutes-to-come-back-and-the-student-watches-the-clock)._
 
 ### When the teacher's connection drops, the queue dims under a reconnecting banner
@@ -1339,8 +1353,10 @@ is still useful information — a full overlay would take it hostage exactly
 when the teacher is juggling thirty kids. Dimming without the banner was
 rejected too: staleness needs words, not just opacity.
 
-_Planned in [the feature-2 plan](docs/plans/feature-2-live-lobby.md)
-(Prompt 3)._
+_Implemented in the live branch of
+[HostActivity/index.tsx](client/src/components/Teacher/HostActivity/index.tsx),
+driven by the connection state in
+[useHostActivityLive](client/src/components/Teacher/HostActivity/useHostActivityLive.ts)._
 
 ### A rematch only counts when it's an exact rerun for everyone in it
 
@@ -2713,8 +2729,13 @@ feature 1, and students can already join the moment the code exists. The
 demo rule is the standing offline-forever guarantee extended to the
 transport layer.
 
-_Planned in [the feature-2 plan](docs/plans/feature-2-live-lobby.md)
-(Prompts 2 and 3)._
+_Implemented in
+[useLobbyPresence](client/src/pages/student/useLobbyPresence.ts)
+(student) and
+[useHostActivityLive](client/src/components/Teacher/HostActivity/useHostActivityLive.ts)
+(teacher), both over the factory in
+[socket.ts](client/src/lib/socket.ts) — `autoConnect: false`, so nothing
+connects on the demo by construction._
 
 ### The backend is Express 5 on Render's free tier — REST now, Socket.IO later
 
@@ -2736,6 +2757,11 @@ async throws to error middleware, which keeps handlers thin. The free
 tier's spin-down and deploy-wipe are accepted trade-offs with their own
 entries (the warm-up ping, the in-memory lifecycle). US East sits well
 for both US schools and transatlantic latency.
+
+**Update (2026-07-19):** the "Socket.IO later" half landed with feature
+2 — `attachLobby` ([lobby.ts](server/src/live/lobby.ts)) wraps the same
+`http.Server` at the `index.ts` seam, exactly as reserved. The seam
+never had to move.
 
 _Implemented in [app.ts](server/src/app.ts) and
 [index.ts](server/src/index.ts); topology in
@@ -3052,9 +3078,21 @@ has no visual symptom, so only a pinned allowlist catches a stray
 spread. The untested paths fail loudly in smoke, and while the routes
 and store are still churning, a broad suite would fight every change.
 
+**Update (2026-07-19):** feature 2 extends the policy to the socket
+layer, same shape: the projection test gains the socket-payload
+allowlists (`toQueueEntry` never carries the seat token), and one
+integration file ([lobby.test.ts](server/src/live/lobby.test.ts))
+covers the socket editions of the same invariants — occupancy stays a
+mystery to students, a join code can't open a teacher socket, a student
+`queue:remove` is ignored, and the seat-resume `currentSocketId` race
+guard. Grace timing, the broadcast delay, duplicate tabs, the cap, and
+shutdown stay deliberately untested — the browser and phone passes
+cover them.
+
 _Implemented in
-[projections.test.ts](server/src/store/projections.test.ts) and
-[activities.test.ts](server/src/routes/activities.test.ts)._
+[projections.test.ts](server/src/store/projections.test.ts),
+[activities.test.ts](server/src/routes/activities.test.ts), and
+[lobby.test.ts](server/src/live/lobby.test.ts)._
 
 ### `?fast` compresses the demo clocks — dev builds only, and never to zero
 
