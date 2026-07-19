@@ -65,6 +65,8 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [One page serves both join routes; a wrong code never changes the URL](#one-page-serves-both-join-routes-a-wrong-code-never-changes-the-url)
   - [Student sign-in lives in the tab, and removal sends you to the name step](#student-sign-in-lives-in-the-tab-and-removal-sends-you-to-the-name-step)
 - [Chat behavior](#chat-behavior)
+  - [Leaving a live chat means leaving the activity (until messaging ships)](#leaving-a-live-chat-means-leaving-the-activity-until-messaging-ships)
+  - [The live ended screen returns to the lobby only on a tap, and shows no reveal](#the-live-ended-screen-returns-to-the-lobby-only-on-a-tap-and-shows-no-reveal)
   - [In a group the student leaves; only a 2-person chat can be ended](#in-a-group-the-student-leaves-only-a-2-person-chat-can-be-ended)
   - [The composer's emoji picker stays open across inserts](#the-composers-emoji-picker-stays-open-across-inserts)
   - [Every chat end explains itself](#every-chat-end-explains-itself)
@@ -88,6 +90,11 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Character rows lead with the emoji avatar](#character-rows-lead-with-the-emoji-avatar)
   - [Setup sections each carry one brand accent; settings stays the quiet one](#setup-sections-each-carry-one-brand-accent-settings-stays-the-quiet-one)
 - [Teacher live activity page](#teacher-live-activity-page)
+  - [Feature 3 makes matching real; messaging, ending, and pause stay placeholders](#feature-3-makes-matching-real-messaging-ending-and-pause-stay-placeholders)
+  - [Auto-match runs on the server, and only while the teacher is connected](#auto-match-runs-on-the-server-and-only-while-the-teacher-is-connected)
+  - [Mid-chat, drops show and Remove works — nothing happens automatically](#mid-chat-drops-show-and-remove-works--nothing-happens-automatically)
+  - [Settings edits sync for real; characters, scenario, and host name stay local](#settings-edits-sync-for-real-characters-scenario-and-host-name-stay-local)
+  - [Server pairing keeps no rematch memory this feature](#server-pairing-keeps-no-rematch-memory-this-feature)
   - [The chat sections hide entirely on real activities until matching ships](#the-chat-sections-hide-entirely-on-real-activities-until-matching-ships)
   - [Real host pages show an honest placeholder instead of pairing controls](#real-host-pages-show-an-honest-placeholder-instead-of-pairing-controls)
   - [A dropped student keeps their seat for 2 minutes, marked and unmatchable](#a-dropped-student-keeps-their-seat-for-2-minutes-marked-and-unmatchable)
@@ -154,6 +161,8 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [`/demo`, `/demo/teacher`, and `/demo/student` are thin redirects, never pages](#demo-demoteacher-and-demostudent-are-thin-redirects-never-pages)
   - [The temporary `/demo/*` routes are gone — every surface lives in its real flow](#the-temporary-demo-routes-are-gone--every-surface-lives-in-its-real-flow)
 - [Backend & API](#backend--api)
+  - [The student chat wire carries characterIds only](#the-student-chat-wire-carries-characterids-only)
+  - [Starting a chat clamps to the server's roster instead of rejecting](#starting-a-chat-clamps-to-the-servers-roster-instead-of-rejecting)
   - [Sockets connect at lobby entry and host-page load, and never on the demo](#sockets-connect-at-lobby-entry-and-host-page-load-and-never-on-the-demo)
   - [The backend is Express 5 on Render's free tier — REST now, Socket.IO later](#the-backend-is-express-5-on-renders-free-tier--rest-now-socketio-later)
   - [The API lives at `api.chaverola.com` from day one, with no `/api/v1` prefix](#the-api-lives-at-apichaverolacom-from-day-one-with-no-apiv1-prefix)
@@ -687,6 +696,49 @@ _Implemented in [studentSession.ts](client/src/lib/studentSession.ts) and
 ---
 
 ## Chat behavior
+
+### Leaving a live chat means leaving the activity (until messaging ships)
+
+_2026-07-19_
+
+**Decision:** In the real chat room, the header's exit control and browser
+back both open a confirm that says the student will leave the activity;
+confirming releases their seat (the same back-as-reset flow as the lobby).
+If that empties a duo, the partner's chat ends with the teacher-reason ended
+screen. The demo chat keeps the recorded End-vs-Leave semantics
+([In a group the student leaves; only a 2-person chat can be ended](#in-a-group-the-student-leaves-only-a-2-person-chat-can-be-ended))
+— those return to real rooms with messaging.
+
+**Why:** Founder call (feature-3 planning). Browser back can't be blocked,
+so an exit path exists regardless; a dead exit pill next to it would be the
+one button in the room that does nothing. With no messages to protect,
+"leave the chat" and "leave the activity" are honestly the same act — the
+confirm just has to say so.
+
+_Planned in
+[docs/plans/feature-3-real-matching.md](docs/plans/feature-3-real-matching.md)._
+
+### The live ended screen returns to the lobby only on a tap, and shows no reveal
+
+_2026-07-19_
+
+**Decision:** When a live chat ends under a student, their seat leaves the
+teacher's queue and stays unmatchable until the student taps "Back to the
+lobby", which re-queues them with a fresh wait clock — extending
+[End of chat requires a tap to return to the lobby](#end-of-chat-requires-a-tap-to-return-to-the-lobby)
+to the real world. The live ended screen shows a neutral wrap-up with no
+name reveal (reveal ships with a later feature). A student who refreshes
+while on the ended screen returns to the lobby immediately — the client has
+nothing left to show them there.
+
+**Why:** Auto-returning the seat would show the teacher a "waiting" student
+who is still reading the ended screen — and auto-match could pair them
+before they've looked up. The reveal is suppressed because claiming "your
+teacher hasn't revealed names yet" would be false: there is no reveal to
+wait for yet.
+
+_Planned in
+[docs/plans/feature-3-real-matching.md](docs/plans/feature-3-real-matching.md)._
 
 ### In a group the student leaves; only a 2-person chat can be ended
 
@@ -1249,6 +1301,132 @@ _Implemented in
 
 ## Teacher live activity page
 
+### Feature 3 makes matching real; messaging, ending, and pause stay placeholders
+
+_2026-07-19_
+
+**Decision:** Real host pages get the demo's full matching experience,
+working: tap-to-select (2 up to `min(4, roster)`), "Pair everyone 1:1", the
+auto-match switch, random character dealing, live "Chats in progress" cards,
+and each matched student's phone moving into a real chat room. **No messages
+travel yet.** The student's composer renders disabled with honest copy, and
+"End chat", "End all chats", and "Pause all chats" render disabled with a
+short hint; no auto-end clock runs. One structural exception: when a chat's
+active membership would drop below 2 — the teacher removed someone, or a
+student left — the chat ends with reason "teacher": the remaining peer gets
+the ended screen and can rejoin the queue, and the card moves to "Completed
+chats" (demo semantics kept).
+
+**Why:** Founder call (feature-3 planning, 2026-07-19). Matching alone is a
+shippable slice that gets real classes off the placeholder; messaging is the
+next feature. A working "End chat" was considered and declined — ending
+machinery ships with messaging — but a fully placeholder ending would strand
+a student alone in a silent room the moment a working Remove pulls their
+only partner, so the below-2 ending is the one exception. When this ships it
+replaces
+[The chat sections hide entirely on real activities until matching ships](#the-chat-sections-hide-entirely-on-real-activities-until-matching-ships)
+and
+[Real host pages show an honest placeholder instead of pairing controls](#real-host-pages-show-an-honest-placeholder-instead-of-pairing-controls).
+
+_Planned in
+[docs/plans/feature-3-real-matching.md](docs/plans/feature-3-real-matching.md)._
+
+### Auto-match runs on the server, and only while the teacher is connected
+
+_2026-07-19_
+
+**Decision:** Real auto-match is server-side: once two eligible students
+have each waited `autoMatchSeconds`, the server pairs the two
+longest-waiting, one pair every ~3 seconds — but only while at least one
+teacher socket is connected to the activity. The teacher disconnecting (tab
+closed, laptop asleep) holds auto-match; reconnecting resumes it,
+immediately matching anyone already past the threshold. The rail's switch
+keeps being the real setting per
+[The pairing rail carries the auto-match switch, and it IS the activity setting](#the-pairing-rail-carries-the-auto-match-switch-and-it-is-the-activity-setting),
+now synced to the server.
+
+**Why:** Founder call (feature-3 planning): "as a teacher, if my laptop is
+closed I wouldn't expect students to still be getting matched." A classroom
+shouldn't run itself with nobody watching. Both alternatives were rejected —
+fully unattended pairing puts kids in rooms no teacher is monitoring, and a
+placeholder switch makes the rail's footer copy a lie now that the page can
+keep the promise.
+
+_Planned in
+[docs/plans/feature-3-real-matching.md](docs/plans/feature-3-real-matching.md)._
+
+### Mid-chat, drops show and Remove works — nothing happens automatically
+
+_2026-07-19_
+
+**Decision:** Once students are in a chat: a member whose connection drops
+dims on the teacher's card with a "lost connection" tag (same ~4s broadcast
+delay as queue rows) and recovers on reconnect; the participant × performs
+the quiet-exit remove per
+[Removing a student mid-chat is a quiet exit](#removing-a-student-mid-chat-is-a-quiet-exit).
+Nothing else happens on its own — **a matched seat is never grace-reaped**,
+so a dropped student can resume into their chat at any point until the
+activity dies. (One bookkeeping exception: if a chat ends underneath an
+already-disconnected member, a fresh 2-minute grace starts then, so
+abandoned seats don't hold cap slots forever.) Students see none of this: no
+peer-connection UI in the live room this feature. The lobby-side rule in
+[A dropped student keeps their seat for 2 minutes, marked and unmatchable](#a-dropped-student-keeps-their-seat-for-2-minutes-marked-and-unmatchable)
+is unchanged.
+
+**Why:** Founder call (feature-3 planning). The mid-chat 2-minute window
+([A disconnected peer gets 2 minutes to come back, and the student watches the clock](#a-disconnected-peer-gets-2-minutes-to-come-back-and-the-student-watches-the-clock))
+exists to protect a running conversation — but these rooms are silent, so a
+timed drop would kick students out of chats that lose nothing by waiting,
+and a peer-countdown banner would alarm the remaining student over nothing.
+Both activate when messaging ships.
+
+_Planned in
+[docs/plans/feature-3-real-matching.md](docs/plans/feature-3-real-matching.md)._
+
+### Settings edits sync for real; characters, scenario, and host name stay local
+
+_2026-07-19_
+
+**Decision:** A settings edit on a real host page now sends the full
+`ActivitySettings` object to the server, which validates and stores it;
+other connected host devices receive the change live. `revealNames` and
+`autoEndChats` are stored but still act on nothing. Character, scenario, and
+host-name edits remain local-only exactly as recorded in
+[The live-settings panel stays on real activities, editing the teacher's local view](#the-live-settings-panel-stays-on-real-activities-editing-the-teachers-local-view)
+— that entry's settings half retires when this ships.
+
+**Why:** Real auto-match forces the question: the switch and its seconds
+must reach the server or the rail lies. Syncing the whole settings object is
+one event and stops the panel silently reverting on refresh; syncing only
+the two auto-match fields was rejected — it leaves the panel half-real with
+no user-visible logic to the split. Roster/scenario sync stays out because
+those propagate to students' lobbies — a bigger feature than a settings
+echo. Founder call (feature-3 planning).
+
+_Planned in
+[docs/plans/feature-3-real-matching.md](docs/plans/feature-3-real-matching.md)._
+
+### Server pairing keeps no rematch memory this feature
+
+_2026-07-19_
+
+**Decision:** The server's matching keeps no previous-partners memory: live
+"Pair everyone 1:1" and auto-match pair greedily in queue order, the live
+selection heads-up never fires, and no left-in-line notice can occur. The
+demo keeps the full rematch behavior, and the rematch decisions
+([A rematch only counts when it's an exact rerun for everyone in it](#a-rematch-only-counts-when-its-an-exact-rerun-for-everyone-in-it),
+[The rematch warning remembers one round, and never blocks](#the-rematch-warning-remembers-one-round-and-never-blocks))
+stand — they get enforced server-side when ending ships.
+
+**Why:** A rematch needs a previous chat. With ending unbuilt, students
+return to the queue only through the rare below-2 ending, and the partner
+they'd rerun with has by then left the activity — an exact rerun is
+structurally impossible. Porting the memory now would be dead code
+pretending to be behavior.
+
+_Planned in
+[docs/plans/feature-3-real-matching.md](docs/plans/feature-3-real-matching.md)._
+
 ### The chat sections hide entirely on real activities until matching ships
 
 _2026-07-19_
@@ -1271,6 +1449,10 @@ _Implemented in
 [`Teacher/HostActivity/index.tsx`](client/src/components/Teacher/HostActivity/index.tsx);
 the sibling call for the pairing controls is
 [Real host pages show an honest placeholder instead of pairing controls](#real-host-pages-show-an-honest-placeholder-instead-of-pairing-controls)._
+
+_Planned update (2026-07-19):
+[Feature 3 makes matching real; messaging, ending, and pause stay placeholders](#feature-3-makes-matching-real-messaging-ending-and-pause-stay-placeholders)
+returns both sections to real pages when it ships._
 
 ### Real host pages show an honest placeholder instead of pairing controls
 
@@ -1296,6 +1478,9 @@ _Implemented in
 [PairingPanel.tsx](client/src/components/Teacher/HostActivity/PairingPanel.tsx)
 (the `pairing` prop) and the live branch of
 [HostActivity/index.tsx](client/src/components/Teacher/HostActivity/index.tsx)._
+
+_Planned update (2026-07-19): the pairing controls become real with
+[Feature 3 makes matching real; messaging, ending, and pause stay placeholders](#feature-3-makes-matching-real-messaging-ending-and-pause-stay-placeholders)._
 
 ### A dropped student keeps their seat for 2 minutes, marked and unmatchable
 
@@ -1422,6 +1607,10 @@ _Implemented in
 [HostActivityPage](client/src/pages/teacher/HostActivityPage.tsx) (local
 state is the only edit target) and
 [index.tsx](client/src/components/Teacher/HostActivity/index.tsx)._
+
+_Planned update (2026-07-19):
+[Settings edits sync for real; characters, scenario, and host name stay local](#settings-edits-sync-for-real-characters-scenario-and-host-name-stay-local)
+retires the settings half of this when it ships._
 
 ### Start their chat sits below Pair everyone 1:1, nearest the names
 
@@ -2707,6 +2896,47 @@ _Routes live in [App.tsx](client/src/App.tsx)._
 ---
 
 ## Backend & API
+
+### The student chat wire carries characterIds only
+
+_2026-07-19_
+
+**Decision:** Everything a student receives about their chat is targeted and
+character-shaped: their own characterId plus peers as bare characterIds —
+never a peer's real name, never a peer's studentId. The teacher's chat
+snapshots carry real names and the server roster's full `Character` (so a
+locally renamed roster still resolves on cards). A chat-ended payload
+carries only the reason.
+
+**Why:** The projection tradition
+([The host page is never projected — it's the teacher's private control room](#the-host-page-is-never-projected--its-the-teachers-private-control-room))
+extended to matching: the who-am-I-chatting-with mystery is the product, and
+peer studentIds buy the client nothing while no messages travel — every
+field a student doesn't get is a field that can't leak. Pinned by exact-key
+allowlist tests like every other projection.
+
+_Planned in
+[docs/plans/feature-3-real-matching.md](docs/plans/feature-3-real-matching.md)._
+
+### Starting a chat clamps to the server's roster instead of rejecting
+
+_2026-07-19_
+
+**Decision:** A teacher's start-chat command is filtered to currently
+eligible students (connected, unmatched) and clamped to `min(4, the server's
+roster size)`; whoever doesn't fit visibly stays in the queue. Below 2
+eligible members the command does nothing and the next snapshot corrects the
+rail.
+
+**Why:** Character edits are local-only, so the teacher's roster can briefly
+disagree with the server's — and a selected student can drop in the instant
+before the tap lands. Rejecting the whole command on either mismatch makes
+the button read as broken; clamping produces a visible, explainable outcome,
+and the rail self-corrects from the snapshot either way. Founder-approved in
+feature-3 planning.
+
+_Planned in
+[docs/plans/feature-3-real-matching.md](docs/plans/feature-3-real-matching.md)._
 
 ### Sockets connect at lobby entry and host-page load, and never on the demo
 
