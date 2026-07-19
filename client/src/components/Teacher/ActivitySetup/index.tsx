@@ -1,12 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Clapperboard, Drama, UserRound } from "lucide-react";
+import {
+  ArrowRight,
+  Clapperboard,
+  Drama,
+  Loader2,
+  UserRound,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { createActivity } from "@/lib/api";
 import {
-  buildHostedActivity,
   readActivityDraft,
   saveActivityDraft,
-  saveHostedActivity,
+  toCreateActivityRequest,
   validateActivityDraft,
   type ActivityDraft,
   type ActivityDraftFields,
@@ -14,7 +20,9 @@ import {
   type SetupProblem,
 } from "@/lib/activitySetup";
 import { useLocaleNavigate } from "@/lib/locale";
-import { mockGenerateJoinCode } from "@/mockData";
+import { SLOW_LOOKUP_HINT_MS } from "@/lib/useActivityLookup";
+import { primeHostedActivityLookup } from "@/lib/useHostedActivityLookup";
+import { useWarmUpServer } from "@/lib/useWarmUpServer";
 
 import { AboutYouFields } from "./AboutYouFields";
 import {
@@ -31,6 +39,26 @@ import { SettingsSection } from "./SettingsSection";
 // but the persisted draft stores only the content.
 let rowSeq = 0;
 const nextRowId = () => `character-row-${++rowSeq}`;
+
+/** What went wrong with the last Host attempt. */
+type CreateFailure = "unreachable" | "server";
+
+/**
+ * The copy for a create that has blown past the slow-hint mark — the
+ * free-tier server takes ~30s to wake. Mirrors the join page's line.
+ */
+const SLOW_CREATE_COPY =
+  "Chaverola is just waking up. The first activity of the day takes about " +
+  "half a minute.";
+
+const FAILURE_COPY: Record<CreateFailure, string> = {
+  unreachable:
+    "We can't reach Chaverola right now. Check your internet, then try " +
+    "again. Everything you typed is still here.",
+  server:
+    "Something went wrong on our end and the activity wasn't created. " +
+    "Give it a second, then try again.",
+};
 
 interface SetupFormState extends ActivityDraftFields {
   characters: CharacterRowState[];
@@ -57,11 +85,17 @@ function toDraft(form: SetupFormState): ActivityDraft {
  * it for every activity in a series, and seeing everything at once backs the
  * "about a minute" promise). The draft auto-saves to sessionStorage as they
  * type, so a refresh on a flaky classroom device loses nothing; closing the
- * tab discards it. "Host the Activity" is never disabled: tapping it with a
- * problem left scrolls to and highlights the first one instead of navigating.
+ * tab discards it. "Host the Activity" is never disabled by validation:
+ * tapping it with a problem left scrolls to and highlights the first one
+ * instead of submitting. Only an in-flight create disables it — submitting
+ * `POST /activities` and landing on `/activity/host/<hostKey>`.
  */
 export function ActivitySetupForm() {
   const navigate = useLocaleNavigate();
+
+  // Wake the free-tier server while the teacher fills the form, so the
+  // create they submit in a minute lands on a warm instance.
+  useWarmUpServer();
 
   const [form, setForm] = useState<SetupFormState>(() =>
     fromDraft(readActivityDraft())
@@ -69,6 +103,21 @@ export function ActivitySetupForm() {
   // Problems render only after the first failed Host tap; from then on they
   // update live, so fixing a field clears its error the moment it's fixed.
   const [showProblems, setShowProblems] = useState(false);
+
+  // True while the create request is in flight; the button stays disabled
+  // for the whole ride (see handleSubmit for why there's no timeout).
+  const [hosting, setHosting] = useState(false);
+  // True once an in-flight create has blown past the slow-hint mark.
+  const [hostingSlow, setHostingSlow] = useState(false);
+  const hostingSlowTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [failure, setFailure] = useState<CreateFailure | null>(null);
+
+  useEffect(
+    () => () => {
+      if (hostingSlowTimer.current) clearTimeout(hostingSlowTimer.current);
+    },
+    []
+  );
 
   useEffect(() => {
     saveActivityDraft(toDraft(form));
@@ -115,17 +164,43 @@ export function ActivitySetupForm() {
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
+    if (hosting) return;
     const firstProblem = problems[0];
     if (firstProblem) {
       setShowProblems(true);
       scrollToProblem(firstProblem);
       return;
     }
-    // The draft stays put on purpose: Chaverola is a series of activities
-    // with the same class, so the next round starts from this setup.
-    const activity = buildHostedActivity(toDraft(form), mockGenerateJoinCode());
-    saveHostedActivity(activity);
-    navigate(`/activity/host/${activity.joinCode}`);
+    setHosting(true);
+    setFailure(null);
+    hostingSlowTimer.current = setTimeout(
+      () => setHostingSlow(true),
+      SLOW_LOOKUP_HINT_MS
+    );
+    // No client-side timeout on purpose: create isn't idempotent, so a retry
+    // fired while a cold-start response is still in flight could mint a
+    // second activity. The button waits out even a ~60s cold start.
+    void createActivity(toCreateActivityRequest(toDraft(form))).then(
+      (result) => {
+        if (hostingSlowTimer.current !== null) {
+          clearTimeout(hostingSlowTimer.current);
+          hostingSlowTimer.current = null;
+        }
+        setHosting(false);
+        setHostingSlow(false);
+        if (!result.ok) {
+          // Create has no not-found; anything but unreachable reads as a
+          // server-side failure.
+          setFailure(result.kind === "unreachable" ? "unreachable" : "server");
+          return;
+        }
+        // The draft stays put on purpose: Chaverola is a series of
+        // activities with the same class, so the next round starts from
+        // this setup.
+        primeHostedActivityLookup(result.data.hostKey, result.data.activity);
+        navigate(`/activity/host/${result.data.hostKey}`);
+      }
+    );
   };
 
   const hostNameError = problemFor("hostName");
@@ -210,14 +285,44 @@ export function ActivitySetupForm() {
           pointer-events-none there so it never blocks the page behind it. */}
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-background/85 backdrop-blur-sm lg:pointer-events-none lg:border-t-0 lg:bg-transparent lg:backdrop-blur-none">
         <div className="mx-auto w-full max-w-2xl px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:grid lg:max-w-5xl lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10 lg:pt-0 lg:pb-5">
-          <Button
-            type="submit"
-            size="lg"
-            className="w-full lg:pointer-events-auto lg:shadow-lg"
-          >
-            Host the Activity
-            <ArrowRight className="size-4" />
-          </Button>
+          <div className="flex flex-col gap-2 lg:pointer-events-auto">
+            {/* Solid backgrounds on both notices: on desktop the strip
+                behind them is transparent, and they float over the page. */}
+            {failure && !hosting && (
+              <div
+                role="alert"
+                className="rounded-xl border border-destructive/30 bg-red-50 px-4 py-3 text-sm font-medium text-destructive lg:shadow-lg"
+              >
+                {FAILURE_COPY[failure]}
+              </div>
+            )}
+            {hosting && hostingSlow && (
+              <p
+                role="status"
+                className="rounded-xl bg-background/95 px-4 py-1.5 text-center text-sm text-muted-foreground lg:shadow-lg"
+              >
+                {SLOW_CREATE_COPY}
+              </p>
+            )}
+            <Button
+              type="submit"
+              size="lg"
+              disabled={hosting}
+              className="w-full lg:shadow-lg"
+            >
+              {hosting ? (
+                <>
+                  Setting up your activity…
+                  <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
+                </>
+              ) : (
+                <>
+                  Host the Activity
+                  <ArrowRight className="size-4" />
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </form>

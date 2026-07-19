@@ -1,73 +1,124 @@
-import { useMemo, useState } from "react";
-import { Navigate, useParams } from "react-router-dom";
+import { useState } from "react";
+import { Loader2, RotateCw } from "lucide-react";
+import { useParams } from "react-router-dom";
 
 import { DemoBanner } from "@/components/demo/DemoBanner";
+import { LocaleLink } from "@/components/layout/LocaleLink";
+import { PlaceholderPage } from "@/components/layout/PlaceholderPage";
 import { HostActivityDashboard } from "@/components/Teacher/HostActivity";
 import { Badge } from "@/components/ui/badge";
-import { readHostedActivity, saveHostedActivity } from "@/lib/activitySetup";
-import { useLocalePath } from "@/lib/locale";
+import { Button } from "@/components/ui/button";
 import { usePageTitle } from "@/lib/usePageTitle";
+import { useHostedActivityLookup } from "@/lib/useHostedActivityLookup";
 import { DEMO_JOIN_CODE, demoHostedActivity } from "@/mockData";
 import type { HostedActivity } from "@/types/activity";
 
 /**
- * `/activity/host/:joinCode` — the teacher's live activity page.
+ * The copy for a host-page load that has blown past the slow-hint mark —
+ * the free-tier server takes ~30s to wake. Mirrors the join page's line.
+ */
+const SLOW_HOST_LOOKUP_COPY =
+  "Chaverola is just waking up. The first load of the day takes about " +
+  "half a minute.";
+
+/**
+ * `/activity/host/:hostKey` — the teacher's live activity page. The URL is
+ * the capability: the create form lands here with the freshly minted key,
+ * and the same link keeps working from any device (shareable with an
+ * assistant teacher; see DECISIONS.md → "Host access is a URL capability").
  *
- * Which activity renders: the one the teacher just hosted (stashed by the
- * setup form under `chaverola.hostedActivity`, so a refresh keeps it), or
- * the Rome demo for direct visits to `/activity/host/1234` — the same
- * activity the student side mocks, so the pin on screen really works on
- * `/activity/join` in another tab. Any other unknown code redirects to the
- * demo pin so the URL, the pin, and the student link always agree. See
- * DECISIONS.md → "Teacher live activity page".
+ * Which activity renders: `1234` hosts the Rome demo, fully client-simulated
+ * — the same activity the student side mocks, so the pin on screen really
+ * works on `/activity/join` in another tab. Every other param resolves over
+ * `GET /activities/host/:hostKey`; a link that doesn't resolve (expired
+ * activity, stale 4-digit link, typo) gets a friendly not-found — the old
+ * always-redirect-to-the-demo is gone now that real links exist.
  */
 export function HostActivityPage() {
-  const { joinCode } = useParams();
-  const localePath = useLocalePath();
+  const { hostKey } = useParams();
   usePageTitle("Your Live Activity");
 
-  const resolved = useMemo(() => {
-    if (!joinCode) return null;
-    if (joinCode === DEMO_JOIN_CODE) {
-      return { activity: demoHostedActivity(), fromStash: false };
-    }
-    const stashed = readHostedActivity(joinCode);
-    return stashed ? { activity: stashed, fromStash: true } : null;
-  }, [joinCode]);
+  // The demo never consults this: the hook settles `1234` (or any other
+  // non-key-shaped param) as not-found without a network trip.
+  const { lookup, slow, retry } = useHostedActivityLookup(hostKey);
 
-  if (!resolved) {
+  if (hostKey === DEMO_JOIN_CODE) {
     return (
-      <Navigate to={localePath(`/activity/host/${DEMO_JOIN_CODE}`)} replace />
+      <HostedActivityView
+        key={DEMO_JOIN_CODE}
+        initialActivity={demoHostedActivity()}
+      />
     );
   }
 
-  return (
-    <HostedActivityView
-      key={resolved.activity.joinCode}
-      initialActivity={resolved.activity}
-      persistEdits={resolved.fromStash}
-    />
-  );
+  if (lookup.state === "loading") {
+    return (
+      <div className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-3 px-4 py-12 text-center">
+        <Loader2
+          aria-hidden
+          className="size-8 animate-spin text-brand-grape motion-reduce:animate-none"
+        />
+        <p className="text-lg font-semibold text-foreground">
+          Finding your activity…
+        </p>
+        {slow && (
+          <p className="text-sm text-muted-foreground">
+            {SLOW_HOST_LOOKUP_COPY}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  if (lookup.state === "unreachable") {
+    return (
+      <PlaceholderPage
+        eyebrow="For teachers"
+        title="We can't reach Chaverola"
+        description="Your activity may well still be running. Check your internet, then try again."
+      >
+        <Button size="lg" onClick={retry}>
+          <RotateCw aria-hidden className="size-4" />
+          Try again
+        </Button>
+      </PlaceholderPage>
+    );
+  }
+
+  if (lookup.state === "not-found") {
+    return (
+      <PlaceholderPage
+        eyebrow="For teachers"
+        title="That activity isn't running"
+        description="Activities only stay up while class is happening, and this link doesn't match any that are live right now. If you typed or pasted it, double-check it. Setting up a new activity takes about a minute."
+      >
+        <div className="flex flex-col items-center gap-3 sm:flex-row">
+          <Button asChild size="lg">
+            <LocaleLink to="/activity/create">Set up a new activity</LocaleLink>
+          </Button>
+          <Button asChild size="lg" variant="outline">
+            <LocaleLink to="/">Back home</LocaleLink>
+          </Button>
+        </div>
+      </PlaceholderPage>
+    );
+  }
+
+  return <HostedActivityView key={hostKey} initialActivity={lookup.activity} />;
 }
 
 function HostedActivityView({
   initialActivity,
-  persistEdits,
 }: {
   initialActivity: HostedActivity;
-  /**
-   * True when the activity came from the sessionStorage stash: live edits
-   * write back so a refresh keeps them. The Rome demo stays memory-only —
-   * writing it to the stash could clobber a real hosted activity.
-   */
-  persistEdits: boolean;
 }) {
+  // Edits (the live-settings panel, the rail's auto-match switch) apply to
+  // this local state only. On the demo that IS the real thing — the whole
+  // class is client-side. On a real activity there's no edit endpoint yet,
+  // so changes don't reach students and a refresh refetches the server's
+  // copy (founder-accepted; see DECISIONS.md → "The live-settings panel
+  // stays on real activities, editing the teacher's local view").
   const [activity, setActivity] = useState(initialActivity);
-
-  const handleActivityChange = (next: HostedActivity) => {
-    setActivity(next);
-    if (persistEdits) saveHostedActivity(next);
-  };
 
   return (
     <div className="relative isolate">
@@ -93,7 +144,7 @@ function HostedActivityView({
         </div>
         <HostActivityDashboard
           activity={activity}
-          onActivityChange={handleActivityChange}
+          onActivityChange={setActivity}
         />
       </div>
     </div>

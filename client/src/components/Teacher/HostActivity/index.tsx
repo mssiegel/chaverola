@@ -4,6 +4,7 @@ import { Timer, UserPlus, UsersRound } from "lucide-react";
 import { DemoControlsPanel, EventButton } from "@/components/demo/DemoControls";
 import { AccentIconChip } from "@/components/Teacher/ActivitySetup/FormSection";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DEMO_JOIN_CODE } from "@/mockData";
 import type { HostedActivity } from "@/types/activity";
 
 import { ChatsInProgressSection } from "./ChatsInProgressSection";
@@ -34,7 +35,11 @@ export function HostActivityDashboard({
   activity,
   onActivityChange,
 }: HostActivityDashboardProps) {
-  const demo = useHostActivityDemo(activity);
+  // Only the `1234` demo seeds the pretend classroom (and gets the demo
+  // steering panel); a real activity runs the same engine over an empty
+  // world that stays empty until the realtime feature.
+  const isDemo = activity.joinCode === DEMO_JOIN_CODE;
+  const demo = useHostActivityDemo(activity, isDemo);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(
     null
@@ -126,9 +131,18 @@ export function HostActivityDashboard({
     setPendingAction(null);
   };
 
+  // An empty queue means two very different things: everyone's mid-chat, or
+  // (on a fresh real activity) nobody has joined at all — the copy in the
+  // header and the rail must not claim chats that don't exist.
+  const noStudentsYet =
+    demo.waiting.length === 0 &&
+    demo.chatsInProgress.length === 0 &&
+    demo.completedChats.length === 0;
+
   const pairingPanel = (
     <PairingPanel
       waiting={demo.waiting}
+      noStudentsYet={noStudentsYet}
       selectedIds={validSelectedIds}
       onToggleSelect={toggleSelect}
       maxGroupSize={maxGroupSize}
@@ -152,15 +166,25 @@ export function HostActivityDashboard({
 
   const waitingHint =
     demo.waiting.length === 0
-      ? "Everyone's chatting. The queue refills as chats end"
+      ? noStudentsYet
+        ? "No students yet. Share the pin to let them in"
+        : "Everyone's chatting. The queue refills as chats end"
       : `${demo.waiting.length} students waiting`;
 
   return (
     <div className="flex flex-col gap-5">
-      <HostHeader activity={activity} waitingCount={demo.waiting.length} />
+      <HostHeader
+        activity={activity}
+        waitingCount={demo.waiting.length}
+        noStudentsYet={noStudentsYet}
+      />
 
       <JoiningInstructions joinCode={activity.joinCode} />
 
+      {/* On real activities too — founder call. Until the edit-sync feature
+          lands the edits are local-only there (students' lobbies keep the
+          server's copy, a refresh reverts); see DECISIONS.md → "The
+          live-settings panel stays on real activities". */}
       <LiveSettingsPanel
         activity={activity}
         characterIdsInUse={demo.characterIdsInUse}
@@ -228,32 +252,35 @@ export function HostActivityDashboard({
             activity={activity}
           />
 
-          {/* Demo steering for what a real classroom would do on its own.
+          {/* Demo steering for what a real classroom would do on its own —
+              demo only; a teacher's real activity gets no demo furniture.
               Inside the chats column (not below the grid) so the page ends
               where the grid ends — that's what lets the rail stay stuck for
               the whole scroll. Same visual spot on phones. */}
-          <DemoControlsPanel caption="A real class does all this by itself.">
-            <div className="grid grid-cols-2 gap-2 sm:max-w-md">
-              <EventButton
-                onClick={demo.triggerJoin}
-                disabled={!demo.canTriggerJoin}
-                icon={<UserPlus className="size-4" />}
-              >
-                A student joins
-              </EventButton>
-              <EventButton
-                onClick={demo.fastForwardClocks}
-                disabled={
-                  !demo.chatsInProgress.some(
-                    (c) => c.autoEndSecondsLeft !== null
-                  )
-                }
-                icon={<Timer className="size-4" />}
-              >
-                Fast-forward clocks
-              </EventButton>
-            </div>
-          </DemoControlsPanel>
+          {isDemo && (
+            <DemoControlsPanel caption="A real class does all this by itself.">
+              <div className="grid grid-cols-2 gap-2 sm:max-w-md">
+                <EventButton
+                  onClick={demo.triggerJoin}
+                  disabled={!demo.canTriggerJoin}
+                  icon={<UserPlus className="size-4" />}
+                >
+                  A student joins
+                </EventButton>
+                <EventButton
+                  onClick={demo.fastForwardClocks}
+                  disabled={
+                    !demo.chatsInProgress.some(
+                      (c) => c.autoEndSecondsLeft !== null
+                    )
+                  }
+                  icon={<Timer className="size-4" />}
+                >
+                  Fast-forward clocks
+                </EventButton>
+              </div>
+            </DemoControlsPanel>
+          )}
         </div>
       </div>
 

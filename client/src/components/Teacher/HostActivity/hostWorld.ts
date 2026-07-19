@@ -477,6 +477,27 @@ export function tickWorld(w: HostWorld, activity: HostedActivity): HostWorld {
   return next;
 }
 
+/**
+ * A world with nobody in it — real activities boot here. The engine still
+ * ticks, but with an empty queue and an empty join pool nothing ever joins,
+ * pairs, or chats on its own; students start flowing in when the realtime
+ * feature replaces the simulation as the world's source.
+ */
+export function emptyWorld(): HostWorld {
+  return {
+    queue: [],
+    chats: [],
+    wrappingUp: [],
+    lastPartners: {},
+    joinPool: [],
+    secondsUntilNextJoin: 0,
+    secondsUntilAutoMatch: AUTO_MATCH_GAP_SECONDS,
+    leftoverStudentId: null,
+    rematchNotice: null,
+    paused: false,
+  };
+}
+
 /** Boot the demo classroom: 2 chats going, 2 finished, 6 waiting, more coming. */
 export function seedWorld(activity: HostedActivity): HostWorld {
   const roster: RosterStudent[] = HOST_STUDENT_NAMES.map((realName) => ({

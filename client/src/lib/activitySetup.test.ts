@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  buildHostedActivity,
   defaultActivityDraft,
   readActivityDraft,
+  toCreateActivityRequest,
   validateActivityDraft,
   type ActivityDraft,
 } from "./activitySetup";
@@ -85,39 +85,43 @@ describe("readActivityDraft (sessionStorage sanitizing)", () => {
   });
 });
 
-describe("buildHostedActivity", () => {
-  it("slugs names into unique ids and keeps emoji only when set", () => {
-    const activity = buildHostedActivity(
+describe("toCreateActivityRequest", () => {
+  it("trims names, keeps emoji only when set, and sends no ids", () => {
+    const request = toCreateActivityRequest(
       draftWith({
         characters: [
-          { name: " Caesar's Ghost 👻 ", emoji: "👻" },
+          { name: " Caesar's Ghost ", emoji: "👻" },
           { name: "Brutus!" },
-          { name: "Brutus?" },
         ],
-      }),
-      "4321"
+      })
     );
-    expect(activity.characters.map((c) => c.id)).toEqual([
-      "caesar-s-ghost",
-      "brutus",
-      "brutus-2",
+    // Exact object equality doubles as the no-ids check: the server mints
+    // character ids, so the wire carries only name and emoji.
+    expect(request.characters).toEqual([
+      { name: "Caesar's Ghost", emoji: "👻" },
+      { name: "Brutus!" },
     ]);
-    expect(activity.characters[0]!.emoji).toBe("👻");
-    expect(activity.characters[1]!.emoji).toBeUndefined();
   });
 
-  it("drops abandoned rows and trims/omits optional fields", () => {
-    const activity = buildHostedActivity(
+  it("drops abandoned rows and omits blank optional fields", () => {
+    const request = toCreateActivityRequest(
       draftWith({
         characters: [{ name: "Ada" }, { name: "  " }, { name: "Ben" }],
         scene: "   ",
         teacherEmail: "",
-      }),
-      "4321"
+      })
     );
-    expect(activity.characters.map((c) => c.name)).toEqual(["Ada", "Ben"]);
-    expect(activity.scenario).toBeUndefined();
-    expect(activity.teacherEmail).toBeUndefined();
-    expect(activity.joinCode).toBe("4321");
+    expect(request.characters.map((c) => c.name)).toEqual(["Ada", "Ben"]);
+    // Omitted, not "" — the wire contract never sends blank optionals.
+    expect("scenario" in request).toBe(false);
+    expect("teacherEmail" in request).toBe(false);
+  });
+
+  it("maps the draft's scene onto the wire's scenario, trimmed", () => {
+    const request = toCreateActivityRequest(
+      draftWith({ scene: "  Rome, 44 BC.  ", teacherEmail: "a@b.co" })
+    );
+    expect(request.scenario).toBe("Rome, 44 BC.");
+    expect(request.teacherEmail).toBe("a@b.co");
   });
 });

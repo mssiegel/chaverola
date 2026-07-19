@@ -34,7 +34,9 @@ function LocalizedRoutes() {
       <Route element={<AppLayout />}>
         <Route index element={<HomePage />} />
         <Route path="activity/create" element={<CreateActivityPage />} />
-        <Route path="activity/host/:joinCode" element={<HostActivityPage />} />
+        {/* The param is the unguessable hostKey — the URL is the teacher's
+            capability. The demo's `1234` rides the same param slot. */}
+        <Route path="activity/host/:hostKey" element={<HostActivityPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
       <Route element={<StudentWorldLayout />}>

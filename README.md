@@ -9,10 +9,11 @@ really talking to. Only the teacher sees real names, and can reveal them at the 
 automatically via Vercel).
 
 > **Scope note:** Every screen of the client is built and nothing is a dead
-> end. The backend (`server/`) is live at `api.chaverola.com`, and the
-> student join flow resolves real codes through it; the teacher side (and
-> everything the demo simulates — matching, chat) is still mock-driven.
-> Finishing that wiring is feature 1, in progress. See
+> end. The backend (`server/`) is live at `api.chaverola.com`, and both
+> sides of the client call it: students resolve real join codes, teachers
+> create activities and host them at a private `hostKey` URL. Everything
+> inside a live session — matching, chat, the teacher's live view — is
+> still simulated until the realtime feature. See
 > [Shared_Project_Context.md](Shared_Project_Context.md)
 > for the full brief and [docs/plans/](docs/plans/) for the current feature plan.
 
@@ -54,7 +55,7 @@ either side alone; the server needs no env vars in dev
 | `/activity/join`           | Student join-code entry                                                 |
 | `/activity/join/:joinCode` | Name entry → waiting lobby (one URL for the whole student journey)      |
 | `/activity/create`         | Teacher activity setup                                                  |
-| `/activity/host/:joinCode` | Teacher's live activity page (join code `1234` hosts the demo)          |
+| `/activity/host/:hostKey`  | Teacher's live activity page (the param `1234` hosts the demo)          |
 | `/demo` · `/demo/teacher`  | Redirects to the teacher demo (`/activity/host/1234`)                   |
 | `/demo/student`            | Redirects into the student demo (`/activity/join/1234`, name prefilled) |
 
@@ -92,9 +93,8 @@ Two platforms, split by package:
   `VITE_API_URL` — the API base URL, baked in at build time.
 - **Server → Render** (Virginia/US-East, free tier), reached at
   `api.chaverola.com`. One required env var: `NODE_ENV=production`
-  (Render injects `PORT` itself). Live since 2026-07-18; the student
-  join flow calls it, and the teacher side follows in feature 1's
-  remaining prompts.
+  (Render injects `PORT` itself). Live since 2026-07-18; both the student
+  join flow and the teacher create/host flow call it.
 
 Free-tier caveats worth knowing: the server spins down when idle
 (observed: ~30 minutes after the last real request; a single hit wakes it

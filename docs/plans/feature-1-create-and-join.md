@@ -26,7 +26,11 @@ When a prompt is done, tick its checkbox here (same commit).
 - [x] Prompt 3 — Docs, DECISIONS.md, stale-reference sweep
 - [x] Prompt 4 — Deploy to Render + DNS + agent log access
 - [x] Prompt 5 — Client wiring, student side
-- [ ] Prompt 6 — Client wiring, teacher side (the feature completes)
+- [x] Prompt 6 — Client wiring, teacher side (the feature completes).
+      One founder-approved deviation from the prompt text below: the
+      live-settings panel **stays** on real activities, editing the teacher's
+      local view only — see DECISIONS.md → "The live-settings panel stays on
+      real activities"
 - [ ] Prompt 7 — End-to-end verification + prod cutover
 
 Repo rules that apply to every prompt (details in `AGENTS.md`): run

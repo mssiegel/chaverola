@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { EMAIL_MAX_CHARS } from "@chaverola/shared";
 import { Input } from "@/components/ui/input";
 import {
   NAME_COUNTER_FROM,
@@ -84,6 +85,7 @@ export function AboutYouFields({
           type="email"
           inputMode="email"
           autoComplete="email"
+          maxLength={EMAIL_MAX_CHARS}
           ref={registerField?.("teacherEmail")}
           value={teacherEmail}
           onChange={(event) => onPatch({ teacherEmail: event.target.value })}

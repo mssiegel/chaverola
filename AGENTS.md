@@ -7,10 +7,12 @@ This file is the canonical source of guidance for all AI agents (Claude Code, Cu
 Every UI surface is built and lives in its real flow (demo URLs exist but
 only as redirects). `server/` is a real Express 5 API implementing the
 create-and-join contract ([docs/api.md](docs/api.md)) — live at
-`https://api.chaverola.com` (Render, free tier). The **student join flow
-calls it** (real codes resolve through `GET /activities/:joinCode`; the
-demo code `1234` stays fully client-simulated, zero network); the teacher
-side is still mock-driven — its wiring is feature 1's Prompt 6 (see
+`https://api.chaverola.com` (Render, free tier), and **both sides of the
+client call it**: students resolve real codes through
+`GET /activities/:joinCode`, teachers create activities with
+`POST /activities` and host them at `/activity/host/:hostKey`. The demo
+code `1234` stays fully client-simulated, zero network. What's left of
+feature 1 is its Prompt 7 — end-to-end verification on production (see
 [docs/plans/feature-1-create-and-join.md](docs/plans/feature-1-create-and-join.md)).
 The demo flows are a **permanent product surface** — the homepage links to
 them and the founder pitches with them — not scaffolding; see the working
@@ -20,8 +22,8 @@ rule below. The map:
 | --------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Homepage              | `/`                                       | `client/src/pages/HomePage.tsx` + `components/home/` — the hero chatbox and the teacher-view `ChatCard` mirror one live `useChatDemo` chat; demo section (`DemoSection.tsx`); founder's note with photo fallback                                                      |
 | Student join flow     | `/activity/join[/:joinCode]`              | `client/src/pages/student/JoinActivityPage.tsx` — code → name → lobby → chatting → ended, all on one URL; `components/Student/ChatStage.tsx` owns the chat stages, keyed per match                                                                                    |
-| Teacher setup         | `/activity/create`                        | `client/src/components/Teacher/ActivitySetup/` — form UI; the caps, draft persistence, validation, and hand-off live in `client/src/lib/activitySetup.ts`                                                                                                             |
-| Teacher live activity | `/activity/host/:joinCode`                | `client/src/components/Teacher/HostActivity/` — engine `useHostActivityDemo.ts` + pure world model `hostWorld.ts`; live-edit draft model in `client/src/lib/hostActivity.ts`. The route param becomes `:hostKey` when the teacher side goes real (feature-1 Prompt 6) |
+| Teacher setup         | `/activity/create`                        | `client/src/components/Teacher/ActivitySetup/` — form UI; the caps, draft persistence, validation, and the `POST /activities` request mapping live in `client/src/lib/activitySetup.ts`                                                                               |
+| Teacher live activity | `/activity/host/:hostKey`                 | `client/src/components/Teacher/HostActivity/` — engine `useHostActivityDemo.ts` + pure world model `hostWorld.ts`; live-edit draft model in `client/src/lib/hostActivity.ts`. `1234` seeds the demo classroom; real keys resolve via `lib/useHostedActivityLookup.ts` |
 | Demo entry URLs       | `/demo`, `/demo/teacher`, `/demo/student` | Thin locale-aware redirects in `client/src/App.tsx` — teacher entries land on `/activity/host/1234`, the student entry on `/activity/join/1234` (name prefilled); never pages of their own (see DECISIONS.md → "Routes & app structure")                              |
 | Not found             | `*`                                       | `client/src/pages/NotFoundPage.tsx`                                                                                                                                                                                                                                   |
 
@@ -29,15 +31,21 @@ Load-bearing flow facts (the reasoning for each is in DECISIONS.md):
 
 - The demo activity behind join code `1234` seeds everything
   (`client/src/mockData/`); `/activity/host/1234` hosts the Rome demo (no
-  teacher email, on purpose), other host codes read the sessionStorage
-  stash or redirect to `1234`. (The stash and `mockGenerateJoinCode` are
-  the last mock-era plumbing: feature-1 Prompt 6 replaces them with real
-  API calls, making the server the only join-code issuer.) On the student
-  side that split already happened: join codes resolve through
-  `lib/useActivityLookup.ts` — `1234` synchronously from mock data (the
-  demo works offline forever), everything else over the API via
+  teacher email, on purpose). Everything else is strictly real: join codes
+  resolve through `lib/useActivityLookup.ts` and host keys through
+  `lib/useHostedActivityLookup.ts` — `1234` synchronously from mock data
+  (the demo works offline forever), the rest over the API via
   `lib/api.ts`, with `not-found` and `unreachable` as distinct render
-  states. Real lobbies show no demo furniture and never auto-pair.
+  states (the host page's unreachable screen has a retry). The server is
+  the only join-code issuer; an unknown host link gets a friendly
+  not-found, never the old demo redirect. Real lobbies and host pages
+  show no demo furniture and never auto-pair; a real host world boots
+  empty until the realtime feature. Two teacher-side gotchas: the create
+  submit deliberately has **no client-side timeout** (create isn't
+  idempotent — a retry could mint a second activity), and live-settings
+  edits on a real activity are **local-only** until edit-sync ships
+  (founder call; students' lobbies keep the server's copy, refresh
+  reverts — see DECISIONS.md).
 - The student flow renders navbar-free inside `StudentWorldLayout` (purple
   world, drifting doodles, brand pill that swaps for the student's name badge
   mid-chat); everything else sits under `AppLayout`, whose logo also hides on

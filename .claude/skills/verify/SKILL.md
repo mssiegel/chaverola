@@ -18,8 +18,8 @@ before driving the app, and drive only the surfaces the change touches.
   proves nothing — 5199 is Chaverola's designated verification port, and
   `--strictPort` fails fast instead of drifting. Still confirm the page
   says Chaverola before asserting anything.
-- Surfaces that call the API (real-code student joins; teacher create once
-  it's wired) also need `pnpm dev:server` — and the server's dev CORS
+- Surfaces that call the API (real-code student joins, teacher create,
+  real host pages) also need `pnpm dev:server` — and the server's dev CORS
   allowlist is **exact-origin `localhost:5173`/`5174` only** (Vite's
   default and its first fallback), so on port 5199 every API call dies as
   "unreachable" unless you start it with the override:
@@ -28,9 +28,11 @@ before driving the app, and drive only the surfaces the change touches.
   $env:CLIENT_ORIGINS='http://localhost:5199'; pnpm dev:server
   ```
 
-  Mint real join codes by curl-ing `POST /activities` at
-  `http://localhost:3001` (payload shape in docs/api.md); remember the
-  in-memory store forgets them on every server restart.
+  Mint real activities by driving the create form, or by curl-ing
+  `POST /activities` at `http://localhost:3001` (payload shape in
+  docs/api.md) — the 201 carries the student joinCode AND the hostKey
+  that opens `/activity/host/<hostKey>`. The in-memory store forgets
+  everything on every server restart.
 
 ## Drive (headless browser)
 
@@ -64,12 +66,26 @@ Useful, stable handles:
 - Locale checks: `waitForURL` with exact URLs (`/he`, `/he/activity/join`).
 - Setup form (`/activity/create`): character inputs by placeholder
   (`Caesar's ghost`, `Brutus`, …), host name is `#setup-host-name`. Two
-  "Host the Activity" buttons exist (desktop rail + mobile dock) — click the
-  visible one. Success = `waitForURL(/\/activity\/host\/\d{4}$/)`.
-- Host page (`/activity/host/1234`): a golden demo banner ("This is the
-  demo class…") is sticky under the navbar; the condensed "waiting to chat"
-  bar never appears on the demo page (it stands down for the banner), so
-  assert it only on teacher-created activities. The desktop pairing rail is
+  "Host the Activity" buttons exist (desktop rail + mobile dock) — click
+  the visible one. Submitting POSTs to the API (needs the dev server +
+  CORS override above). Success =
+  `waitForURL(/\/activity\/host\/[A-Za-z0-9_-]{24}$/)`; the button
+  disables while the create is in flight and deliberately never times out
+  (create isn't idempotent). With the server down, a red banner lands
+  above the docked button and the sessionStorage draft survives.
+- Host page routes on `:hostKey`. `/activity/host/1234` is the demo: a
+  golden banner ("This is the demo class…") sticky under the navbar (the
+  condensed "waiting to chat" bar stands down for it — assert that bar
+  only on real activities), seeded pretend classroom, demo steering panel.
+  A REAL host page (24-char key) fetches over the API — expect a "Finding
+  your activity…" beat — and boots an empty, truthful world: queue shows
+  "No students yet", chats "No chats yet", no banner, no demo panel. The
+  live-settings panel IS present on real activities, but its edits are
+  local-only until edit-sync ships (they never reach student lobbies and a
+  refresh refetches the server copy — expected, not a bug). Dead host
+  links (garbage keys, stale 4-digit codes) render "That activity isn't
+  running" with no demo redirect; an unreachable server renders "We can't
+  reach Chaverola" whose Try again refetches in place. The desktop pairing rail is
   the `aside`; queue rows are `ul li button[aria-pressed]` (tap-to-select), each
   row's remove control is `button[aria-label="Remove <name> from the
 activity"]`. Section headers are buttons whose `innerText` carries the

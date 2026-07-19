@@ -16,6 +16,7 @@ import { NOTICE_SENDER_ID } from "@/types/chat";
 import {
   activeChatMembers,
   createChat,
+  emptyWorld,
   endChatIn,
   JOIN_GAP_MAX_SECONDS,
   JOIN_GAP_MIN_SECONDS,
@@ -31,13 +32,16 @@ import {
 } from "./hostWorld";
 
 /*
-  The host page's demo "engine": with no backend, this simulates the whole
-  round — students joining over time, the waiting queue, pairing (manual,
-  pair-everyone, and auto-match), per-chat auto-end clocks, chats that keep
-  talking, and quiet-exit removals. Everything a real backend will push
-  later flows through here; the components only render its state and call
-  its actions. The pure simulation rules live in hostWorld.ts (same
-  directory); this hook owns the React state, the clocks, and the actions.
+  The host page's world "engine": it simulates the whole round — students
+  joining over time, the waiting queue, pairing (manual, pair-everyone, and
+  auto-match), per-chat auto-end clocks, chats that keep talking, and
+  quiet-exit removals. Everything a real backend will push later flows
+  through here; the components only render its state and call its actions.
+  The `1234` demo seeds a full pretend classroom; a real activity runs the
+  same engine over an EMPTY world (nobody can join until the realtime
+  feature arrives, so nothing ever moves on its own). The pure simulation
+  rules live in hostWorld.ts (same directory); this hook owns the React
+  state, the clocks, and the actions.
 */
 
 const DRIP_INTERVAL_MS = 4200;
@@ -72,9 +76,13 @@ export interface HostActivityDemo {
 }
 
 export function useHostActivityDemo(
-  activity: HostedActivity
+  activity: HostedActivity,
+  /** True only for the `1234` demo: seed the pretend classroom. */
+  seeded: boolean
 ): HostActivityDemo {
-  const [world, setWorld] = useState<HostWorld>(() => seedWorld(activity));
+  const [world, setWorld] = useState<HostWorld>(() =>
+    seeded ? seedWorld(activity) : emptyWorld()
+  );
 
   // Refs so timers and actions always read the freshest state — same idiom
   // as useChatDemo. `commit` updates worldRef eagerly so two actions in one

@@ -14,9 +14,12 @@ import type { HostedActivity } from "@/types/activity";
 export function HostHeader({
   activity,
   waitingCount,
+  noStudentsYet = false,
 }: {
   activity: HostedActivity;
   waitingCount: number;
+  /** Nobody has joined at all — a fresh real activity, not a busy round. */
+  noStudentsYet?: boolean;
 }) {
   const heroStatRef = useRef<HTMLDivElement>(null);
   const [statOffScreen, setStatOffScreen] = useState(false);
@@ -63,7 +66,9 @@ export function HostHeader({
           </p>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {waitingCount === 0
-              ? "The queue refills as chats wrap up."
+              ? noStudentsYet
+                ? "Share the pin below and they'll pop up here."
+                : "The queue refills as chats wrap up."
               : "Pair them up below, or let auto-match handle it."}
           </p>
         </div>

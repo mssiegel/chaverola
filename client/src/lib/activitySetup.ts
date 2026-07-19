@@ -8,25 +8,24 @@ import {
   NAME_MAX_CHARS,
   SCENE_MAX_WORDS,
 } from "@chaverola/shared";
-import type { StepperBounds } from "@chaverola/shared";
-import type { ActivitySettings, HostedActivity } from "@/types/activity";
+import type {
+  CharacterInput,
+  CreateActivityRequest,
+  StepperBounds,
+} from "@chaverola/shared";
+import type { ActivitySettings } from "@/types/activity";
 import type { Character } from "@/types/chat";
 
-import {
-  hasString,
-  isRecord,
-  readSessionJson,
-  writeSessionJson,
-} from "./storage";
+import { readSessionJson, writeSessionJson } from "./storage";
 import { clampChars, clampWords } from "./text";
 
 /*
   Everything behind the teacher's setup form that isn't UI: the in-progress
   draft (sessionStorage — survives a refresh on a flaky classroom device,
   gone when the tab closes), validation for the always-tappable Host button,
-  and the hand-off of the finished activity to the live host page. The field
-  caps themselves live in @chaverola/shared (the server enforces the same
-  numbers) and are re-exported here so form imports stay put. See
+  and the mapping of a finished draft onto the create-activity request. The
+  field caps themselves live in @chaverola/shared (the server enforces the
+  same numbers) and are re-exported here so form imports stay put. See
   DECISIONS.md → "Teacher activity setup".
 */
 
@@ -238,91 +237,31 @@ export function validateActivityDraft(draft: ActivityDraft): SetupProblem[] {
 // ---------------------------------------------------------------------------
 // Hosting
 
-/** Slug a character name into an id, unique within this activity. */
-function toCharacterId(name: string, taken: Set<string>): string {
-  const slug =
-    name
-      .trim()
-      .toLowerCase()
-      .replace(/[^\p{L}\p{N}]+/gu, "-")
-      .replace(/^-+|-+$/g, "") || "character";
-  let id = slug;
-  let suffix = 2;
-  while (taken.has(id)) id = `${slug}-${suffix++}`;
-  taken.add(id);
-  return id;
-}
-
 /**
- * Turn a valid draft into the activity the teacher is about to host. Rows
- * left empty are dropped here — an abandoned character row never blocks a
- * class from starting.
+ * Turn a valid draft into the `POST /activities` body. Rows left empty are
+ * dropped here — an abandoned character row never blocks a class from
+ * starting. Blank optional fields are omitted (the wire contract never sends
+ * `""` or null), the draft's `scene` becomes the wire's `scenario`, and no
+ * ids go over: the server mints character ids.
  */
-export function buildHostedActivity(
-  draft: ActivityDraft,
-  joinCode: string
-): HostedActivity {
-  const taken = new Set<string>();
-  const characters: Character[] = draft.characters
+export function toCreateActivityRequest(
+  draft: ActivityDraft
+): CreateActivityRequest {
+  const characters: CharacterInput[] = draft.characters
     .filter(isFilledCharacter)
     .map((row) => {
       const name = row.name.trim();
-      const character: Character = { id: toCharacterId(name, taken), name };
-      if (row.emoji) character.emoji = row.emoji;
-      return character;
+      return row.emoji ? { name, emoji: row.emoji } : { name };
     });
 
   const scene = draft.scene.trim();
   const email = draft.teacherEmail.trim();
-  const activity: HostedActivity = {
-    joinCode,
+  const request: CreateActivityRequest = {
     hostName: draft.hostName.trim(),
     characters,
     settings: { ...draft.settings },
   };
-  if (scene !== "") activity.scenario = scene;
-  if (email !== "") activity.teacherEmail = email;
-  return activity;
-}
-
-// ---------------------------------------------------------------------------
-// Hand-off to the live host page
-
-const HOSTED_ACTIVITY_KEY = "chaverola.hostedActivity";
-
-/**
- * Stashes the activity the teacher just hosted so `/activity/host/:joinCode`
- * can pick it up (same per-tab spirit as the draft and the student session).
- * The host page falls back to the Rome demo activity for direct visits.
- */
-export function saveHostedActivity(activity: HostedActivity): void {
-  writeSessionJson(HOSTED_ACTIVITY_KEY, activity);
-}
-
-export function readHostedActivity(
-  joinCode: string
-): HostedActivity | undefined {
-  const stashed = readSessionJson(
-    HOSTED_ACTIVITY_KEY,
-    (parsed): HostedActivity | null => {
-      // A stash that fails any of this reads as absent, and the host page
-      // falls back to its demo-activity redirect instead of crashing the
-      // engine on a half-formed activity.
-      if (
-        isRecord(parsed) &&
-        parsed.joinCode === joinCode &&
-        hasString(parsed, "hostName") &&
-        Array.isArray(parsed.characters) &&
-        parsed.characters.every(
-          (c: unknown) =>
-            isRecord(c) && hasString(c, "id") && hasString(c, "name")
-        ) &&
-        isRecord(parsed.settings)
-      ) {
-        return parsed as unknown as HostedActivity;
-      }
-      return null;
-    }
-  );
-  return stashed ?? undefined;
+  if (scene !== "") request.scenario = scene;
+  if (email !== "") request.teacherEmail = email;
+  return request;
 }

@@ -84,7 +84,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Setup sections each carry one brand accent; settings stays the quiet one](#setup-sections-each-carry-one-brand-accent-settings-stays-the-quiet-one)
 - [Teacher live activity page](#teacher-live-activity-page)
   - [A rematch only counts when it's an exact rerun for everyone in it](#a-rematch-only-counts-when-its-an-exact-rerun-for-everyone-in-it)
-  - [Real activities hide the live-settings panel until edit sync ships](#real-activities-hide-the-live-settings-panel-until-edit-sync-ships)
+  - [The live-settings panel stays on real activities, editing the teacher's local view](#the-live-settings-panel-stays-on-real-activities-editing-the-teachers-local-view)
   - [Start their chat sits below Pair everyone 1:1, nearest the names](#start-their-chat-sits-below-pair-everyone-11-nearest-the-names)
   - [The pairing CTAs pin at the top of the desktop rail while the queue scrolls](#the-pairing-ctas-pin-at-the-top-of-the-desktop-rail-while-the-queue-scrolls)
   - [Pause is one world-level switch: chats freeze, clocks hold, matchmaking waits](#pause-is-one-world-level-switch-chats-freeze-clocks-hold-matchmaking-waits)
@@ -102,7 +102,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Auto-end edits: new minutes wait for new chats; the toggle acts immediately](#auto-end-edits-new-minutes-wait-for-new-chats-the-toggle-acts-immediately)
   - [Live edits propagate after a 1-second pause, and invalid states never do](#live-edits-propagate-after-a-1-second-pause-and-invalid-states-never-do)
   - [No reveal-names control in Chats in progress](#no-reveal-names-control-in-chats-in-progress)
-  - [An unknown host code redirects to the demo activity](#an-unknown-host-code-redirects-to-the-demo-activity)
+  - [Unknown host links get a friendly not-found, and the demo redirect is gone](#unknown-host-links-get-a-friendly-not-found-and-the-demo-redirect-is-gone)
   - [The copyable student link carries the current origin, and is never printed](#the-copyable-student-link-carries-the-current-origin-and-is-never-printed)
 - [Teacher monitoring view](#teacher-monitoring-view)
   - [Teacher chat cards: collapsed to the last 5 lines, End chat asks first](#teacher-chat-cards-collapsed-to-the-last-5-lines-end-chat-asks-first)
@@ -170,6 +170,8 @@ the affected part. Link related entries by title anchor, never by "above" /
 - [Superseded](#superseded)
   - [Demo surfaces say so: a pretend-students chip on both views](#demo-surfaces-say-so-a-pretend-students-chip-on-both-views)
   - [Hero CTAs sit above the fold on phones](#hero-ctas-sit-above-the-fold-on-phones)
+  - [Real activities hide the live-settings panel until edit sync ships](#real-activities-hide-the-live-settings-panel-until-edit-sync-ships)
+  - [An unknown host code redirects to the demo activity](#an-unknown-host-code-redirects-to-the-demo-activity)
 
 ---
 
@@ -354,8 +356,7 @@ session in one tab, so a chat URL could never be opened, shared, or restored.
 Kahoot and Blooket players likewise sit on one URL from name entry to the final
 screen. Distinct URLs pay off where pages are addressable and revisitable —
 the teacher side — and the route table reflects that (`/activity/create`,
-`/activity/host/:joinCode` — whose param becomes `:hostKey` when real host
-links land, feature-1 Prompt 6).
+`/activity/host/:hostKey`).
 
 _Implemented in
 [JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx); routes in
@@ -892,6 +893,16 @@ API, then navigates to `/activity/host/:hostKey`. Everything else here
 (one scrolling form, never-disabled submit, tap-to-find-the-problem) is
 unchanged.
 
+**Update (2026-07-19):** that replacement landed (Prompt 6). One narrowing
+of "never disabled": the button now disables while its own create request
+is in flight — deliberately with no client-side timeout, waiting out even
+a ~60s cold start, because a retry could mint a second activity (see
+[Create is not idempotent in v1](#create-is-not-idempotent-in-v1-a-lost-response-can-orphan-one-activity)).
+The pending button reads "Setting up your activity…", swaps in the
+"Chaverola is just waking up" patience line after ~5 seconds, and a failed
+create shows distinct inline copy for unreachable vs server error, right
+above the button. Validation still never disables anything.
+
 _Implemented in
 [ActivitySetupForm](client/src/components/Teacher/ActivitySetup/index.tsx)
 with validation in [activitySetup](client/src/lib/activitySetup.ts)._
@@ -938,7 +949,7 @@ to tell the characters apart. Flagging the later row leaves the one the
 teacher filled first alone.
 
 _Implemented in [activitySetup](client/src/lib/activitySetup.ts)
-(`validateActivityDraft` / `buildHostedActivity`) and
+(`validateActivityDraft` / `toCreateActivityRequest`) and
 [CharacterRowsField](client/src/components/Teacher/ActivitySetup/CharacterRowsField.tsx)._
 
 ### Hard caps with quiet counters: 30-character names, 20-word scene
@@ -1159,27 +1170,30 @@ _Implemented in
 heads-up in
 [index.tsx](client/src/components/Teacher/HostActivity/index.tsx)._
 
-### Real activities hide the live-settings panel until edit sync ships
+### The live-settings panel stays on real activities, editing the teacher's local view
 
-_2026-07-17_
+_2026-07-19_
 
-**Decision:** When teachers host real activities (from feature-1
-Prompt 6), the host page's live-settings panel does not render. It stays
-fully functional on the `1234` demo, and it returns for real activities
-with the edit-sync feature — a real settings-edit endpoint plus
-propagation to students.
+**Decision:** Real activities keep the host page's live-settings panel,
+fully editable — reversing, at implementation time, the plan to hide it
+until edit sync ships. Until a settings-edit endpoint exists the edits are
+**local-only**: they update the teacher's own dashboard (header, roster
+labels, clocks) but never reach students' lobbies, and a refresh refetches
+the server's copy. The pairing rail's auto-match switch stays interactive
+on the same terms. The edits become real when the edit-sync feature lands.
 
-**Why:** Founder call. There is no edit endpoint yet, so on a real
-activity the panel could only change the teacher's local copy —
-invisible to students and gone on refresh. That's teacher/student
-split-brain: a teacher who flips "reveal names" off would believe the
-mystery holds while students still get the reveal. A control that
-silently does nothing is worse than no control.
+**Why:** Founder call (2026-07-19), made with the split-brain caveat on
+the table: an edit a student never sees, and a refresh that quietly
+undoes it. The panel is also where the teacher sees the activity's
+settings and email at all — hiding it would remove that view with nothing
+in its place, and make the real page a stripped-down stranger to the demo
+the teacher first learned. Supersedes
+[Real activities hide the live-settings panel until edit sync ships](#real-activities-hide-the-live-settings-panel-until-edit-sync-ships).
 
-_Scheduled in
-[feature-1 Prompt 6](docs/plans/feature-1-create-and-join.md); the panel
-lives in
-[Teacher/HostActivity](client/src/components/Teacher/HostActivity/)._
+_Implemented in
+[HostActivityPage](client/src/pages/teacher/HostActivityPage.tsx) (local
+state is the only edit target) and
+[index.tsx](client/src/components/Teacher/HostActivity/index.tsx)._
 
 ### Start their chat sits below Pair everyone 1:1, nearest the names
 
@@ -1364,8 +1378,7 @@ _Implemented in
 
 _2026-07-15_
 
-**Decision:** The host page (`/activity/host/:joinCode` today; its param
-becomes `:hostKey` with real activities — the rule doesn't change) is
+**Decision:** The host page (`/activity/host/:hostKey`) is
 designed on the assumption that
 **no student ever sees it**. Unlike Kahoot, the teacher never projects or
 shares this screen; anything students need (the pin, instructions) the
@@ -1628,34 +1641,37 @@ _The section header in
 [ChatsInProgressSection](client/src/components/Teacher/HostActivity/ChatsInProgressSection.tsx)
 deliberately has count + End-all only._
 
-### An unknown host code redirects to the demo activity
+### Unknown host links get a friendly not-found, and the demo redirect is gone
 
-_2026-07-15_
+_2026-07-19_
 
-**Decision:** `/activity/host/1234` always hosts the Rome demo activity —
-the same one the student side mocks, seeded with no teacher email so the
-settings section's add-your-email nudge stays exercised. A teacher arriving
-from the create flow gets their just-hosted activity from the
-`chaverola.hostedActivity` stash (refresh keeps it; live edits write back
-to the stash — but only for the stashed code, never for the Rome demo, so
-playing with the demo can't clobber a real activity). Any other code with
-no matching stash **redirects to `/activity/host/1234`**.
+**Decision:** The host route is `/activity/host/:hostKey` (feature-1
+Prompt 6). `1234` still hosts the Rome demo, fully client-simulated, and
+the `/demo` redirects keep working verbatim. Every other param resolves
+over `GET /activities/host/:hostKey`, with the same visible outcomes as
+the student lookup: a loading beat ("Finding your activity…", patience
+copy after ~5s), found, a friendly **not-found** screen, or a distinct
+**unreachable** screen whose Try again button refetches without a reload
+("Your activity may well still be running" — a teacher hits this
+mid-class). A param that can't be a real key — stale 4-digit links from
+the mock era included — settles as not-found with no network trip. The
+not-found copy says out loud that activities only stay up while class is
+happening, and offers "Set up a new activity" and "Back home". Supersedes
+[An unknown host code redirects to the demo activity](#an-unknown-host-code-redirects-to-the-demo-activity):
+that redirect was right only while every live code was fake and a dead
+link couldn't exist.
 
-**Why:** The pin on screen, the URL, and the copyable student link must
-always agree — and the pin must actually work on `/activity/join`. Showing
-a dead activity page for a stale link (an old code opened in a new tab)
-would put a pin on screen that rejects every student who types it.
-
-**Update (2026-07-18):** this redirect has a scheduled end (feature-1
-Prompt 6): once real host links exist (`/activity/host/:hostKey`), an
-unknown key becomes a friendly not-found — the redirect is right only
-while every live code is fake and a dead link can't exist. The
-`chaverola.hostedActivity` stash goes away in the same prompt. See
-[When the backend arrives: real activities get strictly real, and `1234` stays the only demo](#when-the-backend-arrives-real-activities-get-strictly-real-and-1234-stays-the-only-demo),
-point (3).
+**Why:** Now that real host links exist, a dead link resurrecting as the
+demo would look like YOUR activity with pretend students in it — worse
+than any dead end. The not-found screen is honest about the free tier's
+reality (activities expire, deploys wipe them) and routes the teacher to
+the one-minute fix. The create flow hands its response straight to the
+host page (no refetch flash), and the host lookup is also what refreshes
+the activity's TTL, so an open host page keeps its class alive.
 
 _Implemented in
-[HostActivityPage](client/src/pages/teacher/HostActivityPage.tsx)._
+[HostActivityPage](client/src/pages/teacher/HostActivityPage.tsx) over
+[useHostedActivityLookup](client/src/lib/useHostedActivityLookup.ts)._
 
 ### The copyable student link carries the current origin, and is never printed
 
@@ -2087,9 +2103,8 @@ AppLayout, the ChaverolaPill in the student world — is a link home, and it is
 **removed entirely** (not just made non-clickable) on two screens: while a
 student has a chat on screen (the chatting **and** just-ended stages, until
 they tap back to the lobby), and on the teacher's live host page
-(`/activity/host/:joinCode`; the param becomes `:hostKey` with real
-activities — the rule follows the page, not the param). The language
-switcher stays and keeps its end-aligned spot via `ms-auto`.
+(`/activity/host/:hostKey` — the rule follows the page, not the param).
+The language switcher stays and keeps its end-aligned spot via `ms-auto`.
 
 **Why:** Product-owner call. One stray tap on the brand would dump the user
 on the homepage: for a student that kills a live conversation (chat state is
@@ -2331,6 +2346,13 @@ know the demo exists, so a compromised server can't impersonate it.
 `mockGenerateJoinCode` itself is deleted in feature-1 Prompt 6, when the
 server becomes the only join-code issuer. Points (2)–(4) land with
 Prompts 5–6.
+
+**Update (2026-07-19):** all four points are now real (Prompts 5–6):
+`mockGenerateJoinCode` is gone (the server is the only issuer), a real
+activity boots an empty host world with no pretend students, unknown host
+links get the friendly not-found (see
+[Unknown host links get a friendly not-found, and the demo redirect is gone](#unknown-host-links-get-a-friendly-not-found-and-the-demo-redirect-is-gone)),
+and the demo control panels render only on `1234`.
 
 _The client-side seams are the engine hooks
 ([useChatDemo.ts](client/src/components/chat/useChatDemo.ts),
@@ -2639,9 +2661,9 @@ _2026-07-17_
 response is lost after the server processed the create (say, a
 connection drop during a cold start), a retry mints a second activity;
 the first sits unused until the 12-hour TTL reaps it. Accepted for v1.
-The client's half of the bargain (feature-1 Prompt 6): the submit stays
-disabled until the request settles — no short client-side timeout that
-would invite an automatic retry.
+The client's half of the bargain (landed with feature-1 Prompt 6): the
+submit stays disabled until the request settles — no short client-side
+timeout that would invite an automatic retry.
 
 **Why:** Founder call. Idempotency machinery (client-minted keys, a
 dedup window in the store) is real complexity, and the worst case here
@@ -2649,8 +2671,8 @@ is one orphaned in-memory record that expires on its own — nothing
 leaks, and with a 4,000 cap against 8,999 codes an orphan can't
 meaningfully crowd anyone out.
 
-_Recorded for
-[feature-1 Prompt 6](docs/plans/feature-1-create-and-join.md)._
+_The client half is implemented in
+[ActivitySetupForm](client/src/components/Teacher/ActivitySetup/index.tsx)._
 
 ### Transcripts wait: feature 1 only stores the teacher's email
 
@@ -2978,3 +3000,52 @@ never have to scroll to find it. Desktop has the room, and there the
 pitch → how-it-works → act reading order is worth keeping.
 
 _Implemented in [HomePage](client/src/pages/HomePage.tsx)._
+
+### Real activities hide the live-settings panel until edit sync ships
+
+_2026-07-17 · Superseded by
+[The live-settings panel stays on real activities, editing the teacher's local view](#the-live-settings-panel-stays-on-real-activities-editing-the-teachers-local-view)_
+
+**Decision:** When teachers host real activities (from feature-1
+Prompt 6), the host page's live-settings panel does not render. It stays
+fully functional on the `1234` demo, and it returns for real activities
+with the edit-sync feature — a real settings-edit endpoint plus
+propagation to students.
+
+**Why:** Founder call. There is no edit endpoint yet, so on a real
+activity the panel could only change the teacher's local copy —
+invisible to students and gone on refresh. That's teacher/student
+split-brain: a teacher who flips "reveal names" off would believe the
+mystery holds while students still get the reveal. A control that
+silently does nothing is worse than no control. (Reversed at
+implementation time — the founder weighed the same caveat and picked
+keeping the panel.)
+
+_Was scheduled in
+[feature-1 Prompt 6](docs/plans/feature-1-create-and-join.md); the panel
+lives in
+[Teacher/HostActivity](client/src/components/Teacher/HostActivity/)._
+
+### An unknown host code redirects to the demo activity
+
+_2026-07-15 · Superseded by
+[Unknown host links get a friendly not-found, and the demo redirect is gone](#unknown-host-links-get-a-friendly-not-found-and-the-demo-redirect-is-gone)_
+
+**Decision:** `/activity/host/1234` always hosts the Rome demo activity —
+the same one the student side mocks, seeded with no teacher email so the
+settings section's add-your-email nudge stays exercised. A teacher arriving
+from the create flow gets their just-hosted activity from the
+`chaverola.hostedActivity` stash (refresh keeps it; live edits write back
+to the stash — but only for the stashed code, never for the Rome demo, so
+playing with the demo can't clobber a real activity). Any other code with
+no matching stash **redirects to `/activity/host/1234`**.
+
+**Why:** The pin on screen, the URL, and the copyable student link must
+always agree — and the pin must actually work on `/activity/join`. Showing
+a dead activity page for a stale link (an old code opened in a new tab)
+would put a pin on screen that rejects every student who types it. The
+redirect was right only while every live code was fake and a dead link
+couldn't exist; real host links ended it.
+
+_Was implemented in
+[HostActivityPage](client/src/pages/teacher/HostActivityPage.tsx)._

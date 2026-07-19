@@ -3,9 +3,9 @@ import type { Activity } from "@/types/activity";
 
 /*
   The one mock activity behind the student join flow. Per the project brief,
-  the demo join code `1234` always works; every other code is "not found".
-  DEMO_JOIN_CODE itself lives in @chaverola/shared (the server refuses to
-  issue or answer for it) and is re-exported here.
+  the demo join code `1234` always works, fully client-simulated; real codes
+  resolve over the API. DEMO_JOIN_CODE itself lives in @chaverola/shared
+  (the server refuses to issue or answer for it) and is re-exported here.
 */
 
 export { DEMO_JOIN_CODE };
@@ -33,21 +33,3 @@ export const demoActivity: Activity = {
     { id: "marc-antony", name: "Marc Antony" },
   ],
 };
-
-/** Mock lookup for the join flow — only the demo activity exists. */
-export function findActivityByCode(code: string): Activity | undefined {
-  return code === demoActivity.joinCode ? demoActivity : undefined;
-}
-
-/**
- * Mock stand-in for the backend handing out a join code when a teacher hosts
- * an activity: any 4-digit code except the demo's `1234`, so a teacher-made
- * activity never masquerades as the always-works demo activity.
- */
-export function mockGenerateJoinCode(): string {
-  let code = DEMO_JOIN_CODE;
-  while (code === DEMO_JOIN_CODE) {
-    code = String(Math.floor(1000 + Math.random() * 9000));
-  }
-  return code;
-}

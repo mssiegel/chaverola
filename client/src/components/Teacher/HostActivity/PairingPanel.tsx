@@ -11,6 +11,8 @@ import type { WaitingStudent } from "./hostWorld";
 
 export interface PairingPanelProps {
   waiting: WaitingStudent[];
+  /** Nobody has joined at all — a fresh real activity, not a busy round. */
+  noStudentsYet: boolean;
   selectedIds: string[];
   onToggleSelect: (studentId: string) => void;
   /** min(4, characters on the roster) — how big a selection can get. */
@@ -46,6 +48,7 @@ export interface PairingPanelProps {
  */
 export function PairingPanel({
   waiting,
+  noStudentsYet,
   selectedIds,
   onToggleSelect,
   maxGroupSize,
@@ -110,17 +113,31 @@ export function PairingPanel({
       )}
 
       {waiting.length === 0 ? (
-        <EmptyState className="py-8">
-          <p className="text-2xl" aria-hidden>
-            🎉
-          </p>
-          <p className="mt-1 font-semibold text-foreground">
-            Everyone's chatting
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Students come back here once their chats end.
-          </p>
-        </EmptyState>
+        noStudentsYet ? (
+          <EmptyState className="py-8">
+            <p className="text-2xl" aria-hidden>
+              📣
+            </p>
+            <p className="mt-1 font-semibold text-foreground">
+              No students yet
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Read out the pin and they'll show up here as they join.
+            </p>
+          </EmptyState>
+        ) : (
+          <EmptyState className="py-8">
+            <p className="text-2xl" aria-hidden>
+              🎉
+            </p>
+            <p className="mt-1 font-semibold text-foreground">
+              Everyone's chatting
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Students come back here once their chats end.
+            </p>
+          </EmptyState>
+        )
       ) : (
         <>
           {/* lg: matches the host page's rail breakpoint — only the desktop
