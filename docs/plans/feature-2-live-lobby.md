@@ -38,6 +38,19 @@ When a prompt is done, tick its checkbox here (same commit).
 - [ ] Prompt 5 — End-to-end production verification (feature 1's Prompt 7
       caught a prod-breaking bug; keep the tradition)
 
+> **Prompt 1 spin-down proof, results (2026-07-19, for Prompt 4's docs):**
+> passed both ways against prod. One student socket held 20 min (websocket
+> transport through Cloudflare, zero external HTTP) — no spin-down. After
+> its disconnect the instance stopped 15:08 later via SIGTERM, shutdown
+> completing within one second. Render's own platform health checks (every
+> ~5s at `/healthz`, `render-health-check: 1`) demonstrably do NOT count as
+> inbound traffic — they ran identically through both phases. Two extra
+> observations: Render restarted the stopped instance on its own ~2.5 min
+> later with no inbound request (the store wipe at stop time is what
+> matters, not the downtime), and the 120s grace reap fired in prod to the
+> millisecond. SIGTERM-with-open-sockets gets its real test in Prompt 5's
+> restart story.
+
 Repo rules that apply to every prompt (details in `AGENTS.md`): run
 `pnpm format` before committing; run every piece of new user-facing copy
 through the **humanizer** skill; never hand-write `memo`/`useCallback`/
