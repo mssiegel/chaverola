@@ -31,7 +31,7 @@ When a prompt is done, tick its checkbox here (same commit).
 
 - [x] Prompt 1 — Shared socket contract + server live-lobby layer + tests +
       the spin-down proof
-- [ ] Prompt 2 — Client wiring, student side (lobby presence + reconnect)
+- [x] Prompt 2 — Client wiring, student side (lobby presence + reconnect)
 - [ ] Prompt 3 — Client wiring, teacher side (the live queue; the feature
       completes)
 - [ ] Prompt 4 — Docs + stale-reference sweep

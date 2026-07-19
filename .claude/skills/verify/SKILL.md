@@ -151,6 +151,14 @@ live-settings ~1s typing debounce is never scaled.
   `fullPage: true`, not a layout bug. Check
   `document.documentElement.scrollWidth` for real overflow.
 - Demo join code `1234` always works for flows behind `/activity/join`.
+- **Playwright's `context.setOffline(true)` does not sever an established
+  WebSocket** (old Chromium limitation), so a connected lobby socket only
+  notices the outage when the engine.io ping cycle misses (~45s at default
+  settings) — budget waits accordingly when asserting the reconnecting
+  pill, and don't read the delay as a client bug. Restarting the dev
+  server is the fast way to force a real disconnect. Also note the lobby
+  socket resumes seats across refreshes: to observe a fresh join, use a
+  new browser context (fresh sessionStorage), not a reload.
 
 ## Production
 

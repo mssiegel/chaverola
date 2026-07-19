@@ -1,4 +1,6 @@
-import { Pause } from "lucide-react";
+import { Loader2, Pause } from "lucide-react";
+
+import type { LobbyConnectionState } from "@chaverola/shared";
 
 import { TypingDots } from "@/components/chat/TypingDots";
 import { SectionLabel } from "@/components/ui/section-label";
@@ -10,6 +12,8 @@ interface WaitingLobbyProps {
   studentName: string;
   /** The teacher paused the class: matching is on hold and the pill says so. */
   isPaused?: boolean;
+  /** The lobby's live connection; "reconnecting" swaps the pill to amber. */
+  connection?: LobbyConnectionState;
 }
 
 /**
@@ -21,6 +25,7 @@ export function WaitingLobby({
   activity,
   studentName,
   isPaused = false,
+  connection = "connected",
 }: WaitingLobbyProps) {
   return (
     <section className="flex w-full animate-in flex-col items-center gap-6 text-center duration-500 fade-in slide-in-from-bottom-4 motion-reduce:animate-none">
@@ -35,7 +40,20 @@ export function WaitingLobby({
         </p>
       </div>
 
-      {isPaused ? (
+      {/* Connection trouble outranks the pause pill: while the socket is
+          down, "paused" is a claim this screen can't back up. */}
+      {connection === "reconnecting" ? (
+        <div
+          className="flex items-center gap-2.5 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800"
+          aria-live="polite"
+        >
+          <Loader2
+            aria-hidden
+            className="size-4 animate-spin motion-reduce:animate-none"
+          />
+          Reconnecting you…
+        </div>
+      ) : isPaused ? (
         <div
           className="flex items-center gap-2.5 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800"
           aria-live="polite"

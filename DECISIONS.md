@@ -44,6 +44,8 @@ the affected part. Link related entries by title anchor, never by "above" /
 ## Contents
 
 - [Student join flow & lobby](#student-join-flow--lobby)
+  - [The full-activity screen names the 60-seat cap and offers a retry](#the-full-activity-screen-names-the-60-seat-cap-and-offers-a-retry)
+  - [A removed student retypes their name — the field is not refilled](#a-removed-student-retypes-their-name--the-field-is-not-refilled)
   - [The real lobby still says Waiting for your match until matching ships](#the-real-lobby-still-says-waiting-for-your-match-until-matching-ships)
   - [Two students can share a name; the queue tells them apart](#two-students-can-share-a-name-the-queue-tells-them-apart)
   - [A wiped server ends the class honestly on the student's screen](#a-wiped-server-ends-the-class-honestly-on-the-students-screen)
@@ -183,6 +185,45 @@ the affected part. Link related entries by title anchor, never by "above" /
 ---
 
 ## Student join flow & lobby
+
+### The full-activity screen names the 60-seat cap and offers a retry
+
+_2026-07-19_
+
+**Decision:** A student who hits the seat cap gets the lobby gate's own
+screen: copy that says an activity holds up to 60 students and every spot is
+taken, a "Try again" button that re-attempts the connection, and a quiet
+"Use a different code" link back to code entry. Not a bare copy block, and
+not a plain sign-out.
+
+**Why:** Founder call (feature-2 Prompt 2 implementation). Naming the number
+turns an arbitrary wall into an explanation a student can repeat to their
+teacher. The retry is load-bearing, not a nicety: Socket.IO never re-attempts
+a rejected connection on its own, so without the button a freed seat would be
+unreachable until a full page reload. The quiet link keeps a way out for a
+class that stays full.
+
+_Implemented in
+[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)
+(`ActivityFullCard`) over
+[useLobbyPresence](client/src/pages/student/useLobbyPresence.ts)._
+
+### A removed student retypes their name — the field is not refilled
+
+_2026-07-19_
+
+**Decision:** When a real teacher removes a student, the student lands on the
+name step with the removed notice and an **empty** name field. The demo keeps
+refilling "Rachel" (its prefill exists so the demo stays one click deep).
+
+**Why:** Founder call (feature-2 Prompt 2 implementation), choosing blank
+over prefill-for-one-tap-rejoin: most real removals target a fake name, and
+handing the same name back would make the re-offense friction-free. A student
+who mistyped a real name just retypes it.
+
+_Implemented in
+[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx) (the
+presence hook's `onRemoved` callback)._
 
 ### The real lobby still says Waiting for your match until matching ships
 

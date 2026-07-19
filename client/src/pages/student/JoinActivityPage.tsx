@@ -8,7 +8,14 @@ import {
   Play,
   Users,
   UserX,
+  WifiOff,
 } from "lucide-react";
+
+import {
+  MAX_STUDENTS_PER_ACTIVITY,
+  STUDENT_NAME_MAX_CHARS,
+  type LobbyConnectionState,
+} from "@chaverola/shared";
 
 import { DemoBanner } from "@/components/demo/DemoBanner";
 import { DemoControlsPanel, EventButton } from "@/components/demo/DemoControls";
@@ -28,6 +35,7 @@ import {
 } from "@/lib/useActivityLookup";
 import { useLatestRef } from "@/lib/useLatestRef";
 import { usePageTitle } from "@/lib/usePageTitle";
+import { useLobbyPresence } from "@/pages/student/useLobbyPresence";
 import { useWarmUpServer } from "@/lib/useWarmUpServer";
 import { cn } from "@/lib/utils";
 import {
@@ -37,7 +45,15 @@ import {
 } from "@/mockData";
 
 type StudentStage =
-  "code" | "loading" | "name" | "lobby" | "chatting" | "ended";
+  | "code"
+  | "loading"
+  | "name"
+  | "lobby"
+  | "chatting"
+  | "ended"
+  // The activity died under a seated student (deploy/restart wipe, TTL) —
+  // distinct from "ended", which is a finished chat.
+  | "activity-gone";
 
 /** What went wrong with the last code the student tried. */
 type CodeProblem = "not-found" | "unreachable";
@@ -56,6 +72,7 @@ const PAGE_TITLES: Record<StudentStage, string> = {
   lobby: "Waiting Lobby",
   chatting: "Chatting",
   ended: "Chat Ended",
+  "activity-gone": "Activity Ended",
 };
 
 /**
@@ -65,6 +82,11 @@ const PAGE_TITLES: Record<StudentStage, string> = {
  * See DECISIONS.md → "The demo lobby pairs you by itself after 20 seconds".
  */
 const DEMO_LOBBY_AUTO_MATCH_MS = 20_000;
+
+/** How long the demo's pretend wifi blip keeps the reconnecting pill up —
+ *  demo simulation, so it runs through scaledMs (live socket state never
+ *  does). */
+const DEMO_WIFI_BLIP_MS = 4_000;
 
 /**
  * The copy for a lookup that has blown past the slow-hint mark
@@ -106,7 +128,7 @@ export function JoinActivityPage() {
   const { joinCode: joinCodeParam } = useParams();
   const navigate = useLocaleNavigate();
   const { setChatStudentName } = useOutletContext<StudentWorldOutletContext>();
-  const { session, signIn, signOut } = useStudentSession();
+  const { session, signIn, signOut, updateSession } = useStudentSession();
 
   // Wake the free-tier server the moment a student arrives, so the code
   // they're about to type resolves against a warm instance.
@@ -130,7 +152,10 @@ export function JoinActivityPage() {
 
   const isSignedIn =
     activity !== undefined && session?.joinCode === activity.joinCode;
-  const stage: StudentStage = !joinCodeParam
+  // The classic stage machine. The activity-gone override is layered on
+  // AFTER the presence hook has had its say (`stage` below); the hook
+  // itself keys off this base value.
+  const baseStage: StudentStage = !joinCodeParam
     ? "code"
     : lookup.state === "loading"
       ? "loading"
@@ -144,6 +169,33 @@ export function JoinActivityPage() {
               : "chatting"
             : "lobby";
 
+  const isRealActivity =
+    activity !== undefined && activity.joinCode !== DEMO_JOIN_CODE;
+
+  // Which real join code the socket said died under us. Latched into state
+  // by the presence hook's onEnded callback (the presence value itself
+  // resets when its socket tears down) and matched against the current code
+  // AND session, so it can't bleed onto another activity; the ended
+  // screen's CTA and a fresh sign-in clear it explicitly.
+  const [goneCode, setGoneCode] = useState<string | null>(null);
+  const activityGoneFromSocket =
+    goneCode !== null &&
+    goneCode === joinCodeParam &&
+    session?.joinCode === goneCode;
+
+  // The REST path of the same truth: a resolved not-found while the session
+  // holds a seat token for that exact code. The token is proof the code WAS
+  // real, so this is "the class ended", never "recheck your code" — this is
+  // the wake-after-deploy path (dark phone → reload → 404).
+  const activityGoneFromLookup =
+    joinCodeParam !== undefined &&
+    lookup.state === "not-found" &&
+    session?.joinCode === joinCodeParam &&
+    session.token !== undefined;
+
+  const activityGone = activityGoneFromSocket || activityGoneFromLookup;
+  const stage: StudentStage = activityGone ? "activity-gone" : baseStage;
+
   // Only a *resolved* landing at the code-entry gate ends a session: bare
   // /activity/join (browser back from the lobby is how a student redoes a
   // wrong name — see DECISIONS.md) or a code the server said doesn't exist.
@@ -151,12 +203,14 @@ export function JoinActivityPage() {
   // with an async lookup, a lobby refresh passes through a "no activity
   // yet" moment, and signing out on it would destroy the session on every
   // refresh. Unreachable keeps the session so the lobby comes right back
-  // once the server answers again.
+  // once the server answers again. The activity-gone screen also holds the
+  // session (it renders FROM it) — its CTA lands here signed-in on purpose,
+  // and that's when the sign-out finally runs.
   useEffect(() => {
     const resolvedToCodeEntry =
       joinCodeParam === undefined || lookup.state === "not-found";
-    if (resolvedToCodeEntry && session) signOut();
-  }, [joinCodeParam, lookup.state, session, signOut]);
+    if (resolvedToCodeEntry && session && !activityGoneFromLookup) signOut();
+  }, [joinCodeParam, lookup.state, session, signOut, activityGoneFromLookup]);
 
   // While a chat is on screen (live or just ended) the layout swaps its brand
   // pill for the student's name badge — same condition that renders ChatStage
@@ -235,6 +289,53 @@ export function JoinActivityPage() {
   const [name, setName] = useState(demoPrefillName);
   const [removedByTeacher, setRemovedByTeacher] = useState(false);
 
+  // The live seat. Active only for the lobby stage of real activities —
+  // the demo (1234) keeps zero network by construction. Called after the
+  // name state above because its callbacks reach for it:
+  // - onRemoved (the socket event, or a tombstoned token on a reconnect
+  //   attempt) drives the same flow the demo button does — except the name
+  //   field stays blank on real activities (founder call: most removals
+  //   target a fake name, so don't hand it back for one-tap re-entry; a
+  //   mistyped real name is quick to retype).
+  // - onEnded latches the dead activity's code, which flips the stage to
+  //   the activity-gone screen.
+  const { presence, retrying, retry } = useLobbyPresence({
+    active: baseStage === "lobby" && isRealActivity && !activityGoneFromSocket,
+    joinCode: activity?.joinCode,
+    session,
+    updateSession,
+    onRemoved: () => {
+      signOut();
+      setName("");
+      setRemovedByTeacher(true);
+    },
+    onEnded: () => {
+      if (activity) setGoneCode(activity.joinCode);
+    },
+  });
+
+  // The demo lobby's pretend wifi blip: flips the pill to reconnecting for
+  // a few seconds, then back. Pure simulation (hence scaledMs) — on real
+  // activities the pill is driven by the live presence state instead.
+  const [demoWifiBlip, setDemoWifiBlip] = useState(false);
+  useEffect(() => {
+    if (!demoWifiBlip) return;
+    const timer = setTimeout(
+      () => setDemoWifiBlip(false),
+      scaledMs(DEMO_WIFI_BLIP_MS)
+    );
+    return () => clearTimeout(timer);
+  }, [demoWifiBlip]);
+
+  const lobbyConnection: LobbyConnectionState =
+    activity?.joinCode === DEMO_JOIN_CODE
+      ? demoWifiBlip
+        ? "reconnecting"
+        : "connected"
+      : presence === "reconnecting"
+        ? "reconnecting"
+        : "connected";
+
   // Autofocusing an input on a phone pops the keyboard over half the world,
   // so phones only get it when there's typing to do: never on the code input
   // (fresh landing, let the page breathe first) and not on a prefilled demo
@@ -258,6 +359,9 @@ export function JoinActivityPage() {
     if (stage === "name") {
       if (!activity) return;
       setRemovedByTeacher(false);
+      // A fresh sign-in must not inherit a dead activity's latch — the
+      // same 4-digit code can be minted again for a brand-new activity.
+      setGoneCode(null);
       // A fresh sign-in always starts in the lobby — never in a chat a
       // previous session left behind (e.g. after hopping via the URL bar).
       backToLobby();
@@ -319,7 +423,18 @@ export function JoinActivityPage() {
       {/* From the name stage on, the world is honest about being the demo
           (the code screen resolves no activity, so it can't know yet). */}
       {activity?.joinCode === DEMO_JOIN_CODE && <DemoBanner onWorld />}
-      {activity && session && match ? (
+      {stage === "activity-gone" ? (
+        // The class died under a seated student (deploy/restart wipe, TTL).
+        // First in the chain on purpose: it renders from the session alone,
+        // before any activity-dependent branch can fall through, and its
+        // CTA is what finally signs the student out (see the effect above).
+        <ActivityGoneCard
+          onEnterNewCode={() => {
+            setGoneCode(null);
+            navigate("/activity/join");
+          }}
+        />
+      ) : activity && session && match ? (
         // Chatting + chat ended, on this same route. Keyed per match so a
         // rematch always boots a fresh chat.
         <ChatStage
@@ -332,25 +447,38 @@ export function JoinActivityPage() {
           onClassPausedChange={setClassPaused}
         />
       ) : stage === "lobby" && activity && session ? (
-        <>
-          <div className={cn(STUDENT_CARD_CLASS, "w-full p-5 sm:p-6")}>
-            <WaitingLobby
-              activity={activity}
-              studentName={session.name}
-              isPaused={classPaused}
-            />
-          </div>
-          {/* Demo steering is demo furniture: a real activity's lobby waits
-              for a real teacher, so it renders none of this. */}
-          {activity.joinCode === DEMO_JOIN_CODE && (
-            <LobbyDemoControls
-              onTeacherRemove={teacherRemovesStudent}
-              onMatch={startMatch}
-              classPaused={classPaused}
-              onClassPausedChange={setClassPaused}
-            />
-          )}
-        </>
+        presence === "full" ? (
+          // The seat cap said no — the lobby gate's own copy, with a way to
+          // retry (a freed seat lets them in) and a way out.
+          <ActivityFullCard
+            retrying={retrying}
+            onRetry={retry}
+            onUseAnotherCode={() => navigate("/activity/join")}
+          />
+        ) : (
+          <>
+            <div className={cn(STUDENT_CARD_CLASS, "w-full p-5 sm:p-6")}>
+              <WaitingLobby
+                activity={activity}
+                studentName={session.name}
+                isPaused={classPaused}
+                connection={lobbyConnection}
+              />
+            </div>
+            {/* Demo steering is demo furniture: a real activity's lobby
+                waits for a real teacher, so it renders none of this. */}
+            {activity.joinCode === DEMO_JOIN_CODE && (
+              <LobbyDemoControls
+                onTeacherRemove={teacherRemovesStudent}
+                onMatch={startMatch}
+                classPaused={classPaused}
+                onClassPausedChange={setClassPaused}
+                wifiBlipActive={demoWifiBlip}
+                onWifiBlip={() => setDemoWifiBlip(true)}
+              />
+            )}
+          </>
+        )
       ) : stage === "loading" ? (
         // The URL names a code whose lookup is still in flight (a lobby
         // refresh, a shared link). Its own stage on purpose: rendering the
@@ -425,7 +553,7 @@ export function JoinActivityPage() {
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   autoFocus={isDesktopViewport || name === ""}
-                  maxLength={40}
+                  maxLength={STUDENT_NAME_MAX_CHARS}
                   aria-label="Your name"
                   placeholder="Your name"
                   className="w-full animate-in rounded-2xl border-0 bg-brand-grape-soft px-4 py-4 text-center text-xl font-semibold duration-300 outline-none fade-in slide-in-from-bottom-2 focus:ring-2 focus:ring-brand-grape/40 motion-reduce:animate-none"
@@ -502,10 +630,111 @@ export function JoinActivityPage() {
 }
 
 /**
+ * The screen for an activity that died under a seated student — a deploy or
+ * restart wiped the in-memory store, or the 12h TTL reaped it. Honest about
+ * the free tier instead of blaming the student's code, and the sign-out is
+ * deferred to the CTA (the session is the evidence this screen exists).
+ */
+function ActivityGoneCard({ onEnterNewCode }: { onEnterNewCode: () => void }) {
+  return (
+    <div className="flex w-full max-w-sm flex-1 flex-col items-center justify-start gap-4 pt-2 sm:justify-center sm:pt-0">
+      <div
+        className={cn(
+          STUDENT_CARD_CLASS,
+          "flex w-full animate-in flex-col gap-6 px-6 py-8 text-center duration-500 fade-in motion-reduce:animate-none sm:px-8"
+        )}
+      >
+        <div className="space-y-2">
+          <h1 className="text-3xl font-semibold text-foreground">
+            This activity is over
+          </h1>
+          <p className="text-muted-foreground">
+            Your class wrapped up, or Chaverola's server restarted and cut the
+            activity short. If class is still going, ask your teacher for a
+            fresh code.
+          </p>
+        </div>
+        <Button
+          size="lg"
+          onClick={onEnterNewCode}
+          className="w-full bg-linear-to-r from-brand-gradient-from to-brand-gradient-to hover:from-[#7d5cf5] hover:to-[#5f3fd6]"
+        >
+          Enter a new code
+          <ArrowRight className="size-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The seat-cap screen: the student signed in, but every seat is taken.
+ * Names the cap so the wall makes sense, offers a retry (someone leaving
+ * frees a seat — socket.io doesn't auto-retry a middleware rejection, so
+ * the button is the only way back in) and a quiet way out.
+ */
+function ActivityFullCard({
+  retrying,
+  onRetry,
+  onUseAnotherCode,
+}: {
+  retrying: boolean;
+  onRetry: () => void;
+  onUseAnotherCode: () => void;
+}) {
+  return (
+    <div className="flex w-full max-w-sm flex-1 flex-col items-center justify-start gap-4 pt-2 sm:justify-center sm:pt-0">
+      <div
+        className={cn(
+          STUDENT_CARD_CLASS,
+          "flex w-full animate-in flex-col gap-6 px-6 py-8 text-center duration-500 fade-in motion-reduce:animate-none sm:px-8"
+        )}
+      >
+        <div className="space-y-2">
+          <h1 className="text-3xl font-semibold text-foreground">
+            This activity is full
+          </h1>
+          <p className="text-muted-foreground">
+            An activity holds up to {MAX_STUDENTS_PER_ACTIVITY} students, and
+            every spot is taken right now. If someone leaves, their spot opens
+            up.
+          </p>
+        </div>
+        <div className="flex w-full flex-col items-center gap-3">
+          <Button
+            size="lg"
+            onClick={onRetry}
+            disabled={retrying}
+            className="w-full bg-linear-to-r from-brand-gradient-from to-brand-gradient-to hover:from-[#7d5cf5] hover:to-[#5f3fd6]"
+          >
+            {retrying ? (
+              <>
+                Checking for a spot…
+                <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
+              </>
+            ) : (
+              "Try again"
+            )}
+          </Button>
+          <button
+            type="button"
+            onClick={onUseAnotherCode}
+            className="text-sm font-medium text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
+          >
+            Use a different code
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * The lobby's demo steering: what a real teacher does from the host page —
  * matching this student into a chat (1:1 or a group of 3, so the group drop
- * behavior is demoable too) and removing them from the activity. Permanent
- * demo furniture; on a real activity a backend pushes these instead. If the
+ * behavior is demoable too) and removing them from the activity — plus a
+ * wifi blip, so the reconnecting pill is demoable too. Permanent demo
+ * furniture; on a real activity a backend pushes these instead. If the
  * visitor presses nothing, the auto-match fallback above pairs them anyway.
  */
 function LobbyDemoControls({
@@ -513,11 +742,15 @@ function LobbyDemoControls({
   onMatch,
   classPaused,
   onClassPausedChange,
+  wifiBlipActive,
+  onWifiBlip,
 }: {
   onTeacherRemove: () => void;
   onMatch: (scenarioKey: ActivityChatScenarioKey) => void;
   classPaused: boolean;
   onClassPausedChange: (paused: boolean) => void;
+  wifiBlipActive: boolean;
+  onWifiBlip: () => void;
 }) {
   return (
     <DemoControlsPanel
@@ -558,15 +791,21 @@ function LobbyDemoControls({
         >
           Teacher resumes the class
         </EventButton>
-        <div className="col-span-2">
-          <EventButton
-            onWorld
-            onClick={onTeacherRemove}
-            icon={<UserX className="size-4" />}
-          >
-            Teacher removes you
-          </EventButton>
-        </div>
+        <EventButton
+          onWorld
+          onClick={onWifiBlip}
+          disabled={wifiBlipActive}
+          icon={<WifiOff className="size-4" />}
+        >
+          Your wifi blips
+        </EventButton>
+        <EventButton
+          onWorld
+          onClick={onTeacherRemove}
+          icon={<UserX className="size-4" />}
+        >
+          Teacher removes you
+        </EventButton>
       </div>
     </DemoControlsPanel>
   );

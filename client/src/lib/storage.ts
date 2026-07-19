@@ -55,3 +55,11 @@ export function hasString(
 ): boolean {
   return typeof record[key] === "string";
 }
+
+/** True when `record[key]` is a string or absent — for optional fields. */
+export function hasOptionalString(
+  record: Record<string, unknown>,
+  key: string
+): boolean {
+  return record[key] === undefined || typeof record[key] === "string";
+}
