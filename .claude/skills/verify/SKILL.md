@@ -19,10 +19,10 @@ before driving the app, and drive only the surfaces the change touches.
   `--strictPort` fails fast instead of drifting. Still confirm the page
   says Chaverola before asserting anything.
 - Surfaces that call the API (real-code student joins; teacher create once
-  it's wired) also need `pnpm dev:server` — and the server's CORS
-  allowlist is **exact-origin `localhost:5173`** in dev, so on port 5199
-  every API call dies as "unreachable" unless you start it with the
-  override:
+  it's wired) also need `pnpm dev:server` — and the server's dev CORS
+  allowlist is **exact-origin `localhost:5173`/`5174` only** (Vite's
+  default and its first fallback), so on port 5199 every API call dies as
+  "unreachable" unless you start it with the override:
 
   ```powershell
   $env:CLIENT_ORIGINS='http://localhost:5199'; pnpm dev:server

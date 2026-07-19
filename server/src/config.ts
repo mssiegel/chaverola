@@ -43,7 +43,15 @@ export function allowedOrigins(
     VERCEL_PREVIEW_ORIGIN,
   ];
   if (env.NODE_ENV === "production") return production;
-  return [...production, "http://localhost:5173", "http://127.0.0.1:5173"];
+  // 5173 is Vite's default; 5174 is where Vite lands when another repo's
+  // dev server already holds 5173 — a daily occurrence on this machine.
+  return [
+    ...production,
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+  ];
 }
 
 export function readConfig(env: NodeJS.ProcessEnv = process.env): Config {
