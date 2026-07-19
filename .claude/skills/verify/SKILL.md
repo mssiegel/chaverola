@@ -11,13 +11,26 @@ before driving the app, and drive only the surfaces the change touches.
 
 ## Launch
 
-- `pnpm dev --port 5199 --strictPort` from the repo root → Vite dev server
-  at `http://localhost:5199` (ready in <1s, SPA fallback covers `/he/*`
-  deep links). Always pass the port flags: other repos' Vite servers (e.g.
-  LetsGo) often hold the default 5173, and a 200 there proves nothing —
-  5199 is Chaverola's designated verification port, and `--strictPort`
-  fails fast instead of drifting. Still confirm the page says Chaverola
-  before asserting anything.
+- `pnpm dev:client --port 5199 --strictPort` from the repo root → Vite dev
+  server at `http://localhost:5199` (ready in <1s, SPA fallback covers
+  `/he/*` deep links). Always pass the port flags: other repos' Vite
+  servers (e.g. LetsGo) often hold the default 5173, and a 200 there
+  proves nothing — 5199 is Chaverola's designated verification port, and
+  `--strictPort` fails fast instead of drifting. Still confirm the page
+  says Chaverola before asserting anything.
+- Surfaces that call the API (real-code student joins; teacher create once
+  it's wired) also need `pnpm dev:server` — and the server's CORS
+  allowlist is **exact-origin `localhost:5173`** in dev, so on port 5199
+  every API call dies as "unreachable" unless you start it with the
+  override:
+
+  ```powershell
+  $env:CLIENT_ORIGINS='http://localhost:5199'; pnpm dev:server
+  ```
+
+  Mint real join codes by curl-ing `POST /activities` at
+  `http://localhost:3001` (payload shape in docs/api.md); remember the
+  in-memory store forgets them on every server restart.
 
 ## Drive (headless browser)
 
@@ -70,10 +83,16 @@ activity"]`. Section headers are buttons whose `innerText` carries the
   is gone). The name step swaps in-place — wait for
   `getByPlaceholder("Your name")`, then click "Join Activity"; lobby shows
   "Waiting for your match". On `/activity/join/1234` the name input arrives
-  prefilled "Rachel" (demo only — cleared on real codes), and the golden
+  prefilled "Rachel" (demo only — real codes start blank), and the golden
   "This is the demo…" card is sticky at `top-20` (y≈80 while scrolled). Auto-match keeps
   the host-page queue moving (~20s waits), so re-query rows right before
   clicking and avoid exact queue-count assertions.
+- Real codes resolve over the API: expect a "Finding your activity…"
+  loading beat on direct `/activity/join/<code>` arrivals, the not-found
+  message ("Activity was not found…") on dead codes, and the distinct
+  unreachable copy ("We can't reach Chaverola right now…") when the server
+  is down. Real lobbies render no demo banner, no demo controls, and never
+  auto-pair — only `1234` does, and it needs zero network.
 - Demo entry URLs: `/demo` and `/demo/teacher` redirect to
   `/activity/host/1234`; `/demo/student` redirects to `/activity/join/1234`
   (name step, prefilled; locale-preserving: `/he/demo` →
@@ -116,3 +135,8 @@ live-settings ~1s typing debounce is never scaled.
   `fullPage: true`, not a layout bug. Check
   `document.documentElement.scrollWidth` for real overflow.
 - Demo join code `1234` always works for flows behind `/activity/join`.
+- **StrictMode double-fires data effects in dev**: the join-code lookup
+  fetches twice on mount. A Playwright `route` that aborts only the FIRST
+  `/activities` request to fake an outage silently lets the duplicate
+  through and the page loads fine — gate the abort on a flag you flip when
+  the "server" should come back, not on a request count.

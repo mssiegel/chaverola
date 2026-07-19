@@ -44,6 +44,7 @@ the affected part. Link related entries by title anchor, never by "above" /
 ## Contents
 
 - [Student join flow & lobby](#student-join-flow--lobby)
+  - [Real codes resolve over the API, and only a resolved miss signs anyone out](#real-codes-resolve-over-the-api-and-only-a-resolved-miss-signs-anyone-out)
   - [Stage swaps inside the student route open at the top of the page](#stage-swaps-inside-the-student-route-open-at-the-top-of-the-page)
   - [No identity bar during chat either](#no-identity-bar-during-chat-either)
   - [Mid-chat, the student's name is a corner badge](#mid-chat-the-students-name-is-a-corner-badge)
@@ -173,6 +174,58 @@ the affected part. Link related entries by title anchor, never by "above" /
 ---
 
 ## Student join flow & lobby
+
+### Real codes resolve over the API, and only a resolved miss signs anyone out
+
+_2026-07-19_
+
+**Decision:** The join flow resolves real codes through
+`GET /activities/:joinCode` (feature-1 Prompt 5); the demo code `1234`
+keeps resolving synchronously from mock data, with zero network — the demo
+works offline forever. The lookup has four visible outcomes, and they are
+deliberately not collapsed:
+
+- **Loading** is its own stage ("Finding your activity…"), and it never
+  signs the student out. A session is cleared only by a **resolved**
+  landing at the code gate: bare `/activity/join`, or a code the server
+  answered "doesn't exist" to.
+- **Not found** and **unreachable** get distinct copy: "Activity was not
+  found. Recheck the Join Code you entered." vs "We can't reach Chaverola
+  right now. Check your internet, then try again." An unreachable server
+  also keeps the session, so when it answers again the student lands right
+  back in their lobby — same name, no re-entry.
+- A lookup still running after ~5 seconds swaps in patience copy
+  ("Chaverola is just waking up. The first join of the day takes about
+  half a minute.") — on the code-entry button while a submit is in
+  flight, and on the loading card for direct-link arrivals.
+- A 5xx or rate-limited answer reads as unreachable to the student: the
+  practical advice (try again shortly) is the same, and a student can't
+  act on the difference.
+
+Real lobbies show none of the demo furniture: no banner, no demo control
+panel, and no auto-pairing — those stay exclusive to `1234`.
+
+**Why:** The old sign-out rule
+([Landing on code entry signs the student out](#landing-on-code-entry-signs-the-student-out))
+derived "you're at the code gate" from "no activity resolved", which was
+safe only while lookups were synchronous. An async lookup passes through
+a no-activity moment on every lobby refresh, and classroom devices refresh
+constantly — signing out there would wipe a student's name mid-class. So
+the trigger moved from "no activity on screen" to "the server said no".
+Unreachable must not sign out either: the free tier spins down and
+networks blip, and neither is the student's fault. The distinct copy
+matters for the same reason — "recheck the code" sends a kid whose wifi
+dropped hunting a typo that isn't there. The ~5s patience line sets an
+honest expectation for the ~30s cold start instead of looking frozen, per
+the free-tier truthfulness stance. The submit's lookup runs in place so a
+wrong code still never changes the URL (that rule predates the API and
+survives it), and a found activity is handed to the next screen rather
+than refetched, keeping the in-place code→name swap.
+
+_Implemented in
+[useActivityLookup](client/src/lib/useActivityLookup.ts),
+[api.ts](client/src/lib/api.ts), and
+[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._
 
 ### Stage swaps inside the student route open at the top of the page
 
@@ -335,6 +388,11 @@ it needs its own guard (the end-chat confirmation pattern) when it's built.
 
 **Update (2026-07-14):** the chatting stage is built and has that guard —
 see [Back during a live chat asks before ending it](#back-during-a-live-chat-asks-before-ending-it).
+
+**Update (2026-07-19):** with real codes resolving over the API, "landing
+on code entry" is narrowed to a **resolved** landing — an in-flight lookup
+or an unreachable server never signs anyone out. See
+[Real codes resolve over the API, and only a resolved miss signs anyone out](#real-codes-resolve-over-the-api-and-only-a-resolved-miss-signs-anyone-out).
 
 _Implemented in
 [JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)._

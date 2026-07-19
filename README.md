@@ -8,10 +8,12 @@ really talking to. Only the teacher sees real names, and can reveal them at the 
 **Live site:** [chaverola.com](https://chaverola.com) (every push to `main` deploys
 automatically via Vercel).
 
-> **Scope note:** Every screen of the client is built and driven by mock data
-> and demo events — nothing is a dead end. The backend (`server/`) is real and
-> runnable but not yet deployed or wired to the client; that wiring is
-> feature 1, in progress. See [Shared_Project_Context.md](Shared_Project_Context.md)
+> **Scope note:** Every screen of the client is built and nothing is a dead
+> end. The backend (`server/`) is live at `api.chaverola.com`, and the
+> student join flow resolves real codes through it; the teacher side (and
+> everything the demo simulates — matching, chat) is still mock-driven.
+> Finishing that wiring is feature 1, in progress. See
+> [Shared_Project_Context.md](Shared_Project_Context.md)
 > for the full brief and [docs/plans/](docs/plans/) for the current feature plan.
 
 > **AI agents:** read [AGENTS.md](AGENTS.md) before doing any work, and check
@@ -90,9 +92,9 @@ Two platforms, split by package:
   `VITE_API_URL` — the API base URL, baked in at build time.
 - **Server → Render** (Virginia/US-East, free tier), reached at
   `api.chaverola.com`. One required env var: `NODE_ENV=production`
-  (Render injects `PORT` itself). Live since 2026-07-18, though the
-  client doesn't call it yet — that wiring is feature 1's remaining
-  prompts.
+  (Render injects `PORT` itself). Live since 2026-07-18; the student
+  join flow calls it, and the teacher side follows in feature 1's
+  remaining prompts.
 
 Free-tier caveats worth knowing: the server spins down when idle
 (observed: ~30 minutes after the last real request; a single hit wakes it

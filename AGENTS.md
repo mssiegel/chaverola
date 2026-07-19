@@ -4,12 +4,13 @@ This file is the canonical source of guidance for all AI agents (Claude Code, Cu
 
 ## Status
 
-Every UI surface is built, mock-driven, and lives in its real flow (demo
-URLs exist but only as redirects). `server/` is a real Express 5 API
-implementing the create-and-join contract ([docs/api.md](docs/api.md)) —
-live at `https://api.chaverola.com` (Render, free tier), but not yet
-called by the client
-(the client wiring lands with feature 1's remaining prompts; see
+Every UI surface is built and lives in its real flow (demo URLs exist but
+only as redirects). `server/` is a real Express 5 API implementing the
+create-and-join contract ([docs/api.md](docs/api.md)) — live at
+`https://api.chaverola.com` (Render, free tier). The **student join flow
+calls it** (real codes resolve through `GET /activities/:joinCode`; the
+demo code `1234` stays fully client-simulated, zero network); the teacher
+side is still mock-driven — its wiring is feature 1's Prompt 6 (see
 [docs/plans/feature-1-create-and-join.md](docs/plans/feature-1-create-and-join.md)).
 The demo flows are a **permanent product surface** — the homepage links to
 them and the founder pitches with them — not scaffolding; see the working
@@ -28,16 +29,24 @@ Load-bearing flow facts (the reasoning for each is in DECISIONS.md):
 
 - The demo activity behind join code `1234` seeds everything
   (`client/src/mockData/`); `/activity/host/1234` hosts the Rome demo (no
-  teacher email, on purpose), other codes read the sessionStorage stash or
-  redirect to `1234`. (The stash and `mockGenerateJoinCode` are mock-era
-  plumbing: feature-1 Prompts 5–6 replace them with real API calls, and
-  the server becomes the only join-code issuer.)
+  teacher email, on purpose), other host codes read the sessionStorage
+  stash or redirect to `1234`. (The stash and `mockGenerateJoinCode` are
+  the last mock-era plumbing: feature-1 Prompt 6 replaces them with real
+  API calls, making the server the only join-code issuer.) On the student
+  side that split already happened: join codes resolve through
+  `lib/useActivityLookup.ts` — `1234` synchronously from mock data (the
+  demo works offline forever), everything else over the API via
+  `lib/api.ts`, with `not-found` and `unreachable` as distinct render
+  states. Real lobbies show no demo furniture and never auto-pair.
 - The student flow renders navbar-free inside `StudentWorldLayout` (purple
   world, drifting doodles, brand pill that swaps for the student's name badge
   mid-chat); everything else sits under `AppLayout`, whose logo also hides on
   the host route. Student identity is a sessionStorage session
-  (`lib/studentSession.ts`); landing back on code entry signs the student
-  out, and browser back during a live chat asks first (`lib/useBackGuard.ts`).
+  (`lib/studentSession.ts`); a **resolved** landing on code entry signs the
+  student out (bare URL or a code the server said doesn't exist — never an
+  in-flight lookup or an unreachable server, so a lobby refresh keeps the
+  session), and browser back during a live chat asks first
+  (`lib/useBackGuard.ts`).
 - The chat-engine contract (`ChatRoomState`/`ChatRoomActions`) carries the
   2-minute peer-reconnect window and the per-chat auto-end clock (reason
   `"timer"` at zero, rendered by `chat/AutoEndCountdown.tsx` in the student
@@ -216,7 +225,12 @@ Run from the repo root:
   "Chaverola | " brand prefix itself, callers pass just the page name —
   `useHeroCtaPassed`, `useBackGuard`, `useLatestRef` — the
   ref-mirrors-latest-value idiom for timer callbacks; don't hand-roll it —
-  `useSecondCountdown`, and the hooks inside `locale.ts` / `studentSession.ts`).
+  `useSecondCountdown`, `useWarmUpServer` — the fire-and-forget `/healthz`
+  ping that wakes the free-tier server — `useActivityLookup`, and the hooks
+  inside `locale.ts` / `studentSession.ts`). All API calls go through the
+  typed fetch layer in `lib/api.ts` (failures are `ApiResult` values, not
+  exceptions; `VITE_API_URL` bakes the base URL at build time — dev falls
+  back to `localhost:3001`, a prod build without it fails at startup).
   All per-tab persistence goes through the sessionStorage helpers in
   `lib/storage.ts` (`readSessionJson`/`writeSessionJson`/`removeSessionItem`,
   plus the `isRecord`/`hasString` guards for the validate callbacks)
