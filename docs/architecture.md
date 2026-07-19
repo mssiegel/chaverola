@@ -222,9 +222,20 @@ two lookup paths.
 - **Join code `1234` is never minted and never served** — it belongs to
   the client-simulated demo forever; the server 404s it unconditionally.
 - Restarts and deploys wipe everything. Accepted for v1 — and honest
-  since feature 2: removal (sweep or lazy expiry) fires the store's
-  `onActivityRemoved` hook, so connected students get `activity:ended`
-  instead of a silent dead socket.
+  since feature 2, by two different paths. An activity aging out under a
+  _running_ server (sweep or lazy expiry) fires the store's
+  `onActivityRemoved` hook, which emits `activity:ended` to connected
+  students before disconnecting them. A **deploy or restart** never runs
+  that hook — SIGTERM kills the process, `io.close()` just drops the
+  sockets, and the store dies with it; the fresh instance boots empty, so
+  each client's auto-reconnect presents a seat token the new store has
+  never seen and gets a `connect_error: activity_gone` (the student's
+  ended screen, the teacher's not-found). Either way nobody is left
+  staring at a silent dead socket. Verified against prod (2026-07-19):
+  a `render restart` under a live class landed the connected phone on
+  the ended screen in ~37s (socket.io's reconnect backoff plus the new
+  instance coming up), and a dark phone that reloaded afterward hit the
+  same ending through the REST 404-with-token branch.
 
 ## Rate-limit sizing
 

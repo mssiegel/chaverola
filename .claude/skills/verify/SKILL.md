@@ -190,7 +190,62 @@ warm-up response for timing and the deployed server commit. Two traps it
 already ate: assert phone-width text via `>> visible=true` (the hidden
 desktop rail duplicates lines), and never probe a bundle for a BOM with
 .NET's default `IndexOf` — culture-sensitive comparison skips zero-width
-characters; pass `[StringComparison]::Ordinal`.
+characters; pass `[StringComparison]::Ordinal`. Note that its host-page
+assertions ("Your activity is live", "No students yet") describe the
+feature-2 LIVE page, which still shows "No students yet" as the empty
+state of the real queue — so they held; but it does not exercise the
+realtime layer.
+
+The **feature-2 realtime prod pass** is four scripts in the same dir, run
+in this order (all mint real activities via a node `fetch` to
+`https://api.chaverola.com/activities` — same payload shape that works
+against local dev):
+
+- `f2p5-coldwake.mjs` — the cold-start wake-UX check. **Run it FIRST**,
+  before any other prod contact, so it lands on a naturally-asleep
+  instance: a teacher submits the create form while the server wakes and
+  must ride the "Chaverola is just waking up" patience copy into the live
+  host page (which opens a real `/socket.io/` websocket). It reports
+  whether the server was cold or already warm — if warm, the cold path
+  just wasn't exercisable this session (opportunistic, not a failure).
+  Caught cold on 2026-07-19: create took ~32s, patience copy at +5s.
+- `f2p5-gauntlet.mjs` — the full realtime story with the browser on both
+  sides (teacher desktop, students at phone width): live rows + ticking
+  clocks, remove + rejoin, a navigate-away drop → "lost connection" →
+  resume with the clock kept, back-from-lobby immediate drop
+  (`lobby:leave`), a second host device with idempotent remove, and
+  duplicate-tab takeover (seed the copied `chaverola.studentSession` into
+  a fresh context via `addInitScript`; the newer socket wins).
+- `f2p5-demo.mjs` — the demo journey with a socket.io network watch:
+  proves ZERO `/socket.io/` traffic on `/demo`, `/demo/teacher`,
+  `/demo/student` and that the demo still auto-pairs.
+- `f2p5-restart.mjs` — the restart story. Sets up a live class (teacher +
+  a connected "live phone" + a "dark phone" that seats then goes to
+  about:blank holding its token), then waits on a flag file. Trigger a
+  `render restart srv-d9ducu3bc2fs73esrr8g --confirm` (loads
+  `RENDER_API_KEY` from `.env.local`), then create the flag; it asserts
+  the live phone hits the ended screen, the teacher falls to not-found,
+  the dark phone's reload hits the REST 404-with-token → same ended
+  screen (not "recheck your code"), and a fresh create works after. This
+  is the only feature-2 prod step that deploys — off-hours only.
+
+Two lessons this pass paid for:
+
+- **A deploy/restart ends live classes via `connect_error: activity_gone`,
+  not the `activity:ended` event.** SIGTERM kills the process (`io.close()`
+  drops sockets, never calls the store's removal hook); the fresh instance
+  boots empty, so each client's auto-reconnect presents a token it has
+  never seen and is rejected. Budget ~37s for a connected client to land
+  on the ended screen — that's socket.io's reconnect backoff plus the new
+  instance booting, not a bug. (The `activity:ended` event is only for an
+  activity aging out under a still-running server.)
+- **`page.on("websocket")` fires on the polling→websocket UPGRADE, which
+  lands ~100–150ms AFTER the seat appears** (socket.io connects on polling
+  first; the seat is live on polling before the ws object exists). A fixed
+  post-seat sample of a "did the ws open" flag will intermittently miss it
+  — the seat appearing IS the proof the connection is live; assert that,
+  and if you must confirm the transport, `await` the websocket event with
+  a few-second timeout rather than sampling once.
 
 - **StrictMode double-fires data effects in dev**: the join-code lookup
   fetches twice on mount. A Playwright `route` that aborts only the FIRST

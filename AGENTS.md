@@ -15,14 +15,17 @@ activities with `POST /activities` and host them at
 client-simulated, zero network. Feature 1 is **complete** — verified end
 to end on production 2026-07-19
 ([docs/plans/feature-1-create-and-join.md](docs/plans/feature-1-create-and-join.md)).
-Feature 2's build is done through Prompt 4
+Feature 2 is **complete** — verified end to end on production 2026-07-19
 ([docs/plans/feature-2-live-lobby.md](docs/plans/feature-2-live-lobby.md)):
 **the waiting queue is real over Socket.IO** — students in a real lobby
 hold live, resumable seats, and the teacher's host page renders the queue
-live with Remove acting on the real world (verified with real phones on
-the LAN; the production pass is the plan's final prompt). Matching and
-chat stay simulated until the next feature, so real host pages show an
-honest placeholder where the pairing controls would be.
+live with Remove acting on the real world. The prod pass covered the
+reconnect gauntlet, duplicate-tab takeover, and the restart story (a live
+`render restart` ended the class honestly and `io.close()` exited clean
+with open sockets); a cellular pass on a physical handset is the one gap
+left to the founder's own device. Matching and chat stay simulated until
+the next feature, so real host pages show an honest placeholder where the
+pairing controls would be.
 The demo flows are a **permanent product surface** — the homepage links to
 them and the founder pitches with them — not scaffolding; see the working
 rule below. The map:

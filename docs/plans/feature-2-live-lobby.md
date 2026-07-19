@@ -35,7 +35,7 @@ When a prompt is done, tick its checkbox here (same commit).
 - [x] Prompt 3 — Client wiring, teacher side (the live queue; the feature
       completes)
 - [x] Prompt 4 — Docs + stale-reference sweep
-- [ ] Prompt 5 — End-to-end production verification (feature 1's Prompt 7
+- [x] Prompt 5 — End-to-end production verification (feature 1's Prompt 7
       caught a prod-breaking bug; keep the tradition)
 
 > **Prompt 1 spin-down proof, results (2026-07-19, for Prompt 4's docs):**
@@ -50,6 +50,32 @@ When a prompt is done, tick its checkbox here (same commit).
 > matters, not the downtime), and the 120s grace reap fired in prod to the
 > millisecond. SIGTERM-with-open-sockets gets its real test in Prompt 5's
 > restart story.
+
+> **Prompt 5 production verification, results (2026-07-19):** the live
+> lobby passed on chaverola.com (server commit `034e6e3`). The cold-start
+> check ran first, on a naturally-asleep instance: create took ~32s, the
+> "just waking up" patience copy appeared at +5s, and the teacher landed on
+> the live host page with a real websocket. The realtime gauntlet passed
+> every check — live rows with ticking clocks, remove + rejoin, a drop
+> marking "lost connection" then resuming with the clock kept,
+> back-from-lobby dropping the seat immediately (`lobby:leave`, no ghost),
+> a second host device with idempotent remove, duplicate-tab takeover
+> (newer tab wins), and a websocket transport upgraded through Cloudflare.
+> The restart story passed via `render restart` under a live class: the
+> connected phone hit the ended screen in ~37s (SIGTERM kills the process,
+> so this is the `activity_gone` reconnect-rejection path, not the
+> `activity:ended` event — the reconnect backoff plus the new instance
+> booting), the dark phone's later reload hit the same ending through the
+> REST 404-with-token branch, the teacher fell back to not-found, and a
+> fresh create worked immediately after; `io.close()` with two open sockets
+> exited cleanly (new instance serving within ~3s — no hung shutdown). The
+> demo journey made zero `/socket.io/` traffic. One doc correction fell out
+> of the pass (architecture.md's deploy-ends-the-class bullet, which had
+> attributed it to `onActivityRemoved`). The student contexts ran at phone
+> viewport, but a genuine cellular pass on a physical handset — the
+> dark-screen radio sleep that drives the real ~45s ping-cycle detection,
+> carrier NAT — is the one thing a headless emulator can't stand in for;
+> left to the founder's own device.
 
 Repo rules that apply to every prompt (details in `AGENTS.md`): run
 `pnpm format` before committing; run every piece of new user-facing copy
