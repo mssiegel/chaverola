@@ -44,6 +44,9 @@ the affected part. Link related entries by title anchor, never by "above" /
 ## Contents
 
 - [Student join flow & lobby](#student-join-flow--lobby)
+  - [The real lobby still says Waiting for your match until matching ships](#the-real-lobby-still-says-waiting-for-your-match-until-matching-ships)
+  - [Two students can share a name; the queue tells them apart](#two-students-can-share-a-name-the-queue-tells-them-apart)
+  - [A wiped server ends the class honestly on the student's screen](#a-wiped-server-ends-the-class-honestly-on-the-students-screen)
   - [Real codes resolve over the API, and only a resolved miss signs anyone out](#real-codes-resolve-over-the-api-and-only-a-resolved-miss-signs-anyone-out)
   - [Stage swaps inside the student route open at the top of the page](#stage-swaps-inside-the-student-route-open-at-the-top-of-the-page)
   - [No identity bar during chat either](#no-identity-bar-during-chat-either)
@@ -83,6 +86,9 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Character rows lead with the emoji avatar](#character-rows-lead-with-the-emoji-avatar)
   - [Setup sections each carry one brand accent; settings stays the quiet one](#setup-sections-each-carry-one-brand-accent-settings-stays-the-quiet-one)
 - [Teacher live activity page](#teacher-live-activity-page)
+  - [Real host pages show an honest placeholder instead of pairing controls](#real-host-pages-show-an-honest-placeholder-instead-of-pairing-controls)
+  - [A dropped student keeps their seat for 2 minutes, marked and unmatchable](#a-dropped-student-keeps-their-seat-for-2-minutes-marked-and-unmatchable)
+  - [When the teacher's connection drops, the queue dims under a reconnecting banner](#when-the-teachers-connection-drops-the-queue-dims-under-a-reconnecting-banner)
   - [A rematch only counts when it's an exact rerun for everyone in it](#a-rematch-only-counts-when-its-an-exact-rerun-for-everyone-in-it)
   - [The live-settings panel stays on real activities, editing the teacher's local view](#the-live-settings-panel-stays-on-real-activities-editing-the-teachers-local-view)
   - [Start their chat sits below Pair everyone 1:1, nearest the names](#start-their-chat-sits-below-pair-everyone-11-nearest-the-names)
@@ -145,6 +151,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [`/demo`, `/demo/teacher`, and `/demo/student` are thin redirects, never pages](#demo-demoteacher-and-demostudent-are-thin-redirects-never-pages)
   - [The temporary `/demo/*` routes are gone — every surface lives in its real flow](#the-temporary-demo-routes-are-gone--every-surface-lives-in-its-real-flow)
 - [Backend & API](#backend--api)
+  - [Sockets connect at lobby entry and host-page load, and never on the demo](#sockets-connect-at-lobby-entry-and-host-page-load-and-never-on-the-demo)
   - [The backend is Express 5 on Render's free tier — REST now, Socket.IO later](#the-backend-is-express-5-on-renders-free-tier--rest-now-socketio-later)
   - [The API lives at `api.chaverola.com` from day one, with no `/api/v1` prefix](#the-api-lives-at-apichaverolacom-from-day-one-with-no-apiv1-prefix)
   - [Teachers set up at class start, and a warm-up ping hides the cold start](#teachers-set-up-at-class-start-and-a-warm-up-ping-hides-the-cold-start)
@@ -176,6 +183,68 @@ the affected part. Link related entries by title anchor, never by "above" /
 ---
 
 ## Student join flow & lobby
+
+### The real lobby still says Waiting for your match until matching ships
+
+_2026-07-19_
+
+**Decision:** Feature 2 ships the live lobby before matching exists, and the
+real lobby keeps the exact demo copy anyway — "Waiting for your match" with
+the mint dots. No forked interim copy on real activities.
+
+**Why:** Founder call (feature-2 planning). Matching arrives in the very next
+feature, and real classes won't realistically run an activity until the full
+loop exists — so interim copy would be churn, reverted within weeks, and a
+fork between demo and real surfaces that deliberately render the same
+components. When the student's connection drops, the pill swaps to a
+reconnecting variant (same mechanism as the paused pill), so the lobby never
+lies about the connection either.
+
+_Planned in [the feature-2 plan](docs/plans/feature-2-live-lobby.md)
+(Prompt 2)._
+
+### Two students can share a name; the queue tells them apart
+
+_2026-07-19_
+
+**Decision:** The server accepts duplicate student names within one activity.
+Every student gets a server-minted unique id; the teacher's queue rows are
+disambiguated by their wait clocks, and Remove always targets the exact row
+tapped, never a name.
+
+**Why:** Founder call (feature-2 planning). Classes genuinely have two
+Joshes, and rejecting the second one ("that name's taken") adds friction at
+the worst possible moment — a kid joining while the class waits. The
+anonymity design means other students never see the names anyway, so
+uniqueness buys nothing on the student side.
+
+_Planned in [the feature-2 plan](docs/plans/feature-2-live-lobby.md)
+(Prompt 1)._
+
+### A wiped server ends the class honestly on the student's screen
+
+_2026-07-19_
+
+**Decision:** When a student's activity vanishes mid-class (a server deploy
+or restart wiped the in-memory store, or the TTL reaped it), the student gets
+a dedicated "activity ended" screen — not the "Activity was not found.
+Recheck the Join Code you entered." sign-out. Both paths land there: the
+socket's ended event, and a page reload whose lookup resolves not-found
+**while the session still holds a seat token for that exact code** (the
+token is proof the code was real). Sign-out is deferred to the screen's CTA
+back to code entry. The teacher side keeps its existing friendly not-found.
+
+**Why:** Founder call (feature-2 planning), same free-tier truthfulness
+stance as the distinct not-found/unreachable copy: telling a kid to recheck
+a code that worked five minutes ago sends them hunting a typo that doesn't
+exist. The seat token is what distinguishes "this code was never real" from
+"the class ended under you"; deferring the sign-out matters because clearing
+the session immediately would destroy the very evidence the ended screen
+renders from.
+
+_Planned in [the feature-2 plan](docs/plans/feature-2-live-lobby.md)
+(Prompt 2); extends
+[Real codes resolve over the API, and only a resolved miss signs anyone out](#real-codes-resolve-over-the-api-and-only-a-resolved-miss-signs-anyone-out)._
 
 ### Real codes resolve over the API, and only a resolved miss signs anyone out
 
@@ -1129,6 +1198,75 @@ _Implemented in
 ---
 
 ## Teacher live activity page
+
+### Real host pages show an honest placeholder instead of pairing controls
+
+_2026-07-19_
+
+**Decision:** Until matching ships (feature 3), real host pages render none
+of the pairing UI — no tap-to-select on queue rows, no "Pair everyone 1:1",
+no "Start their chat", no auto-match switch, and no auto-match footer copy.
+In its place stands one short copy block: matching is coming in the next
+update, and right now this page shows who's joined, live. Queue rows on real
+activities keep exactly two affordances — the name + wait clock display and
+Remove. The demo keeps the full pairing UI.
+
+**Why:** Founder call (feature-2 planning), choosing honest placeholder over
+the two alternatives: hiding the rail leaves an unexplained hole where the
+product's core action belongs, and disabled controls in front of a live class
+invite taps that do nothing. The auto-match footer had to go with the
+controls — "students pair up on their own after waiting 20 seconds" is a
+promise the page cannot keep yet, and the switch it explains edits a setting
+nothing consumes.
+
+_Planned in [the feature-2 plan](docs/plans/feature-2-live-lobby.md)
+(Prompt 3)._
+
+### A dropped student keeps their seat for 2 minutes, marked and unmatchable
+
+_2026-07-19_
+
+**Decision:** When a student's lobby connection drops (dark phone screen,
+wifi blip), their queue row survives for 2 minutes, visibly marked "lost
+connection", and reconnecting restores it with the original wait clock. While
+marked, the student is **fully unmatchable** — excluded from auto-match,
+"Pair everyone 1:1", and manual tap-to-pair alike (recorded now so feature 3
+enforces it); the marked row's only action is Remove. Two timing truths are
+part of the decision: the window starts at _detected_ disconnect (a dark
+phone sends no close frame, so detection rides Socket.IO's ping cycle,
+roughly 45 seconds), and a short server-side broadcast delay (~4s) keeps a
+student's page refresh from flashing the row.
+
+**Why:** Founder call (feature-2 planning). Phones go dark constantly
+mid-class and wake moments later — dropping the seat instantly would churn
+the queue for kids who are still there, while an unmarked row would deceive
+the teacher. Matching an absent student starts a chat with an empty seat that
+immediately burns the chat's own 2-minute reconnect window, so unmatchable is
+the only honest state. Two minutes deliberately matches that chat window —
+one reconnect concept across the whole product.
+
+_Planned in [the feature-2 plan](docs/plans/feature-2-live-lobby.md)
+(Prompts 1 and 3); the chat-side window lives in
+[A disconnected peer gets 2 minutes to come back, and the student watches the clock](#a-disconnected-peer-gets-2-minutes-to-come-back-and-the-student-watches-the-clock)._
+
+### When the teacher's connection drops, the queue dims under a reconnecting banner
+
+_2026-07-19_
+
+**Decision:** When the host page loses its socket (wifi blip, server waking,
+redeploy), an honest "Reconnecting to your class…" banner appears and the
+queue dims slightly to signal the data may be stale — but the last-known
+queue stays readable underneath. Everything restores on reconnect (the
+server sends a fresh snapshot the moment a teacher socket joins). No
+blocking overlay.
+
+**Why:** Founder call (feature-2 planning). Mid-class, the last-known queue
+is still useful information — a full overlay would take it hostage exactly
+when the teacher is juggling thirty kids. Dimming without the banner was
+rejected too: staleness needs words, not just opacity.
+
+_Planned in [the feature-2 plan](docs/plans/feature-2-live-lobby.md)
+(Prompt 3)._
 
 ### A rematch only counts when it's an exact rerun for everyone in it
 
@@ -2479,6 +2617,30 @@ _Routes live in [App.tsx](client/src/App.tsx)._
 ---
 
 ## Backend & API
+
+### Sockets connect at lobby entry and host-page load, and never on the demo
+
+_2026-07-19_
+
+**Decision:** The Socket.IO connection is not app-wide. A student's socket
+connects only when they enter the lobby stage of a **real** activity — the
+code and name steps stay REST-only. A teacher's socket connects as soon as
+the host page resolves a real activity; there is no "start the live
+activity" click, because the host page already is the live activity from the
+moment of creation. The demo (`1234`) never loads or connects a socket on
+either side — zero network, structurally.
+
+**Why:** Founder call (feature-2 planning). Sockets exist for presence, and
+presence begins when a student is actually in the room and when a teacher
+opens the control room — connecting earlier spends server connections on
+visitors who never finish joining. An explicit teacher "start" gate was
+rejected as a product change: activities have been live-from-creation since
+feature 1, and students can already join the moment the code exists. The
+demo rule is the standing offline-forever guarantee extended to the
+transport layer.
+
+_Planned in [the feature-2 plan](docs/plans/feature-2-live-lobby.md)
+(Prompts 2 and 3)._
 
 ### The backend is Express 5 on Render's free tier — REST now, Socket.IO later
 
