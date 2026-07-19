@@ -87,10 +87,11 @@ the "Testing stays small" entries.
 
 Two platforms, split by package:
 
-- **Client → Vercel.** Every push to `main` deploys to
-  [chaverola.com](https://chaverola.com) (Root Directory `client`; pushes
-  that don't touch the client are skipped automatically). One env var:
-  `VITE_API_URL` — the API base URL, baked in at build time.
+- **Client → Vercel.** Pushes to `main` deploy to
+  [chaverola.com](https://chaverola.com) (Root Directory `client`; an
+  explicit Ignored Build Step skips pushes that touch neither `client/`,
+  `shared/`, nor the root manifests). One env var: `VITE_API_URL` — the
+  API base URL, baked in at build time.
 - **Server → Render** (Virginia/US-East, free tier), reached at
   `api.chaverola.com`. One required env var: `NODE_ENV=production`
   (Render injects `PORT` itself). Live since 2026-07-18; both the student

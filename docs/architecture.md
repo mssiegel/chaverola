@@ -32,14 +32,16 @@ Who imports what:
   client structurally. The client keeps its friendly per-field form
   validation instead.
 
-The scoped names matter beyond taste: Vercel uses them to skip builds when
-a push doesn't affect `@chaverola/client`.
+Skipping client builds for server-only pushes turned out to need more than
+the workspace layout: Vercel's automatic monorepo detection rebuilt the
+client on a server-only push, so an explicit Ignored Build Step does it by
+paths (see Deploy topology).
 
 ## Deploy topology
 
 ```text
    browser ──────────────► Vercel (client)      chaverola.com, www
-      │                      static SPA; every push to main deploys
+      │                      static SPA; client-touching pushes deploy
       │  fetch/XHR
       ▼
    api.chaverola.com ─────► Render (server)     Virginia / US East, Free tier
@@ -47,8 +49,17 @@ a push doesn't affect `@chaverola/client`.
 ```
 
 - **Vercel** builds only `client/` (Root Directory `client`, with
-  source-files-outside-root enabled so `shared/` resolves). The client
-  reaches the API through `VITE_API_URL`, baked at build time.
+  source-files-outside-root enabled so `shared/` resolves). Its Ignored
+  Build Step — `git diff --quiet HEAD^ HEAD -- . ../shared
+../pnpm-lock.yaml ../package.json ../tsconfig.base.json`, run inside
+  `client/` — skips pushes that touch none of those paths (set explicitly
+  2026-07-19 after a server-only push proved the automatic detection
+  didn't skip). The client reaches the API through `VITE_API_URL`, baked
+  at build time; `lib/api.ts` scrubs BOMs and whitespace off it and
+  requires an absolute URL, because the value once arrived with a leading
+  UTF-8 BOM that turned every prod call into a relative-path 404 (caught
+  by the feature-1 prod pass — the gotcha and the safe way to set env
+  vars are in AGENTS.md → Reading production logs).
 - **Render** runs the server (service `chaverola-api`, live since
   2026-07-18; build filters keep client-only pushes from deploying it). The
   build command installs with pnpm and runs `tsc --noEmit` as the deploy

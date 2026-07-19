@@ -31,7 +31,13 @@ When a prompt is done, tick its checkbox here (same commit).
       live-settings panel **stays** on real activities, editing the teacher's
       local view only — see DECISIONS.md → "The live-settings panel stays on
       real activities"
-- [ ] Prompt 7 — End-to-end verification + prod cutover
+- [x] Prompt 7 — End-to-end verification + prod cutover (2026-07-19).
+      The pass caught a real one: the Vercel-stored `VITE_API_URL`
+      carried a leading UTF-8 BOM, so every prod API call resolved as a
+      relative path on chaverola.com and only the demo worked — fixed in
+      `4aa218a` (clean env var + the client scrubs and validates the
+      URL). Also set Vercel's Ignored Build Step by hand: automatic
+      detection had not actually been skipping server-only pushes.
 
 Repo rules that apply to every prompt (details in `AGENTS.md`): run
 `pnpm format` before committing; run every piece of new user-facing copy

@@ -151,6 +151,20 @@ live-settings ~1s typing debounce is never scaled.
   `fullPage: true`, not a layout bug. Check
   `document.documentElement.scrollWidth` for real overflow.
 - Demo join code `1234` always works for flows behind `/activity/join`.
+
+## Production
+
+The feature-1 prod pass script lives at
+`$env:TEMP\chaverola-verify\prompt7-prod.mjs` — `node prompt7-prod.mjs`
+runs the full desktop + phone sweep against chaverola.com (`--phone-only`
+skips the desktop half). It creates real activities (in-memory, 12h TTL),
+so keep it out of school hours. Its homepage check reads the `/healthz`
+warm-up response for timing and the deployed server commit. Two traps it
+already ate: assert phone-width text via `>> visible=true` (the hidden
+desktop rail duplicates lines), and never probe a bundle for a BOM with
+.NET's default `IndexOf` — culture-sensitive comparison skips zero-width
+characters; pass `[StringComparison]::Ordinal`.
+
 - **StrictMode double-fires data effects in dev**: the join-code lookup
   fetches twice on mount. A Playwright `route` that aborts only the FIRST
   `/activities` request to fake an outage silently lets the duplicate

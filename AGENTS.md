@@ -11,9 +11,11 @@ create-and-join contract ([docs/api.md](docs/api.md)) — live at
 client call it**: students resolve real codes through
 `GET /activities/:joinCode`, teachers create activities with
 `POST /activities` and host them at `/activity/host/:hostKey`. The demo
-code `1234` stays fully client-simulated, zero network. What's left of
-feature 1 is its Prompt 7 — end-to-end verification on production (see
-[docs/plans/feature-1-create-and-join.md](docs/plans/feature-1-create-and-join.md)).
+code `1234` stays fully client-simulated, zero network. Feature 1 is
+**complete** — verified end to end on production 2026-07-19
+([docs/plans/feature-1-create-and-join.md](docs/plans/feature-1-create-and-join.md));
+everything inside a live session (matching, chat, the teacher's live
+view) stays simulated until the realtime feature.
 The demo flows are a **permanent product surface** — the homepage links to
 them and the founder pitches with them — not scaffolding; see the working
 rule below. The map:
@@ -333,6 +335,16 @@ Run from the repo root:
   `chaverola` project — `vercel logs <deployment-url>` tails a deployment,
   `vercel ls` lists recent deployments (also the way to grab a real
   preview hostname, e.g. for the server's CORS regex).
+- **Setting Vercel env vars — never from a PowerShell pipe.** Piping a
+  value into `vercel env add` from PowerShell smuggled a UTF-8 BOM in
+  front of `VITE_API_URL`; the baked URL lost its scheme, every prod API
+  call resolved as a relative path on chaverola.com, and the demo kept
+  working so nothing looked broken (caught by the feature-1 prod pass).
+  Use Git Bash: `printf 'value' | vercel env add NAME production`. The
+  project stores env vars as **sensitive** — `vercel env pull` returns
+  them empty — so verify a value by grepping the deployed bundle, not by
+  pulling. Since `4aa218a` the client also scrubs BOMs/whitespace and
+  refuses a non-absolute URL at module init.
 - **Render (server):** the Render CLI (`render.exe`, installed next to the
   Vercel CLI) reads `RENDER_API_KEY` from the environment — the key lives
   in the gitignored `.env.local` at the repo root. Load it, then query the
