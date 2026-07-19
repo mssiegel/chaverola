@@ -560,12 +560,15 @@ prod-breaking env-var bug; treat it as a hunt, not a formality.
    event, and a dark phone that reloads later via the REST branch); the
    teacher's host page falls back to not-found; creating a fresh activity
    right after works.
-3. Free-tier checks: re-confirm spin-down + wake behavior end to end (leave
-   one lobby connected >20 min → no spin-down in `render logs`; disconnect
-   everyone → spin-down; a student joining after spin-down rides the
-   warm-up/patience copy and lands in the lobby). Confirm the WebSocket
-   transport actually upgrades through Cloudflare (the socket shows
-   `websocket`, not polling-forever).
+3. Free-tier checks — **no waiting**: the spin-down/keep-awake halves are
+   settled by Prompt 1's proof (results blockquote above; standing rule in
+   AGENTS.md) — do NOT re-run the 15–20 min holds. What's left is cheap:
+   the wake-UX check (a student joining a cold server rides the
+   warm-up/patience copy and lands in the lobby) done **opportunistically**
+   as this session's FIRST server contact, when the service is naturally
+   asleep — never by manufacturing a spin-down; and a seconds-long glance
+   that the socket transport shows `websocket` through Cloudflare (not
+   polling-forever — already observed in Prompt 1).
 4. Demo sweep: `/demo`, `/demo/teacher`, `/demo/student` fully intact — the
    whole demo journey with the network tab open proves **zero** `/socket.io/`
    traffic on demo surfaces.

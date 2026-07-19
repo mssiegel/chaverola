@@ -320,6 +320,19 @@ Run from the repo root:
   widths, with fast timers on (`?fast=10` on a dev build; see the skill).
   A full every-surface sweep is for cross-cutting changes (layout shells,
   design tokens, shared chat pieces), not for localized ones.
+- **Render free-tier spin-down is settled — never re-verify it by waiting.**
+  Proven empirically 2026-07-19 (results recorded in
+  [docs/plans/feature-2-live-lobby.md](docs/plans/feature-2-live-lobby.md)):
+  a connected Socket.IO client's heartbeat keeps the service awake; spin-down
+  happens 15 min after the last connection/request; Render's own platform
+  health checks (`render-health-check: 1`) do NOT count as inbound traffic.
+  Do not run multi-minute hold-and-wait checks against this again — they cost
+  15–40 minutes and add no information (founder call, 2026-07-19). Treat the
+  claim as established unless production contradicts it (a live class drops
+  mid-session, or Render announces a policy change). Wake-after-spin-down UX
+  is testable for free: the server is naturally asleep at the start of most
+  work sessions, so check cold-start behavior opportunistically as the
+  session's FIRST server contact — never by manufacturing a spin-down.
 - **Verifying a style-neutral refactor:** run `pnpm build` before and after and
   compare the `dist/assets/index-*.css` filename hash — identical hash is byte-level
   proof no styling changed (used across the 2026-07-13 DRY refactor). If the hash
