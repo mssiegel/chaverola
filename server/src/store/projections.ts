@@ -1,6 +1,15 @@
 import { LOBBY_DISCONNECT_BROADCAST_DELAY_MS } from "@chaverola/shared";
-import type { Activity, HostedActivity, QueueEntry } from "@chaverola/shared";
+import type {
+  Activity,
+  Character,
+  ChatPeer,
+  ChatSnapshot,
+  HostedActivity,
+  QueueEntry,
+} from "@chaverola/shared";
 
+import { activeMembers } from "../live/matching";
+import type { StoredChat } from "../live/matching";
 import type { Seat } from "../live/seats";
 import type { StoredActivity } from "./activityStore";
 
@@ -38,20 +47,24 @@ export function toHostedActivity(stored: StoredActivity): HostedActivity {
   return activity;
 }
 
-/** The teacher's queue row. NEVER the token. `connection` stays "connected"
- *  through the first LOBBY_DISCONNECT_BROADCAST_DELAY_MS of a drop — a
- *  refresh reconnects in ~1–2s and shouldn't flash the row. The delay gates
- *  only this teacher-facing state, never the grace clock. */
-export function toQueueEntry(seat: Seat, now: number): QueueEntry {
-  const reconnecting =
+/** A drop reads "reconnecting" only past the broadcast delay — a refresh
+ *  reconnects in ~1–2s and shouldn't flash the row (or dim a card member).
+ *  The delay gates only this teacher-facing state, never the grace clock. */
+function isReconnecting(seat: Seat, now: number): boolean {
+  return (
     !seat.connected &&
     seat.disconnectedAt !== undefined &&
-    now - seat.disconnectedAt >= LOBBY_DISCONNECT_BROADCAST_DELAY_MS;
+    now - seat.disconnectedAt >= LOBBY_DISCONNECT_BROADCAST_DELAY_MS
+  );
+}
+
+/** The teacher's queue row. NEVER the token. */
+export function toQueueEntry(seat: Seat, now: number): QueueEntry {
   return {
     id: seat.studentId,
     name: seat.name,
     waitSeconds: Math.max(0, Math.floor((now - seat.joinedAt) / 1000)),
-    connection: reconnecting ? "reconnecting" : "connected",
+    connection: isReconnecting(seat, now) ? "reconnecting" : "connected",
   };
 }
 
@@ -63,5 +76,87 @@ export function toLobbyWelcome(seat: Seat): {
   return {
     studentId: seat.studentId,
     token: seat.token,
+  };
+}
+
+/** Characters resolve from the SERVER roster (character edits are
+ *  local-only client-side, so the server's copy never changes and the id
+ *  was minted from it — the find can't miss; the fallback keeps the
+ *  projector total anyway). */
+function resolveCharacter(
+  activity: StoredActivity,
+  characterId: string
+): Character {
+  return (
+    activity.characters.find((c) => c.id === characterId) ?? {
+      id: characterId,
+      name: characterId,
+    }
+  );
+}
+
+/** The teacher's chat card (room lobby:${joinCode}) — real names are fine
+ *  here; never a token. */
+export function toChatSnapshot(
+  chat: StoredChat,
+  activity: StoredActivity,
+  now: number
+): ChatSnapshot {
+  return {
+    id: chat.id,
+    participants: chat.members.map((member) => ({
+      id: member.studentId,
+      name: member.name,
+      character: resolveCharacter(activity, member.characterId),
+    })),
+    inactiveStudentIds: [...chat.inactiveStudentIds],
+    reconnectingStudentIds: activeMembers(chat)
+      .filter((member) => {
+        const seat = activity.seats.byId.get(member.studentId);
+        return seat !== undefined && isReconnecting(seat, now);
+      })
+      .map((member) => member.studentId),
+    elapsedSeconds: Math.max(0, Math.floor((now - chat.startedAt) / 1000)),
+    status: chat.status,
+    endReason: chat.endReason,
+  };
+}
+
+/** The student wire carries characterIds ONLY — never names, never peer
+ *  studentIds (the load-bearing privacy pin). */
+function toChatPeers(chat: StoredChat, studentId: string): ChatPeer[] {
+  return activeMembers(chat)
+    .filter((member) => member.studentId !== studentId)
+    .map((member) => ({ characterId: member.characterId }));
+}
+
+export function toChatStarted(
+  chat: StoredChat,
+  studentId: string
+): { chatId: string; selfCharacterId: string; peers: ChatPeer[] } {
+  // Callers only project a chat for its own members — the find can't miss.
+  const self = chat.members.find((m) => m.studentId === studentId)!;
+  return {
+    chatId: chat.id,
+    selfCharacterId: self.characterId,
+    peers: toChatPeers(chat, studentId),
+  };
+}
+
+export function toChatUpdate(
+  chat: StoredChat,
+  studentId: string
+): { chatId: string; peers: ChatPeer[] } {
+  return {
+    chatId: chat.id,
+    peers: toChatPeers(chat, studentId),
+  };
+}
+
+export function toChatEnded(chat: StoredChat): { reason: "teacher" } {
+  return {
+    // "teacher" is the only reachable reason this feature; the fallback
+    // keeps the projector total if it's ever called on a not-yet-ended chat.
+    reason: chat.endReason ?? "teacher",
   };
 }

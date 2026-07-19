@@ -11,7 +11,11 @@ import {
   SCENE_MAX_CHARS,
   SCENE_MAX_WORDS,
 } from "@chaverola/shared";
-import type { ApiFieldIssue, CreateActivityRequest } from "@chaverola/shared";
+import type {
+  ActivitySettings,
+  ApiFieldIssue,
+  CreateActivityRequest,
+} from "@chaverola/shared";
 
 /*
   zod lives server-side only (the client keeps its friendly per-field form
@@ -37,7 +41,9 @@ const characterInputSchema = z.object({
     .optional(),
 });
 
-const settingsSchema = z.object({
+/** Also the socket's settings:update validator — the full-replace payload
+ *  is exactly the settings object the create request carries. */
+export const activitySettingsSchema = z.object({
   revealNames: z.boolean(),
   autoEndChats: z.boolean(),
   autoEndMinutes: z
@@ -55,7 +61,7 @@ const settingsSchema = z.object({
     // On the step grid too (min is itself a step multiple) — same
     // broken-caller reasoning as the bounds.
     .multipleOf(AUTO_MATCH_SECONDS.step),
-});
+}) satisfies z.ZodType<ActivitySettings>;
 
 export const createActivityRequestSchema = z.object({
   hostName: z
@@ -100,7 +106,7 @@ export const createActivityRequestSchema = z.object({
     .max(EMAIL_MAX_CHARS, "That email address is too long.")
     .regex(EMAIL_PATTERN, "That doesn't look like an email address.")
     .optional(),
-  settings: settingsSchema,
+  settings: activitySettingsSchema,
 }) satisfies z.ZodType<CreateActivityRequest>;
 // ^ The drift pin: if the schema's output ever drifts from the shared wire
 //   type, this line is a compile error.

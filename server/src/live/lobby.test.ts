@@ -16,6 +16,7 @@ import type {
 import { createActivity, resetForTests } from "../store/activityStore";
 import type { StoredActivity } from "../store/activityStore";
 import { attachLobby } from "./lobby";
+import { createChat } from "./matching";
 
 /*
   Deliberately light (see the plan doc): the safety invariants and one happy
@@ -82,6 +83,27 @@ const nextWelcome = (socket: ClientSocket) =>
 const connectError = (socket: ClientSocket) =>
   new Promise<Error>((resolve) => {
     socket.once("connect_error", resolve);
+  });
+const nextChatStarted = (socket: ClientSocket) =>
+  new Promise<{
+    chatId: string;
+    selfCharacterId: string;
+    peers: { characterId: string }[];
+  }>((resolve) => {
+    socket.once("chat:started", resolve);
+  });
+/** Queue snapshots also fire on every join — wait for the one that matters. */
+const snapshotWhere = (
+  socket: ClientSocket,
+  predicate: (payload: { students: QueueEntry[] }) => boolean
+) =>
+  new Promise<{ students: QueueEntry[] }>((resolve) => {
+    const handler = (payload: { students: QueueEntry[] }) => {
+      if (!predicate(payload)) return;
+      socket.off("queue:snapshot", handler);
+      resolve(payload);
+    };
+    socket.on("queue:snapshot", handler);
   });
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -176,5 +198,131 @@ describe("the live lobby", () => {
     expect(seat.connected).toBe(true);
     expect(seat.timers.broadcast).toBeUndefined();
     expect(seat.timers.grace).toBeUndefined();
+  });
+
+  it("chat:start delivers targeted chat:started and empties the queue", async () => {
+    const teacher = connect({ role: "teacher", hostKey: activity.hostKey });
+    // In the room before anyone joins — later snapshots can't race past us.
+    await nextSnapshot(teacher);
+    const studentA = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Rachel",
+      nonce: "nonce-a",
+    });
+    const studentB = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Noa",
+      nonce: "nonce-b",
+    });
+    const welcomeA = await nextWelcome(studentA);
+    const welcomeB = await nextWelcome(studentB);
+
+    const startedA = nextChatStarted(studentA);
+    const startedB = nextChatStarted(studentB);
+    // Every snapshot from here carries 1–2 waiting students until the match
+    // empties the queue — an empty one can only be chat:start's.
+    const emptyQueue = snapshotWhere(teacher, (p) => p.students.length === 0);
+    teacher.emit("chat:start", {
+      studentIds: [welcomeA.studentId, welcomeB.studentId],
+    });
+
+    const [payloadA, payloadB] = await Promise.all([startedA, startedB]);
+    expect(payloadA.chatId).toBe(payloadB.chatId);
+    expect(payloadA.selfCharacterId).not.toBe(payloadB.selfCharacterId);
+    expect(payloadA.peers).toEqual([{ characterId: payloadB.selfCharacterId }]);
+
+    // The occupancy rule: matched students leave the waiting queue.
+    await emptyQueue;
+  });
+
+  it("ignores chat:start, settings:update, and chat:remove from a student socket", async () => {
+    const studentA = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Rachel",
+      nonce: "nonce-a",
+    });
+    const studentB = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Noa",
+      nonce: "nonce-b",
+    });
+    const welcomeA = await nextWelcome(studentA);
+    const welcomeB = await nextWelcome(studentB);
+    const started: unknown[] = [];
+    studentA.on("chat:started", (payload) => started.push(payload));
+    studentB.on("chat:started", (payload) => started.push(payload));
+
+    studentA.emit("chat:start", {
+      studentIds: [welcomeA.studentId, welcomeB.studentId],
+    });
+    studentA.emit("settings:update", {
+      settings: { ...DEFAULT_ACTIVITY_SETTINGS, autoMatch: false },
+    });
+    await sleep(100);
+    expect(activity.chats).toEqual([]);
+    expect(activity.settings).toEqual(DEFAULT_ACTIVITY_SETTINGS);
+    expect(started).toEqual([]);
+
+    // `!` — both members are eligible; the chat just built above them.
+    const chat = createChat(
+      activity,
+      [welcomeA.studentId, welcomeB.studentId],
+      Date.now()
+    )!;
+    studentA.emit("chat:remove", {
+      chatId: chat.id,
+      studentId: welcomeB.studentId,
+    });
+    await sleep(100);
+    expect(chat.status).toBe("active");
+    expect(chat.inactiveStudentIds).toEqual([]);
+  });
+
+  it("a matched seat's drop arms no grace timer, and a resume re-delivers chat:started", async () => {
+    const studentA = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Rachel",
+      nonce: "nonce-a",
+    });
+    const studentB = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Noa",
+      nonce: "nonce-b",
+    });
+    const welcomeA = await nextWelcome(studentA);
+    const welcomeB = await nextWelcome(studentB);
+    // `!` — both members are eligible; the chat just built above them.
+    const chat = createChat(
+      activity,
+      [welcomeA.studentId, welcomeB.studentId],
+      Date.now()
+    )!;
+
+    studentA.disconnect();
+    await sleep(100);
+    // `!` — the drop keeps the seat; only a grace expiry could reap it.
+    const seat = activity.seats.byId.get(welcomeA.studentId)!;
+    expect(seat.connected).toBe(false);
+    expect(seat.timers.broadcast).toBeDefined();
+    expect(seat.timers.grace).toBeUndefined();
+
+    const resumed = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      studentId: welcomeA.studentId,
+      token: welcomeA.token,
+    });
+    const [welcome, startedAgain] = await Promise.all([
+      nextWelcome(resumed),
+      nextChatStarted(resumed),
+    ]);
+    expect(welcome.studentId).toBe(welcomeA.studentId);
+    expect(startedAgain.chatId).toBe(chat.id);
   });
 });

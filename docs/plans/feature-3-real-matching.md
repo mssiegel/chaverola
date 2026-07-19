@@ -32,7 +32,7 @@ To run a prompt, tell the agent:
 
 When a prompt is done, tick its checkbox here (same commit).
 
-- [ ] Prompt 1 — Shared contract + server matching layer + tests (auto-match
+- [x] Prompt 1 — Shared contract + server matching layer + tests (auto-match
       built but NOT armed)
 - [ ] Prompt 2 — Student client: the real chat room (dormant until Prompt 3)
 - [ ] Prompt 3 — Teacher client + arm auto-match (the feature completes)

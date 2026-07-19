@@ -8,6 +8,7 @@ import type {
 } from "@chaverola/shared";
 
 import { capacity } from "../lib/httpErrors";
+import type { StoredChat } from "../live/matching";
 import { clearAllSeatTimers, createSeatState } from "../live/seats";
 import type { ActivitySeats } from "../live/seats";
 
@@ -34,6 +35,12 @@ export interface StoredActivity {
   /** The live lobby's seats — server-internal, never projected (the
    *  explicit-literal rule in projections.ts keeps it out by construction). */
   seats: ActivitySeats;
+  /** Every chat ever started, in creation order (feature 3: chats never
+   *  expire — the activity's lifecycle owns them). */
+  chats: StoredChat[];
+  /** Pair-everyone's odd one out — lazily nulled at snapshot build once
+   *  that seat stops waiting. */
+  leftoverStudentId: string | null;
 }
 
 /** A validated create request, post-zod: trimmed, blanks already omitted. */
@@ -141,6 +148,8 @@ export function createActivity(
     createdAt: now,
     lastSeenAt: now,
     seats: createSeatState(),
+    chats: [],
+    leftoverStudentId: null,
   };
   if (input.scenario !== undefined) record.scenario = input.scenario;
   if (input.teacherEmail !== undefined)

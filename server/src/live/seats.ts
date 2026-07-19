@@ -27,6 +27,9 @@ export interface Seat {
    *  handling and grace expiry must no-op unless the leaving socket still
    *  owns the seat, or a stale disconnect reaps a live student. */
   currentSocketId: string;
+  /** On the ended screen after their chat ended — off the queue and
+   *  unmatchable until their lobby:back tap (returnToQueue). */
+  wrappingUp: boolean;
   disconnectedAt?: number;
   nonce?: string;
   timers: { broadcast?: NodeJS.Timeout; grace?: NodeJS.Timeout };
@@ -100,6 +103,7 @@ export function seatStudent(
     joinedAt: now,
     connected: true,
     currentSocketId: socketId,
+    wrappingUp: false,
     timers: {},
   };
   if (auth.nonce !== undefined) {
@@ -142,13 +146,16 @@ export function markDisconnected(
 }
 
 /**
- * Arm the two per-drop timers. Both re-check that the drop is still current
+ * Arm the per-drop timers. Both re-check that the drop is still current
  * before acting — a resume clears them, but belt over suspenders. Both are
  * unref'd: pending seat timers must never hold the process open on SIGTERM.
+ * `graceMs: null` arms only the broadcast-delay timer — a matched seat is
+ * never grace-reaped (the student can resume into their chat until the
+ * activity dies; founder call, feature 3).
  */
 export function armDisconnectTimers(
   seat: Seat,
-  graceMs: number,
+  graceMs: number | null,
   broadcastDelayMs: number,
   callbacks: { onBroadcastDelay: () => void; onGraceExpiry: () => void }
 ): void {
@@ -157,6 +164,7 @@ export function armDisconnectTimers(
     if (!seat.connected) callbacks.onBroadcastDelay();
   }, broadcastDelayMs);
   seat.timers.broadcast.unref();
+  if (graceMs === null) return;
   seat.timers.grace = setTimeout(() => {
     seat.timers.grace = undefined;
     if (!seat.connected) callbacks.onGraceExpiry();
@@ -195,12 +203,28 @@ export function reapSeat(activity: StoredActivity, seat: Seat): void {
   dropSeat(activity, seat);
 }
 
-/** Teacher-facing queue, oldest join first. */
+/** Their chat ended around them: off the queue and unmatchable until the
+ *  ended screen's back tap. */
+export function markWrappingUp(seat: Seat): void {
+  seat.wrappingUp = true;
+}
+
+/** The lobby:back tap — back in line with a fresh wait clock. */
+export function returnToQueue(seat: Seat, now: number): void {
+  seat.wrappingUp = false;
+  seat.joinedAt = now;
+}
+
+/** Teacher-facing queue, oldest join first. Skips wrappingUp seats and
+ *  `exclude` (lobby.ts supplies matchedStudentIds — this module stays
+ *  chat-unaware). */
 export function toQueueEntries(
   activity: StoredActivity,
-  now: number
+  now: number,
+  exclude: ReadonlySet<string>
 ): QueueEntry[] {
   return [...activity.seats.byId.values()]
+    .filter((seat) => !seat.wrappingUp && !exclude.has(seat.studentId))
     .sort(
       (a, b) => a.joinedAt - b.joinedAt || (a.studentId < b.studentId ? -1 : 1)
     )

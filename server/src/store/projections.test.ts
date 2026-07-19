@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import { DEFAULT_ACTIVITY_SETTINGS } from "@chaverola/shared";
 
+import type { StoredChat } from "../live/matching";
 import { createSeatState } from "../live/seats";
 import type { Seat } from "../live/seats";
 import type { StoredActivity } from "./activityStore";
 import {
   toActivity,
+  toChatSnapshot,
+  toChatStarted,
   toHostedActivity,
   toLobbyWelcome,
   toQueueEntry,
@@ -30,6 +33,8 @@ const fullRecord: StoredActivity = {
   createdAt: 1_000,
   lastSeenAt: 1_000,
   seats: createSeatState(),
+  chats: [],
+  leftoverStudentId: null,
 };
 
 const fullSeat: Seat = {
@@ -39,8 +44,21 @@ const fullSeat: Seat = {
   joinedAt: 10_000,
   connected: true,
   currentSocketId: "socket-1",
+  wrappingUp: false,
   nonce: "nonce-1",
   timers: {},
+};
+
+const fullChat: StoredChat = {
+  id: "chat-1",
+  members: [
+    { studentId: "student-1", name: "Rachel", characterId: "brutus" },
+    { studentId: "student-2", name: "Noa", characterId: "caesar" },
+  ],
+  inactiveStudentIds: [],
+  startedAt: 20_000,
+  status: "active",
+  endReason: null,
 };
 
 describe("toActivity (student projection)", () => {
@@ -84,5 +102,43 @@ describe("toLobbyWelcome (student resume pair)", () => {
       "studentId",
       "token",
     ]);
+  });
+});
+
+describe("toChatSnapshot (teacher chat card)", () => {
+  it("exposes exactly the card fields, each participant never a token", () => {
+    const snapshot = toChatSnapshot(fullChat, fullRecord, 30_000);
+    expect(Object.keys(snapshot).sort()).toEqual([
+      "elapsedSeconds",
+      "endReason",
+      "id",
+      "inactiveStudentIds",
+      "participants",
+      "reconnectingStudentIds",
+      "status",
+    ]);
+    expect(snapshot.participants).toHaveLength(2);
+    for (const participant of snapshot.participants) {
+      expect(Object.keys(participant).sort()).toEqual([
+        "character",
+        "id",
+        "name",
+      ]);
+    }
+  });
+});
+
+describe("toChatStarted (the student wire)", () => {
+  it("carries characterIds only — no names, no studentIds", () => {
+    const started = toChatStarted(fullChat, "student-1");
+    expect(Object.keys(started).sort()).toEqual([
+      "chatId",
+      "peers",
+      "selfCharacterId",
+    ]);
+    expect(started.peers).toHaveLength(1);
+    for (const peer of started.peers) {
+      expect(Object.keys(peer)).toEqual(["characterId"]);
+    }
   });
 });
