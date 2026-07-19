@@ -2544,6 +2544,18 @@ mounts land with the wiring prompts (feature-1 Prompts 5–6); the
 patience copy on pending buttons covers the case where the ping loses
 the race.
 
+**Update (2026-07-19):** placement revisited (founder question: should
+the ping centralize into a run-once call in `App.tsx`?) and deliberately
+kept per-surface. `App` mounts once per page load, so a run-once ping
+couldn't re-warm a server that spun down while a visitor idled on the
+homepage before navigating into the join or create page — the
+per-surface mounts re-ping at exactly the moments that precede an API
+call. Per-surface also keeps the demo routes zero-network (the demo must
+work offline forever), and the host page needs no ping because its own
+lookup is the wake. DRY lives in the shared hook
+([useWarmUpServer.ts](client/src/lib/useWarmUpServer.ts)); the three
+one-line call sites are declarations of intent.
+
 _Server side in [app.ts](server/src/app.ts)._
 
 ### Nothing persists: activities live in memory for 12 hours, and deploys wipe them
