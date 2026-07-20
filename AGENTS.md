@@ -46,7 +46,9 @@ and it can't happen then, record it in
 [docs/pending-manual-tests.md](docs/pending-manual-tests.md) rather than
 letting the ask evaporate.
 
-**Messaging is the next feature, and a lot hangs off that.** No chat
+**Messaging is the next feature, and a lot hangs off that.** It is now
+planned — [docs/plans/feature-4-messaging.md](docs/plans/feature-4-messaging.md),
+the first feature cut as end-to-end slices rather than layers. No chat
 message has ever crossed the wire: the rooms matching creates are
 silent, so the student's composer is disabled with honest copy, and
 "End chat", "End all chats", "Pause all chats", the auto-end clock, and
@@ -376,6 +378,29 @@ Run from the repo root:
 
 ## Working Rules for AI Agents
 
+- **Cut features into end-to-end slices, not layers.** Each prompt in a plan
+  doc is **one working thing** delivered all the way through — wire, server,
+  client, docs, tests, and its own production pass — demonstrable on its own
+  when it lands. Not a server prompt, then a client prompt, then a docs
+  prompt. Docs are updated **inside the prompt that changes the behavior**,
+  never deferred to a sweep at the end. A cross-cutting production hunt still
+  earns its own final prompt: per-prompt verification proves each slice
+  works, but it can't cover the seams between slices. Founder call
+  (2026-07-20) — see DECISIONS.md → "Features ship as end-to-end slices, not
+  layers", and [docs/plans/feature-4-messaging.md](docs/plans/feature-4-messaging.md)
+  for the first worked example.
+  - **The deploy race is the cost, and it has a rule.** A vertical slice
+    touches `shared/` in one commit, and `shared/` is in BOTH deploy
+    triggers (Vercel's Ignored Build Step and Render's build filter), so one
+    push starts two pipelines that race. Client-lands-first means a UI
+    talking to a server that has no handler yet — and Socket.IO drops an
+    unhandled event **silently**, so there is no error anywhere. After
+    pushing a slice, **poll `/healthz` for the new server commit before
+    treating the feature as live or testing it**. Where a
+    client-ahead-of-server window would actually hurt a real user, split that
+    slice's push into a server commit then a client commit — still one
+    session, still one working thing. Layering used to buy this for free
+    (feature 2: "Prompt 1 before everything"); don't quietly go back to it.
 - **Humanize all copy you write.** Any user-facing text you create or change — UI
   strings, button labels, empty states, mock chat messages, error/success copy — must be
   run through the **humanizer** skill ([blader/humanizer](https://github.com/blader/humanizer))

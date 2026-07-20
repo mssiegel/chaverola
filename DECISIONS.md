@@ -65,6 +65,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [One page serves both join routes; a wrong code never changes the URL](#one-page-serves-both-join-routes-a-wrong-code-never-changes-the-url)
   - [Student sign-in lives in the tab, and removal sends you to the name step](#student-sign-in-lives-in-the-tab-and-removal-sends-you-to-the-name-step)
 - [Chat behavior](#chat-behavior)
+  - [The server never inspects what students write](#the-server-never-inspects-what-students-write)
   - [Leaving a live chat means leaving the activity (until messaging ships)](#leaving-a-live-chat-means-leaving-the-activity-until-messaging-ships)
   - [The live ended screen returns to the lobby only on a tap, and shows no reveal](#the-live-ended-screen-returns-to-the-lobby-only-on-a-tap-and-shows-no-reveal)
   - [In a group the student leaves; only a 2-person chat can be ended](#in-a-group-the-student-leaves-only-a-2-person-chat-can-be-ended)
@@ -90,6 +91,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Character rows lead with the emoji avatar](#character-rows-lead-with-the-emoji-avatar)
   - [Setup sections each carry one brand accent; settings stays the quiet one](#setup-sections-each-carry-one-brand-accent-settings-stays-the-quiet-one)
 - [Teacher live activity page](#teacher-live-activity-page)
+  - [The teacher reads every chat, and that ships with messaging — not after it](#the-teacher-reads-every-chat-and-that-ships-with-messaging--not-after-it)
   - [Disabled ending controls share one hint line, not one per card](#disabled-ending-controls-share-one-hint-line-not-one-per-card)
   - [The live card's count-up clock appears only after the first minute](#the-live-cards-count-up-clock-appears-only-after-the-first-minute)
   - [An empty live transcript explains itself; a finished one doesn't](#an-empty-live-transcript-explains-itself-a-finished-one-doesnt)
@@ -178,6 +180,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Transcripts wait: feature 1 only stores the teacher's email](#transcripts-wait-feature-1-only-stores-the-teachers-email)
   - [Considered and rejected for the backend: TanStack Query, dotenv, a hostKey stash, an npm conversion](#considered-and-rejected-for-the-backend-tanstack-query-dotenv-a-hostkey-stash-an-npm-conversion)
 - [Process & tooling](#process--tooling)
+  - [Features ship as end-to-end slices, not layers](#features-ship-as-end-to-end-slices-not-layers)
   - [Agents read Render logs through the CLI, with the API key in `.env.local`](#agents-read-render-logs-through-the-cli-with-the-api-key-in-envlocal)
   - [The numbered doc standard is retired; technical docs live in `docs/`](#the-numbered-doc-standard-is-retired-technical-docs-live-in-docs)
   - [Features ship as prompt-doc plans in `docs/plans/`, one prompt per session](#features-ship-as-prompt-doc-plans-in-docsplans-one-prompt-per-session)
@@ -706,6 +709,34 @@ _Implemented in [studentSession.ts](client/src/lib/studentSession.ts) and
 ---
 
 ## Chat behavior
+
+### The server never inspects what students write
+
+_2026-07-20_
+
+**Decision:** Messages are capped in length (75 characters, the composer's
+own limit, enforced server-side from the same shared constant) and in rate
+(10 per 10 seconds per socket), and that is the whole of it. The server never
+reads a message for content — no profanity list, no blocked words, no
+masking, no held-for-review. Whatever a student types, their peers get.
+
+**Why:** Founder call (2026-07-20), and it matches the safety model already
+on the homepage: the teacher watches every chat live with real names attached
+([The teacher bullets say the safety part out loud](#the-teacher-bullets-say-the-safety-part-out-loud)),
+and Remove is the discipline tool
+([Removing a student mid-chat is a quiet exit](#removing-a-student-mid-chat-is-a-quiet-exit)).
+Oversight by a present adult beats a wordlist: lists are trivially evaded by
+anyone who wants to, they punish false positives (a student quoting Caesar's
+assassination shouldn't be blocked), and this product mirrors every route
+under `/he` — an English-only filter would be security theatre in half the
+app. A filter would also need a "your message didn't send" path back to the
+client, and no socket event has one; every rejection today is a silent no-op.
+
+What would change this: messaging without a teacher present (homework mode,
+async play). That removes the oversight this decision leans on, and the
+question genuinely reopens.
+
+_Implemented in [lobby.ts](server/src/live/lobby.ts)'s `chat:send` handler._
 
 ### Leaving a live chat means leaving the activity (until messaging ships)
 
@@ -1317,6 +1348,42 @@ _Implemented in
 ---
 
 ## Teacher live activity page
+
+### The teacher reads every chat, and that ships with messaging — not after it
+
+_2026-07-20_
+
+**Decision:** Live chat cards fill with the real transcript as students type,
+each line prefixed with the sender's real name in the established format
+(`(Rachel) Brutus 🔪: text`). Read-only — the teacher still has no composer.
+It ships as its own prompt in
+[feature-4-messaging.md](docs/plans/feature-4-messaging.md), immediately after
+the prompt that lets students send, and is not deferrable past it.
+
+**Why:** Founder call (2026-07-20). The homepage already promises this: the
+teacher-view bullet says students only see each other's characters, "nobody
+is anonymous to the teacher, and anyone who gets out of line is
+identifiable"
+([The teacher bullets say the safety part out loud](#the-teacher-bullets-say-the-safety-part-out-loud)).
+Teacher oversight is also the **only** moderation mechanism the product has,
+by deliberate choice
+([The server never inspects what students write](#the-server-never-inspects-what-students-write)).
+So student messaging without a teacher transcript wouldn't just be an
+incomplete feature — it would make a live marketing claim untrue and remove
+the thing that makes anonymous student chat defensible in a classroom.
+
+It is a separate prompt only because every prompt has to be one working thing
+(see
+[Features ship as end-to-end slices, not layers](#features-ship-as-end-to-end-slices-not-layers)).
+The gap between the two prompts is acceptable **only** while no real classes
+are running on production; if that changes, the second prompt becomes urgent
+rather than next.
+
+_Implemented in
+[useHostActivityLive.ts](client/src/components/Teacher/HostActivity/useHostActivityLive.ts)
+(the snapshot mapping and the delta merge) and
+[ChatCard](client/src/components/Teacher/ChatCard/), which has rendered
+transcripts with real names since the demo._
 
 ### Disabled ending controls share one hint line, not one per card
 
@@ -3375,6 +3442,54 @@ forever.
 
 ## Process & tooling
 
+### Features ship as end-to-end slices, not layers
+
+_2026-07-20_
+
+**Decision:** A feature's prompts are cut **vertically**: each prompt is one
+working thing delivered all the way through — wire, server, client, docs,
+tests, and its own production pass — and is demonstrable on its own when it
+lands. Not a server prompt, then a client prompt, then a docs prompt. The
+first example is
+[feature-4-messaging.md](docs/plans/feature-4-messaging.md), whose Prompt 1
+is "students send each other messages" rather than "the server learns to
+carry messages".
+
+Docs are updated **inside the prompt that changes the behavior**, never
+deferred to a docs prompt at the end. A cross-cutting production sweep still
+gets its own final prompt — per-prompt verification proves each slice works,
+but it cannot cover the seams between slices.
+
+This **refines** rather than replaces
+[Features ship as prompt-doc plans in `docs/plans/`, one prompt per session](#features-ship-as-prompt-doc-plans-in-docsplans-one-prompt-per-session):
+plan docs, numbered prompts sized for one session, one commit straight to
+`main`, and a ticked checkbox all stand. What changes is how a prompt is
+_cut_.
+
+**Why:** Founder call (2026-07-20): "test things individually and do one
+feature at a time end to end… each prompt adds something end to end, and each
+prompt updates the docs accordingly." Layering produced long stretches where
+nothing was demonstrable — feature 3's Prompt 2 shipped a whole student chat
+client that was deliberately dormant until Prompt 3 armed it — and it let the
+docs drift behind the code until a sweep prompt caught up, which is how
+`docs/api.md` ended up contradicting itself about the grace window.
+
+**The cost, and it is real:** layering was also buying deploy safety. Feature
+2 said so outright — "Ordering is load-bearing: Prompt 1 before everything
+(the clients need the deployed socket server)". A vertical slice touches
+`shared/` in one commit, and `shared/` is in both deploy triggers (Vercel's
+Ignored Build Step and Render's build filter), so one push starts two
+independent pipelines that race. Client-lands-first means a UI talking to a
+server that lacks the handler, and Socket.IO drops an unhandled event
+silently. The replacement rule: **after pushing a slice, poll `/healthz` for
+the new server commit before treating the feature as live**, and where a
+client-ahead-of-server window would actually hurt a real user, split that
+slice's push into a server commit then a client commit — still one session
+and one working thing. Don't undo this by quietly going back to layered
+prompts; the deploy race has a rule, the demonstrability problem didn't.
+
+_Recorded in [AGENTS.md](AGENTS.md) → Working Rules for AI Agents._
+
 ### Agents read Render logs through the CLI, with the API key in `.env.local`
 
 _2026-07-19_
@@ -3414,7 +3529,11 @@ method. The living docs named in AGENTS.md remain the source of truth.
 
 ### Features ship as prompt-doc plans in `docs/plans/`, one prompt per session
 
-_2026-07-18_
+_2026-07-18 · Partly superseded 2026-07-20 by
+[Features ship as end-to-end slices, not layers](#features-ship-as-end-to-end-slices-not-layers)
+— the plan-doc format, the one-session sizing, the single commit and the
+ticked checkbox all still stand; only the way a prompt is **cut** changed,
+from layers to vertical slices._
 
 **Decision:** A feature spanning several work sessions gets a plan
 document in `docs/plans/` (the first:
