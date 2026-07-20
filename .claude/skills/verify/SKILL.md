@@ -219,10 +219,13 @@ trying to hurry matching along from the client.
 
 **Scripts are not the whole pass.** Both production bugs found so far lived
 where a headless browser structurally cannot go — a device that genuinely
-loses its connection. When a feature ships, hand the founder
-[docs/manual-tests.md](../../../docs/manual-tests.md) and add to it anything
-the feature introduced that only a real handset exercises. Do not treat a
-green scripted pass as a verified feature.
+loses its connection. Do not treat a green scripted pass as a verified
+feature; ask the founder to drive a real handset on the legs that need one.
+If they can't at the time (no cellular, wrong hour, no second device), write
+the ask into
+[docs/pending-manual-tests.md](../../../docs/pending-manual-tests.md) with
+enough detail to run it cold months later. That file holds blocked asks only
+— delete an entry once it has been run.
 
 The feature-1 prod pass script lives at
 `$env:TEMP\chaverola-verify\prompt7-prod.mjs` — `node prompt7-prod.mjs`
