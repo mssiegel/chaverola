@@ -158,6 +158,11 @@ the students' own screens have them.
   raw-socket fan-out/cap/rate-limit checks and a browser leg (messages
   both directions, mid-chat refresh with the backlog intact, a peer
   leaving mid-conversation) — all against chaverola.com.
+- The teacher-side leg got its own scripted production pass on 2026-07-21
+  (13/13, `f4p3-prod-browser.mjs`): lines landing live with names, a
+  second host device staying coherent, a teacher refresh restoring the
+  transcript, both empty states, and an ended card keeping its transcript.
+  What it can't cover is the same radio-path gap as above.
 - Locally: 16/16 socket-script checks, 15/15 browser checks, and the
   server suite pins the cap's code-point unit and `appendLine`'s rules.
 
