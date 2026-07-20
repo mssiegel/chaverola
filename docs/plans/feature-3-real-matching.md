@@ -35,7 +35,7 @@ When a prompt is done, tick its checkbox here (same commit).
 - [x] Prompt 1 — Shared contract + server matching layer + tests (auto-match
       built but NOT armed)
 - [x] Prompt 2 — Student client: the real chat room (dormant until Prompt 3)
-- [ ] Prompt 3 — Teacher client + arm auto-match (the feature completes)
+- [x] Prompt 3 — Teacher client + arm auto-match (the feature completes)
 - [ ] Prompt 4 — Docs + stale-reference sweep
 - [ ] Prompt 5 — End-to-end production verification
 

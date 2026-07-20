@@ -15,6 +15,10 @@ interface ChatsInProgressSectionProps {
   activity: HostedActivity;
   studentsChattingCount: number;
   waitingCount: number;
+  /** False on live activities until messaging ships: End chat / End all /
+   *  Pause all render disabled, with one shared hint line saying why
+   *  (honest-placeholder pattern; founder call, 2026-07-20). */
+  endingEnabled: boolean;
   onEndChat: (chatId: string) => void;
   onRequestEndAll: () => void;
   /** The activity-wide pause; pausing confirms, resuming is one tap. */
@@ -39,6 +43,7 @@ export function ChatsInProgressSection({
   activity,
   studentsChattingCount,
   waitingCount,
+  endingEnabled,
   onEndChat,
   onRequestEndAll,
   paused,
@@ -113,6 +118,7 @@ export function ChatsInProgressSection({
                 <Button
                   variant="outline"
                   size="sm"
+                  disabled={!endingEnabled}
                   onClick={onRequestPauseAll}
                   className="border-amber-400/60 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
                 >
@@ -123,6 +129,7 @@ export function ChatsInProgressSection({
               <Button
                 variant="outline"
                 size="sm"
+                disabled={!endingEnabled}
                 onClick={onRequestEndAll}
                 className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
               >
@@ -131,6 +138,15 @@ export function ChatsInProgressSection({
               </Button>
             </div>
           </div>
+          {/* One shared hint for all three disabled ending controls (the
+              cards' End chat buttons included) — per card would repeat the
+              same sentence across the grid (founder call, 2026-07-20). */}
+          {!endingEnabled && (
+            <p className="-mt-2 mb-4 text-xs text-muted-foreground">
+              Ending and pausing come in the next update, along with messaging
+              itself.
+            </p>
+          )}
           {paused && (
             <div
               role="status"
@@ -157,8 +173,21 @@ export function ChatsInProgressSection({
                 isEnded={false}
                 isPaused={paused}
                 onEndChat={() => onEndChat(chat.id)}
+                endChatDisabled={!endingEnabled}
                 autoEndSecondsLeft={chat.autoEndSecondsLeft}
+                elapsedSeconds={chat.elapsedSeconds ?? null}
+                // Only live cards get the hint: a demo card's silence is
+                // just a beat between simulated lines, not a missing
+                // feature.
+                emptyHint={
+                  endingEnabled
+                    ? undefined
+                    : "Nothing to read yet. Students can't type until messaging arrives in the next update."
+                }
                 inactiveParticipantIds={new Set(chat.inactiveStudentIds)}
+                reconnectingParticipantIds={
+                  new Set(chat.reconnectingStudentIds ?? [])
+                }
                 onRemoveParticipant={(participant) =>
                   onRequestRemoveParticipant(chat, participant)
                 }

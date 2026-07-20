@@ -23,13 +23,26 @@ export interface ChatCardProps {
   isPaused?: boolean;
   /** Omit to hide the End chat button (e.g. the homepage preview card). */
   onEndChat?: () => void;
+  /** Renders the End chat button disabled — the live page's honest
+   *  placeholder until ending ships with messaging (the section-level hint
+   *  explains it once for all cards). */
+  endChatDisabled?: boolean;
   /** Seconds left on the chat's auto-end clock (null/omitted: no clock). */
   autoEndSecondsLeft?: number | null;
+  /** Seconds since the chat started (live cards) — the count-up chip. */
+  elapsedSeconds?: number | null;
+  /** Shown in the conversation area while there are no messages (live
+   *  cards: real chats can't message yet, and a silent card needs to say
+   *  why). Omit to render an empty feed. */
+  emptyHint?: string;
   /**
    * Participants who left the room mid-chat (removed by the teacher). Their
    * lines and colors persist; the header just mutes them.
    */
   inactiveParticipantIds?: ReadonlySet<string>;
+  /** Active members riding a dropped connection (live cards) — dimmed in
+   *  the header with a lost-connection tag. */
+  reconnectingParticipantIds?: ReadonlySet<string>;
   /** When set, each active participant row gets a remove control (live only). */
   onRemoveParticipant?: (participant: Participant) => void;
 }
@@ -47,8 +60,12 @@ export function ChatCard({
   isEnded,
   isPaused = false,
   onEndChat,
+  endChatDisabled = false,
   autoEndSecondsLeft = null,
+  elapsedSeconds = null,
+  emptyHint,
   inactiveParticipantIds,
+  reconnectingParticipantIds,
   onRemoveParticipant,
 }: ChatCardProps) {
   const [expanded, setExpanded] = useState(false);
@@ -104,7 +121,9 @@ export function ChatCard({
         isEnded={isEnded}
         isPaused={isPaused}
         autoEndSecondsLeft={autoEndSecondsLeft}
+        elapsedSeconds={elapsedSeconds}
         inactiveParticipantIds={inactiveParticipantIds}
+        reconnectingParticipantIds={reconnectingParticipantIds}
         onRemoveParticipant={onRemoveParticipant}
       />
 
@@ -121,12 +140,18 @@ export function ChatCard({
             expanded && "scroll-soft max-h-[min(60vh,420px)] overflow-y-auto"
           )}
         >
-          <ConversationLines
-            participants={participants}
-            messages={visibleMessages}
-            characterColors={characterColors}
-            showRealNames
-          />
+          {messages.length === 0 && emptyHint ? (
+            <p className="grid min-h-[inherit] place-items-center px-4 text-center text-sm text-muted-foreground">
+              {emptyHint}
+            </p>
+          ) : (
+            <ConversationLines
+              participants={participants}
+              messages={visibleMessages}
+              characterColors={characterColors}
+              showRealNames
+            />
+          )}
         </div>
 
         {/* Hint that older lines exist above the collapsed excerpt. */}
@@ -156,6 +181,7 @@ export function ChatCard({
             variant="outline"
             size="sm"
             className="flex-1 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            disabled={endChatDisabled}
             onClick={() => setConfirmOpen(true)}
           >
             <LogOut />

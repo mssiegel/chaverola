@@ -6,6 +6,8 @@ import { characterLabel } from "@/lib/characterLabel";
 import { cn } from "@/lib/utils";
 import type { Participant } from "@/types/chat";
 
+import { ElapsedClock } from "./ElapsedClock";
+
 interface ChatCardHeaderProps {
   participants: Participant[];
   /** Distinct color (CSS var) per character id in this chat. */
@@ -15,8 +17,13 @@ interface ChatCardHeaderProps {
   isPaused?: boolean;
   /** Seconds left on the chat's auto-end clock (null/omitted: no clock). */
   autoEndSecondsLeft?: number | null;
+  /** Seconds since the chat started (live cards) — the count-up chip. */
+  elapsedSeconds?: number | null;
   /** Participants no longer in the room (removed mid-chat) render muted. */
   inactiveParticipantIds?: ReadonlySet<string>;
+  /** Active members riding a dropped connection — dimmed with a
+   *  lost-connection tag, same treatment as the queue rows. */
+  reconnectingParticipantIds?: ReadonlySet<string>;
   /** When set, each active participant row gets a remove control. */
   onRemoveParticipant?: (participant: Participant) => void;
 }
@@ -33,7 +40,9 @@ export function ChatCardHeader({
   isEnded,
   isPaused = false,
   autoEndSecondsLeft = null,
+  elapsedSeconds = null,
   inactiveParticipantIds,
+  reconnectingParticipantIds,
   onRemoveParticipant,
 }: ChatCardHeaderProps) {
   return (
@@ -41,10 +50,21 @@ export function ChatCardHeader({
       <ul className="min-w-0 flex-1 space-y-0.5 text-sm leading-snug">
         {participants.map((participant) => {
           const inactive = inactiveParticipantIds?.has(participant.id) ?? false;
+          // A dropped member's seat is riding out the disconnect — mark it
+          // like a queue row's lost-connection state. Inactive wins: someone
+          // who LEFT the room isn't "reconnecting" to it.
+          const dropped =
+            !inactive &&
+            !isEnded &&
+            (reconnectingParticipantIds?.has(participant.id) ?? false);
           return (
             <li key={participant.id} className="flex items-center gap-1.5">
               <span
-                className={cn("min-w-0 truncate", inactive && "opacity-55")}
+                className={cn(
+                  "min-w-0 truncate",
+                  inactive && "opacity-55",
+                  dropped && "opacity-60"
+                )}
               >
                 <span className="font-semibold text-foreground">
                   {participant.realName}
@@ -59,6 +79,11 @@ export function ChatCardHeader({
                   {characterLabel(participant)}
                 </span>
               </span>
+              {dropped && (
+                <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                  lost connection
+                </span>
+              )}
               {!isEnded && !inactive && onRemoveParticipant && (
                 <button
                   type="button"
@@ -99,6 +124,9 @@ export function ChatCardHeader({
               className="text-xs"
             />
           </span>
+        )}
+        {!isEnded && elapsedSeconds !== null && (
+          <ElapsedClock seconds={elapsedSeconds} />
         )}
       </div>
     </header>

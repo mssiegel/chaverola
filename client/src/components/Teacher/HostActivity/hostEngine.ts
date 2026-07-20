@@ -1,4 +1,4 @@
-import type { LobbyConnectionState } from "@chaverola/shared";
+import type { ActivitySettings, LobbyConnectionState } from "@chaverola/shared";
 
 import type { HostedChat, WaitingStudent } from "./hostWorld";
 
@@ -33,6 +33,14 @@ export interface HostEngine {
   resumeAllChats: () => void;
   removeFromQueue: (studentId: string) => void;
   removeFromChat: (chatId: string, studentId: string) => void;
+  /** Push a settings change to the engine's world. The live engine emits it
+   *  to the server (settings sync is real); the demo's world reads
+   *  activity.settings directly, so its engine no-ops. */
+  updateSettings: (settings: ActivitySettings) => void;
+  /** Whether ending/pausing act yet — the ending-era seam. The demo says
+   *  true; the live engine says false until ending ships (flipping ending
+   *  real later is an engine change, not a UI hunt). */
+  endingEnabled: boolean;
   /** The teacher's own link to the class. The demo is always "connected";
    *  the live page goes amber (banner + dimmed queue) while "reconnecting". */
   connection: LobbyConnectionState;

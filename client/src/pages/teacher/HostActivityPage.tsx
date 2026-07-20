@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { useHostedActivityLookup } from "@/lib/useHostedActivityLookup";
 import { DEMO_JOIN_CODE, demoHostedActivity } from "@/mockData";
-import type { HostedActivity } from "@/types/activity";
+import type { ActivitySettings, HostedActivity } from "@/types/activity";
 
 /**
  * The copy for a host-page load that has blown past the slow-hint mark —
@@ -172,12 +172,15 @@ function HostActivityChrome({
   branch is its own thin wrapper calling its own engine hook, and the
   dashboard just takes the resulting HostEngine.
 
-  Edits (the live-settings panel, the rail's auto-match switch) apply to the
-  local `activity` state only. On the demo that IS the real thing — the
-  whole class is client-side. On a real activity there's no edit endpoint
-  yet, so changes don't reach students and a refresh refetches the server's
-  copy (founder-accepted; see DECISIONS.md → "The live-settings panel stays
-  on real activities, editing the teacher's local view").
+  Edits split by kind on a real activity. SETTINGS are synced: every commit
+  that changes them also emits settings:update through the engine (one
+  interception point below catches the rail's auto-match switch, End-all's
+  auto-match hold, and the panel's commits), the server validates and keeps
+  them, and the teacher's other devices hear settings:changed.
+  Characters/scenario/hostName edits stay local-only until edit-sync ships
+  (students' lobbies keep the server's copy, refresh reverts — founder call;
+  see DECISIONS.md). On the demo everything is local because the whole
+  class is client-side.
 */
 
 function DemoHostActivityView({
@@ -232,13 +235,35 @@ function ConnectedHostActivityView({
   onActivityGone: () => void;
 }) {
   const [activity, setActivity] = useState(initialActivity);
-  const engine = useHostActivityLive({ hostKey, onActivityGone });
+  const engine = useHostActivityLive({
+    hostKey,
+    onActivityGone,
+    // Another host device edited the settings — fold the server's copy into
+    // our activity state. The settings panel's own merge effect then folds
+    // it into any open draft (mergeExternalSettings), so a half-typed edit
+    // survives. Deliberately NOT routed through handleActivityChange: a
+    // sync must never echo back as another settings:update.
+    onSettingsSync: (settings) =>
+      setActivity((prev) => ({ ...prev, settings })),
+  });
+
+  // The one interception point for settings reaching the server: the rail's
+  // auto-match switch, End-all's auto-match hold, and the settings panel's
+  // debounced commits all arrive here as a whole next activity.
+  const handleActivityChange = (next: HostedActivity) => {
+    const prev = activity.settings;
+    const settingsChanged = (
+      Object.keys(next.settings) as (keyof ActivitySettings)[]
+    ).some((key) => prev[key] !== next.settings[key]);
+    if (settingsChanged) engine.updateSettings(next.settings);
+    setActivity(next);
+  };
 
   return (
     <HostActivityChrome>
       <HostActivityDashboard
         activity={activity}
-        onActivityChange={setActivity}
+        onActivityChange={handleActivityChange}
         engine={engine}
       />
     </HostActivityChrome>

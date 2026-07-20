@@ -56,6 +56,12 @@ export interface HostedChat {
   endReason: ChatEndReason | null;
   /** Seconds left on this chat's auto-end clock (null: no clock). */
   autoEndSecondsLeft: number | null;
+  /** Active members currently riding a dropped connection — live only; the
+   *  demo never sets it (its wifi-blip simulation lives on queue rows). */
+  reconnectingStudentIds?: readonly string[];
+  /** Seconds since the chat started — live only; drives the card's
+   *  count-up chip. The demo shows the auto-end countdown instead. */
+  elapsedSeconds?: number;
 }
 
 export interface RosterStudent {

@@ -320,14 +320,6 @@ export function attachLobby(
     autoMatchTimers.delete(joinCode);
   }
 
-  // NOT ARMED YET (feature 3, Prompt 1): auto-match must not start chats
-  // against deployed student clients that can't render them. Prompt 3 adds
-  // the one-line armAutoMatch/releaseAutoMatch calls in the teacher
-  // connect/disconnect handlers below once the student client has shipped.
-  // The voids keep noUnusedLocals quiet until then.
-  void armAutoMatch;
-  void releaseAutoMatch;
-
   io.use((socket, next) => {
     const auth: unknown = socket.handshake.auth;
     const role =
@@ -393,6 +385,9 @@ export function attachLobby(
       // onActivityRemoved has already disconnected us.
       if (!record) return;
       log.info({ joinCode: data.joinCode }, "teacher connected");
+      // Auto-match runs only while a teacher is connected (founder call);
+      // the matching disconnect handler below releases this.
+      armAutoMatch(data.joinCode);
       const now = Date.now();
       socket.emit("queue:snapshot", queuePayload(record, now));
       socket.emit("chats:snapshot", chatsPayload(record, now));
@@ -518,6 +513,7 @@ export function attachLobby(
 
       socket.on("disconnect", (reason) => {
         clearInterval(keepAlive);
+        releaseAutoMatch(data.joinCode);
         log.info({ joinCode: data.joinCode, reason }, "teacher disconnected");
       });
       return;

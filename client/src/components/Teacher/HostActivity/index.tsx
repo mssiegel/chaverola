@@ -5,7 +5,6 @@ import { DemoControlsPanel, EventButton } from "@/components/demo/DemoControls";
 import { AccentIconChip } from "@/components/Teacher/ActivitySetup/FormSection";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
-import { DEMO_JOIN_CODE } from "@/mockData";
 import type { HostedActivity } from "@/types/activity";
 
 import { ChatsInProgressSection } from "./ChatsInProgressSection";
@@ -35,12 +34,12 @@ interface HostActivityDashboardProps {
  * who-am-I-chatting-with mystery would be over (see DECISIONS.md → the
  * no-projection principle).
  *
- * Two layouts live here. The `1234` demo keeps the full round: on phones
- * it's stacked minimizable sections; on desktop the pairing queue becomes a
- * sticky left rail beside the chats. A REAL activity shows the live queue
- * and nothing that can't act yet — no pairing affordances and no chat
- * sections until matching ships (founder call, 2026-07-19; see
- * DECISIONS.md → "Teacher live activity page").
+ * One layout for the demo and real activities alike (matching is real now):
+ * on phones it's stacked minimizable sections; on desktop the pairing queue
+ * becomes a sticky left rail beside the chats. What still differs: the demo
+ * gets its steering panel (demoTriggers), and a real activity's
+ * ending/pausing controls render disabled until messaging ships
+ * (engine.endingEnabled).
  */
 export function HostActivityDashboard({
   activity,
@@ -48,9 +47,6 @@ export function HostActivityDashboard({
   engine,
   demoTriggers,
 }: HostActivityDashboardProps) {
-  // Only the `1234` demo has a working simulation to steer; real activities
-  // run the live socket engine, where matching doesn't exist yet.
-  const isDemo = activity.joinCode === DEMO_JOIN_CODE;
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(
     null
@@ -157,7 +153,6 @@ export function HostActivityDashboard({
   const pairingPanel = (
     <PairingPanel
       waiting={engine.waiting}
-      pairing={isDemo}
       noStudentsYet={noStudentsYet}
       selectedIds={validSelectedIds}
       onToggleSelect={toggleSelect}
@@ -180,8 +175,6 @@ export function HostActivityDashboard({
     />
   );
 
-  // On a real activity the "Everyone's chatting" branch is unreachable —
-  // with no chats, an empty queue always means nobody's joined.
   const waitingHint =
     engine.waiting.length === 0
       ? noStudentsYet
@@ -201,21 +194,46 @@ export function HostActivityDashboard({
 
       <JoiningInstructions joinCode={activity.joinCode} />
 
-      {/* On real activities too — founder call. Until the edit-sync feature
-          lands the edits are local-only there (students' lobbies keep the
-          server's copy, a refresh reverts); see DECISIONS.md → "The
-          live-settings panel stays on real activities". */}
+      {/* On real activities too — founder call. Settings edits now sync to
+          the server (the page's onActivityChange wrapper emits them);
+          characters/scenario/hostName edits stay local-only until edit-sync
+          ships; see DECISIONS.md → "The live-settings panel stays on real
+          activities". */}
       <LiveSettingsPanel
         activity={activity}
         characterIdsInUse={engine.characterIdsInUse}
         onActivityChange={onActivityChange}
       />
 
-      {isDemo ? (
-        /* The demo's full round. Desktop: the pairing queue is a sticky rail
-           beside the chats — the teacher watches the lobby refill while
-           monitoring chats. It never disappears at zero; students come back
-           to it. */
+      {/* While the teacher's own connection is down, the banner says so and
+          the last-known queue and cards stay readable (but not actionable)
+          under it. Unreachable on the demo — its connection never drops. */}
+      {reconnecting && (
+        <div
+          role="status"
+          className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800"
+        >
+          <Loader2
+            aria-hidden
+            className="mt-0.5 size-4 shrink-0 animate-spin motion-reduce:animate-none"
+          />
+          <span className="min-w-0 flex-1">
+            <span className="font-semibold">Reconnecting to your class…</span>{" "}
+            Everything below is from right before you lost connection. It
+            catches up as soon as you're back.
+          </span>
+        </div>
+      )}
+
+      {/* The full round, demo and live alike. Desktop: the pairing queue is
+          a sticky rail beside the chats — the teacher watches the lobby
+          refill while monitoring chats. It never disappears at zero;
+          students come back to it. */}
+      <div
+        className={cn(
+          reconnecting && "pointer-events-none opacity-60 select-none"
+        )}
+      >
         <div className="lg:grid lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start lg:gap-6">
           {/* Sticky lives on the aside (a grid item sticks within its full-height
               grid area) and needs the grid's items-start — a stretched item has
@@ -258,6 +276,7 @@ export function HostActivityDashboard({
               activity={activity}
               studentsChattingCount={engine.studentsChattingCount}
               waitingCount={engine.waiting.length}
+              endingEnabled={engine.endingEnabled}
               onEndChat={engine.endChat}
               onRequestEndAll={() => setPendingAction({ kind: "end-all" })}
               paused={engine.paused}
@@ -316,47 +335,7 @@ export function HostActivityDashboard({
             )}
           </div>
         </div>
-      ) : (
-        /* A real activity: the live queue is the whole show until matching
-           ships — no chat sections, no pairing affordances (founder call).
-           While the teacher's own connection is down, the banner says so and
-           the last-known queue stays readable (but not actionable) under it. */
-        <>
-          {reconnecting && (
-            <div
-              role="status"
-              className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800"
-            >
-              <Loader2
-                aria-hidden
-                className="mt-0.5 size-4 shrink-0 animate-spin motion-reduce:animate-none"
-              />
-              <span className="min-w-0 flex-1">
-                <span className="font-semibold">
-                  Reconnecting to your class…
-                </span>{" "}
-                The queue below is from right before you lost connection. It
-                catches up as soon as you're back.
-              </span>
-            </div>
-          )}
-          <div
-            className={cn(
-              reconnecting && "pointer-events-none opacity-60 select-none"
-            )}
-          >
-            <CollapsibleSection
-              title="Who's joined"
-              icon={UsersRound}
-              accent="grape"
-              count={engine.waiting.length}
-              collapsedHint={waitingHint}
-            >
-              {pairingPanel}
-            </CollapsibleSection>
-          </div>
-        </>
-      )}
+      </div>
 
       <ConfirmDialog
         open={pendingAction !== null}

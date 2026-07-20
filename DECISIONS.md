@@ -90,6 +90,8 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Character rows lead with the emoji avatar](#character-rows-lead-with-the-emoji-avatar)
   - [Setup sections each carry one brand accent; settings stays the quiet one](#setup-sections-each-carry-one-brand-accent-settings-stays-the-quiet-one)
 - [Teacher live activity page](#teacher-live-activity-page)
+  - [Disabled ending controls share one hint line, not one per card](#disabled-ending-controls-share-one-hint-line-not-one-per-card)
+  - [The live card's count-up clock appears only after the first minute](#the-live-cards-count-up-clock-appears-only-after-the-first-minute)
   - [Feature 3 makes matching real; messaging, ending, and pause stay placeholders](#feature-3-makes-matching-real-messaging-ending-and-pause-stay-placeholders)
   - [Auto-match runs on the server, and only while the teacher is connected](#auto-match-runs-on-the-server-and-only-while-the-teacher-is-connected)
   - [Mid-chat, drops show and Remove works — nothing happens automatically](#mid-chat-drops-show-and-remove-works--nothing-happens-automatically)
@@ -1300,6 +1302,42 @@ _Implemented in
 ---
 
 ## Teacher live activity page
+
+### Disabled ending controls share one hint line, not one per card
+
+_2026-07-20_
+
+**Decision:** On a live activity, "End all chats", "Pause all chats", and
+every card's "End chat" render disabled, explained by a single muted hint
+line in the Chats-in-progress toolbar ("Ending and pausing come in the next
+update, along with messaging itself."). No per-card hint, no tooltip.
+
+**Why:** Founder call (2026-07-20), choosing between per-card hints,
+tooltips, and one shared line. Per-card repeats the same sentence across the
+whole grid; tooltips are invisible on touch devices, leaving teachers on
+tablets with unexplained dead buttons. One line beside the disabled section
+buttons covers all three controls and disappears with them when ending
+ships (`endingEnabled`).
+
+_Implemented in [ChatsInProgressSection](client/src/components/Teacher/HostActivity/ChatsInProgressSection.tsx)._
+
+### The live card's count-up clock appears only after the first minute
+
+_2026-07-20_
+
+**Decision:** Live chat cards carry an m:ss count-up clock (how long the
+chat has been going) in the same header spot the demo's auto-end countdown
+uses — but it stays hidden for the chat's first 60 seconds and fades in at
+1:00.
+
+**Why:** Founder call (2026-07-20). A fresh card full of chrome (Live badge,
+names, hint line) doesn't need a `0:07` ticking at the teacher; the elapsed
+time only becomes information once a chat has been running a while. The
+threshold lives in one place (`ElapsedClock.SHOW_FROM_SECONDS`). The demo
+keeps the auto-end countdown instead — real chats have no auto-end clock
+yet.
+
+_Implemented in [ElapsedClock](client/src/components/Teacher/ChatCard/ElapsedClock.tsx)._
 
 ### Feature 3 makes matching real; messaging, ending, and pause stay placeholders
 

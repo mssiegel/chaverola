@@ -23,8 +23,8 @@ export function HostHeader({
 }) {
   const heroStatRef = useRef<HTMLDivElement>(null);
   const [statOffScreen, setStatOffScreen] = useState(false);
-  // Real activities can't pair anyone until matching ships, so the hero
-  // stat's action line must not suggest it (the demo keeps the full promise).
+  // Only the condensed bar cares: on the demo the sticky DemoBanner owns
+  // the under-navbar band, so the bar stands down there.
   const isDemo = activity.joinCode === DEMO_JOIN_CODE;
 
   useEffect(() => {
@@ -72,9 +72,7 @@ export function HostHeader({
               ? noStudentsYet
                 ? "Share the pin below and they'll pop up here."
                 : "The queue refills as chats wrap up."
-              : isDemo
-                ? "Pair them up below, or let auto-match handle it."
-                : "They're in and waiting. More names pop up below as students join."}
+              : "Pair them up below, or let auto-match handle it."}
           </p>
         </div>
       </div>
