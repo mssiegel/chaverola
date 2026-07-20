@@ -337,6 +337,25 @@ What this pass paid for:
   cycle, taps End, and asserts the partner is freed. The lesson generalises —
   **a headless browser on broadband never actually loses its connection, so
   it cannot test what a user does while offline.** Only a real device can.
+- **A flushed send buffer is not a delivered message.** The first attempt at
+  the client fix looked right and still failed. An isolation probe
+  (`f3p5-buffer-probe.mjs`, raw socket.io-client, no browser) showed
+  `sendBuffer` going 1 → 0 across the reconnect — the packet genuinely left —
+  while the partner still heard nothing. The socket was reconnecting with an
+  auth CALLBACK that re-reads the student session on every attempt, and
+  leaving had already signed the student out, so the server rejected the
+  connection as `invalid` and took the buffered packet with it. The fix is to
+  freeze the credentials into `socket.auth` before letting it reconnect. Two
+  habits worth keeping: when a client-side fix "should work" but doesn't,
+  drop to a raw socket driver to find out which side is dropping the message;
+  and remember that anything reading session state lazily will read it
+  _after_ the sign-out that leaving performs.
+- **Give a probe the same auth shape the real client uses.** That same buffer
+  probe initially connected with `{role, joinCode, name}` and no `nonce`, so
+  its reconnect fell through `seatStudent`'s resume paths and minted a
+  brand-new seat — making a working path look broken. `seats.ts` resumes on
+  `studentId`+`token` first, then `nonce`; a probe missing both is testing a
+  different student than it thinks.
 - **`?fast` reaches nothing on production** — `demoTime.ts` returns 1 unless
   `import.meta.env.DEV`. The demo lobby's auto-pair takes the real ~20s
   (measured 20.4s). Budget real time; don't pass the param and wonder.

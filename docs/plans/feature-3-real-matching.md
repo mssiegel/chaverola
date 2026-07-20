@@ -597,5 +597,37 @@ Prompt 4 deploy nine minutes earlier, and the plan forbids manufacturing a
 spin-down. Item 2 (the restart story) was deliberately skipped; the
 reasoning is recorded in DECISIONS.md.
 
-**Still owed:** the real-handset-on-cellular leg. Until it is run and
-reported, this checkbox stays unticked.
+### The handset leg found a prod bug — 2026-07-20
+
+The founder ran the cellular leg and it did what feature 1's pass did: it
+broke something the scripts could not. With the phone's socket down (screen
+lock, then airplane mode) the student tapped End; the `lobby:leave` died in
+socket.io's send buffer, and because a matched seat armed no grace timer
+nothing repaired it. The chat was still `active` seven minutes later with the
+phone as a member and the partner stranded — it would have lived until the
+12h TTL.
+
+Fixed on both sides and verified on production:
+
+- Server: every seat takes the same 120s grace, and a matched seat that runs
+  it out leaves its **chat** as well as its seat. Measured independently with
+  no client cooperation at all: a student who vanishes with no goodbye frees
+  their partner **120.2s** after the drop.
+- Client: a leave emitted on a down socket keeps the socket reconnecting to
+  flush it, with the seat credentials frozen first (the sign-out that leaving
+  performs would otherwise invalidate the reconnect).
+- `f3p5-leave-offline-repro.mjs` reproduces the original failure and now
+  passes 6/6; scripts A and C re-run clean afterwards (71/71, 31/31).
+
+Recorded in DECISIONS.md →
+[A matched seat gets the same 2 minutes as any other](../../DECISIONS.md).
+
+**Still owed:** a confirming run on the real handset. The whole lesson of
+this pass is that a headless browser cannot lose its connection the way a
+phone does, so the fix deserves the same gate that caught the bug. Until
+that is run and reported, this checkbox stays unticked.
+
+**Deferred, deliberately:** the partner sees nothing while they wait out the
+grace — the "lost connection" tag is teacher-only. That needs peer connection
+state on `ChatPeer` (allowlist-pinned to `characterId` today) plus new copy,
+so it is its own work rather than a rider on a safety fix.
