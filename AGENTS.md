@@ -41,7 +41,9 @@ was down stranded their partner in a dead room permanently. Fixed on both
 sides and re-verified (see DECISIONS.md → "A matched seat gets the same 2
 minutes as any other"). Keep sending real features to a real phone —
 headless Chrome on broadband never actually loses its connection, so it
-cannot test what a user does while offline.
+cannot test what a user does while offline. The standing checklist is
+[docs/manual-tests.md](docs/manual-tests.md); add to it whenever a feature
+introduces something only a real device exercises.
 
 **Messaging is the next feature, and a lot hangs off that.** No chat
 message has ever crossed the wire: the rooms matching creates are
@@ -167,7 +169,7 @@ The full project brief (what Chaverola is, scope, tech stack, canonical routes, 
 
 ## Documentation
 
-The living docs are [README.md](README.md), this file, [DECISIONS.md](DECISIONS.md), [Shared_Project_Context.md](Shared_Project_Context.md), and the technical docs under [docs/](docs/) — [docs/architecture.md](docs/architecture.md) (packages, request flow, deploy topology, the in-memory lifecycle) and [docs/api.md](docs/api.md) (the canonical API contract, kept current per feature). Keep them all in sync with the code before considering a change complete. Feature plans live in [docs/plans/](docs/plans/). (`PROJECT_DOCUMENTATION_STANDARD.md` was retired 2026-07-18 — founder call; see DECISIONS.md.)
+The living docs are [README.md](README.md), this file, [DECISIONS.md](DECISIONS.md), [Shared_Project_Context.md](Shared_Project_Context.md), and the technical docs under [docs/](docs/) — [docs/architecture.md](docs/architecture.md) (packages, request flow, deploy topology, the in-memory lifecycle) and [docs/api.md](docs/api.md) (the canonical API contract, kept current per feature), plus [docs/manual-tests.md](docs/manual-tests.md) — the checklist of things only a human with a real handset can test, which is where both production bugs have been found. Keep them all in sync with the code before considering a change complete. Feature plans live in [docs/plans/](docs/plans/). (`PROJECT_DOCUMENTATION_STANDARD.md` was retired 2026-07-18 — founder call; see DECISIONS.md.)
 
 ## Project Overview
 
