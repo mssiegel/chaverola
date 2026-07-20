@@ -146,16 +146,17 @@ export function markDisconnected(
 }
 
 /**
- * Arm the per-drop timers. Both re-check that the drop is still current
- * before acting — a resume clears them, but belt over suspenders. Both are
- * unref'd: pending seat timers must never hold the process open on SIGTERM.
- * `graceMs: null` arms only the broadcast-delay timer — a matched seat is
- * never grace-reaped (the student can resume into their chat until the
- * activity dies; founder call, feature 3).
+ * Arm the per-drop timers: the broadcast delay and the grace clock. Every
+ * dropped seat arms both — matched or waiting, the same uniform grace
+ * (what expiry means for a seat mid-chat is the caller's onGraceExpiry
+ * business; this module stays chat-unaware). Both re-check that the drop
+ * is still current before acting — a resume clears them, but belt over
+ * suspenders. Both are unref'd: pending seat timers must never hold the
+ * process open on SIGTERM.
  */
 export function armDisconnectTimers(
   seat: Seat,
-  graceMs: number | null,
+  graceMs: number,
   broadcastDelayMs: number,
   callbacks: { onBroadcastDelay: () => void; onGraceExpiry: () => void }
 ): void {
@@ -164,7 +165,6 @@ export function armDisconnectTimers(
     if (!seat.connected) callbacks.onBroadcastDelay();
   }, broadcastDelayMs);
   seat.timers.broadcast.unref();
-  if (graceMs === null) return;
   seat.timers.grace = setTimeout(() => {
     seat.timers.grace = undefined;
     if (!seat.connected) callbacks.onGraceExpiry();

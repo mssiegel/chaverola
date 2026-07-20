@@ -394,11 +394,11 @@ the teacher's room — the same teacher-only surface as `QueueEntry`.
   frame, so detection is Socket.IO's ping cycle — roughly 45 seconds at
   the default `pingInterval` 25s + `pingTimeout` 20s. Expect the
   latency; don't tune it away (tighter timeouts flap on school wifi).
-- **Grace window — for waiting seats only.** A dropped seat in the queue
+- **Grace window — every seat, waiting or matched.** A dropped seat
   survives `LOBBY_GRACE_SECONDS` (120) starting at _detected_ disconnect,
   marked `reconnecting`, and reconnecting restores it with its original
-  wait clock. A dropped seat **in a chat** gets no such clock at all: it
-  survives until the activity dies (see the matching truths above).
+  wait clock. At expiry a waiting seat is reaped; a seat **in a chat**
+  leaves its chat as well (see the matching truths above).
 - **Broadcast delay.** The teacher-facing row change waits
   `LOBBY_DISCONNECT_BROADCAST_DELAY_MS` (4000) so a student's ~1–2s page
   refresh never flashes the row. The delay gates only the teacher-facing

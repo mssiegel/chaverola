@@ -43,7 +43,7 @@ To run a prompt, tell the agent:
 
 When a prompt is done, tick its checkbox here (same commit).
 
-- [ ] Prompt 1 — The handset fix's leftovers (cleanup; no behavior change)
+- [x] Prompt 1 — The handset fix's leftovers (cleanup; no behavior change)
 - [ ] Prompt 2 — Students send each other messages (end to end)
 - [ ] Prompt 3 — The teacher reads them (end to end)
 - [ ] Prompt 4 — The cross-cutting production sweep

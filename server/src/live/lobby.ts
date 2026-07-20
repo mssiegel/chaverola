@@ -214,7 +214,7 @@ export function attachLobby(
   function armSeatTimers(
     record: StoredActivity,
     seat: Seat,
-    graceMs: number | null
+    graceMs: number
   ): void {
     armDisconnectTimers(seat, graceMs, LOBBY_DISCONNECT_BROADCAST_DELAY_MS, {
       // The delay gates only the teacher-facing state; the room learns of

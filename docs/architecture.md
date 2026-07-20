@@ -171,8 +171,10 @@ How the layer is put together (`server/src/live/`):
   a refresh the new socket can resume the seat before the old socket's
   disconnect fires. Each seat owns up to two timers (broadcast delay +
   grace), cleared on resume, leave, remove, and activity removal.
-  `armDisconnectTimers` takes a nullable grace — `null` arms the
-  broadcast delay alone, which is how a matched seat survives untimed.
+  `armDisconnectTimers` arms both on every drop — the same 120s grace
+  for every seat, matched or waiting (the 2026-07-20 handset fix); what
+  grace expiry means for a seat mid-chat is lobby.ts's callback, so
+  seats.ts stays chat-unaware.
   A seat's `wrappingUp` flag marks the ended-screen state; `toQueueEntries`
   skips those and takes an `exclude` set for matched seats, so seats.ts
   itself stays chat-unaware (lobby.ts supplies the set).
