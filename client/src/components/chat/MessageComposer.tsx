@@ -24,6 +24,11 @@ interface MessageComposerProps {
    * back untouched on resume.
    */
   disabled?: boolean;
+  /**
+   * What the locked field says while `disabled`. Defaults to the pause copy;
+   * live rooms pass their own line (messaging hasn't shipped yet).
+   */
+  disabledPlaceholder?: string;
 }
 
 /**
@@ -36,6 +41,7 @@ export function MessageComposer({
   onSend,
   selfCharacterLabel,
   disabled = false,
+  disabledPlaceholder = "Paused. Hang tight…",
 }: MessageComposerProps) {
   const [value, setValue] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -162,7 +168,7 @@ export function MessageComposer({
             disabled={disabled}
             placeholder={
               disabled
-                ? "Paused. Hang tight…"
+                ? disabledPlaceholder
                 : selfCharacterLabel
                   ? `Talk as ${selfCharacterLabel}…`
                   : "Type a message…"

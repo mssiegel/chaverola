@@ -17,6 +17,12 @@ interface ChatEndedSectionProps {
   endedByPeerId?: string | null;
   /** Whether the room still had 2+ peers when it ended (scopes the copy). */
   endedInGroup?: boolean;
+  /**
+   * Replaces the names-stay-secret line shown when revealNames is off.
+   * Live rooms pass a neutral one — the reveal doesn't exist yet, so the
+   * default line's "your teacher hasn't revealed them" would overpromise.
+   */
+  secretLine?: string;
   onBackToLobby: () => void;
 }
 
@@ -98,6 +104,7 @@ export function ChatEndedSection({
   endReason = null,
   endedByPeerId = null,
   endedInGroup = false,
+  secretLine,
   onBackToLobby,
 }: ChatEndedSectionProps) {
   const endedBy = endedByPeerId
@@ -161,7 +168,10 @@ export function ChatEndedSection({
         ) : (
           <div className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-card/60 p-3 text-sm text-muted-foreground">
             <EyeOff className="size-4" />
-            <span>Names stay secret. Your teacher hasn't revealed them.</span>
+            <span>
+              {secretLine ??
+                "Names stay secret. Your teacher hasn't revealed them."}
+            </span>
           </div>
         )}
 

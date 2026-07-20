@@ -14,6 +14,8 @@ import {
 import {
   MAX_STUDENTS_PER_ACTIVITY,
   STUDENT_NAME_MAX_CHARS,
+  type Character,
+  type ChatPeer,
   type LobbyConnectionState,
 } from "@chaverola/shared";
 
@@ -21,12 +23,14 @@ import { DemoBanner } from "@/components/demo/DemoBanner";
 import { DemoControlsPanel, EventButton } from "@/components/demo/DemoControls";
 import type { StudentWorldOutletContext } from "@/components/layout/StudentWorldLayout";
 import { ChatStage } from "@/components/Student/ChatStage";
+import { LiveChatStage } from "@/components/Student/LiveChatStage";
 import { WaitingLobby } from "@/components/Student/WaitingLobby";
 import { Button } from "@/components/ui/button";
 import { getActivity } from "@/lib/api";
+import { characterLabel } from "@/lib/characterLabel";
 import { scaledMs } from "@/lib/demoTime";
 import { useLocaleNavigate } from "@/lib/locale";
-import { randomFrom } from "@/lib/random";
+import { nextId, randomFrom } from "@/lib/random";
 import { useStudentSession } from "@/lib/studentSession";
 import {
   primeActivityLookup,
@@ -38,6 +42,8 @@ import { usePageTitle } from "@/lib/usePageTitle";
 import { useLobbyPresence } from "@/pages/student/useLobbyPresence";
 import { useWarmUpServer } from "@/lib/useWarmUpServer";
 import { cn } from "@/lib/utils";
+import { NOTICE_SENDER_ID } from "@/types/chat";
+import type { ChatMessage, Participant } from "@/types/chat";
 import {
   DEMO_JOIN_CODE,
   DEMO_STUDENT_NAME,
@@ -59,11 +65,39 @@ type StudentStage =
 type CodeProblem = "not-found" | "unreachable";
 
 /** One mock match the lobby's demo trigger fired the student into. */
-interface ActiveMatch {
+interface DemoMatch {
+  kind: "demo";
   /** Bumped per match so ChatStage remounts with a fresh chat every time. */
   seq: number;
   scenarioKey: ActivityChatScenarioKey;
 }
+
+/**
+ * A real chat the server matched the student into (chat:started). Assembled
+ * from the wire's characterIds against the fetched roster; peers carry no
+ * real names by construction — the student wire never has them.
+ */
+interface LiveMatch {
+  kind: "live";
+  chatId: string;
+  /** The student's own seat (realName from the session). */
+  self: Participant;
+  /** Peers still in the room; chat:update shrinks this. */
+  peers: Participant[];
+  /** Everyone ever in the room — keeps colors and lines stable. */
+  everPeers: Participant[];
+  /** Local membership notices ("X left the chat"), built by diffing. */
+  notices: ChatMessage[];
+}
+
+type ActiveMatch = DemoMatch | LiveMatch;
+
+/**
+ * A characterId the fetched roster can't resolve (shouldn't happen — the
+ * server deals from the same roster the student fetched — but the wire is
+ * the wire). The room still works; only the label is a mystery.
+ */
+const FALLBACK_CHARACTER_NAME = "Mystery guest";
 
 const PAGE_TITLES: Record<StudentStage, string> = {
   code: "Join an Activity",
@@ -114,10 +148,12 @@ const STUDENT_CARD_CLASS =
  * code still being looked up means loading, a code that resolved to nothing
  * falls back to code entry, a found activity without a signed-in session
  * means name entry, and a session that matches the code means the lobby —
- * until a mock match starts a chat. The demo activity (`1234`) resolves
+ * until a match starts a chat: the demo's mock triggers on `1234`, the
+ * server's `chat:started` on real activities. The demo activity resolves
  * synchronously with zero network; real codes go through the API
- * (`useActivityLookup`). The match itself lives only in memory (chat state
- * is mock-only), so a mid-chat refresh lands back in the lobby by design.
+ * (`useActivityLookup`). A demo match lives only in memory, so a mid-chat
+ * refresh lands back in the lobby; a live match resumes across refresh —
+ * the server re-emits `chat:started` to a matched seat on every welcome.
  *
  * Demo entries (the homepage's "Try the student side", /demo/student) skip
  * the code screen: they land straight on /activity/join/1234 with the name
@@ -141,7 +177,8 @@ export function JoinActivityPage() {
   } = useActivityLookup(joinCodeParam);
   const activity = lookup.state === "found" ? lookup.activity : undefined;
 
-  // Set by the lobby's demo match triggers; a real backend pushes this later.
+  // Set by the lobby's demo match triggers (demo) or by the server's
+  // chat:started (real activities, via the presence hook below).
   const [match, setMatch] = useState<ActiveMatch | null>(null);
   // Mirrors the chat engine's ended flag up here so the stage (and with it
   // the page title) can tell chatting from ended.
@@ -226,19 +263,31 @@ export function JoinActivityPage() {
 
   // Match changes swap the screen on this same route (lobby → chat, rematch,
   // back to lobby) without navigating, so ScrollToTop can't see them — open
-  // each one at the top like a fresh page. Layout effect so the jump lands
+  // each one at the top like a fresh page. Keyed on the match's IDENTITY,
+  // not the object: a live chat:update replaces the object mid-chat and
+  // must not yank the reader to the top. Layout effect so the jump lands
   // before paint; the ref skips the initial mount, leaving arrival scrolling
   // (including ScrollToTop's back/forward exception) alone. Chatting → ended
   // stays put on purpose: that swap happens in place, mid-read.
-  const previousMatchRef = useRef(match);
+  const matchKey =
+    match === null
+      ? null
+      : match.kind === "demo"
+        ? `demo-${match.seq}`
+        : match.chatId;
+  const previousMatchKeyRef = useRef(matchKey);
   useLayoutEffect(() => {
-    if (previousMatchRef.current !== match) window.scrollTo(0, 0);
-    previousMatchRef.current = match;
-  }, [match]);
+    if (previousMatchKeyRef.current !== matchKey) window.scrollTo(0, 0);
+    previousMatchKeyRef.current = matchKey;
+  }, [matchKey]);
 
   const startMatch = (scenarioKey: ActivityChatScenarioKey) => {
     setChatEnded(false);
-    setMatch((prev) => ({ seq: (prev?.seq ?? 0) + 1, scenarioKey }));
+    setMatch((prev) => ({
+      kind: "demo",
+      seq: (prev?.kind === "demo" ? prev.seq : 0) + 1,
+      scenarioKey,
+    }));
   };
 
   // Back to the queue: only ever by the student's own tap (see DECISIONS.md).
@@ -289,18 +338,58 @@ export function JoinActivityPage() {
   const [name, setName] = useState(demoPrefillName);
   const [removedByTeacher, setRemovedByTeacher] = useState(false);
 
-  // The live seat. Active only for the lobby stage of real activities —
-  // the demo (1234) keeps zero network by construction. Called after the
-  // name state above because its callbacks reach for it:
+  // Resolve a wire characterId against the fetched roster. Can't miss in
+  // practice (the server deals from the roster the student fetched), but
+  // the wire is the wire — an unresolvable id still renders, as a mystery.
+  const resolveCharacter = (characterId: string): Character =>
+    activity?.characters.find((c) => c.id === characterId) ?? {
+      id: characterId,
+      name: FALLBACK_CHARACTER_NAME,
+    };
+
+  // Reconcile a live match with the wire's current peer list: whoever
+  // disappeared gets a local "left the chat" notice and drops out of
+  // `peers`; `everPeers` keeps them so colors and lines stay stable.
+  const shrinkToPeers = (prev: LiveMatch, current: ChatPeer[]): LiveMatch => {
+    const currentIds = new Set(current.map((p) => p.characterId));
+    const gone = prev.peers.filter((p) => !currentIds.has(p.id));
+    if (gone.length === 0) return prev;
+    return {
+      ...prev,
+      peers: prev.peers.filter((p) => currentIds.has(p.id)),
+      notices: [
+        ...prev.notices,
+        ...gone.map((peer): ChatMessage => ({
+          id: nextId("m"),
+          senderId: NOTICE_SENDER_ID,
+          kind: "notice",
+          text: `${characterLabel(peer)} left the chat`,
+        })),
+      ],
+    };
+  };
+
+  // The live seat. Active through the whole seated life of a real activity
+  // — lobby, chatting, and the chat-ended screen — so a matched student's
+  // socket lives on and a refresh resumes into the chat; the demo (1234)
+  // keeps zero network by construction. Called after the name state above
+  // because its callbacks reach for it:
   // - onRemoved (the socket event, or a tombstoned token on a reconnect
   //   attempt) drives the same flow the demo button does — except the name
   //   field stays blank on real activities (founder call: most removals
   //   target a fake name, so don't hand it back for one-tap re-entry; a
-  //   mistyped real name is quick to retype).
+  //   mistyped real name is quick to retype). Mid-chat removals land here
+  //   too, so the match clears with the seat.
   // - onEnded latches the dead activity's code, which flips the stage to
   //   the activity-gone screen.
-  const { presence, retrying, retry } = useLobbyPresence({
-    active: baseStage === "lobby" && isRealActivity && !activityGoneFromSocket,
+  // - onChatStarted is both the match and every resume into it; a re-send
+  //   for a chat already in memory reconciles peers instead of resetting.
+  // - onChatEnded with no match in memory is the post-refresh ended screen
+  //   — nothing to show, so the seat goes straight back to the queue.
+  const seated =
+    baseStage === "lobby" || baseStage === "chatting" || baseStage === "ended";
+  const { presence, retrying, retry, returnToLobby } = useLobbyPresence({
+    active: seated && isRealActivity && !activityGoneFromSocket,
     joinCode: activity?.joinCode,
     session,
     updateSession,
@@ -308,9 +397,59 @@ export function JoinActivityPage() {
       signOut();
       setName("");
       setRemovedByTeacher(true);
+      setMatch(null);
+      setChatEnded(false);
     },
     onEnded: () => {
       if (activity) setGoneCode(activity.joinCode);
+    },
+    onChatStarted: (payload) => {
+      if (!session) return;
+      setChatEnded(false);
+      setMatch((prev) => {
+        if (prev?.kind === "live" && prev.chatId === payload.chatId) {
+          // A resume re-delivery of the chat already on screen: keep the
+          // notices, fold in any membership change missed while away.
+          return shrinkToPeers(prev, payload.peers);
+        }
+        const peers = payload.peers.map((peer): Participant => ({
+          // characterId doubles as the participant id — unique within a
+          // chat (each character is dealt once), and the only identity
+          // the student wire carries.
+          id: peer.characterId,
+          character: resolveCharacter(peer.characterId),
+          realName: "",
+        }));
+        return {
+          kind: "live",
+          chatId: payload.chatId,
+          self: {
+            id: payload.selfCharacterId,
+            character: resolveCharacter(payload.selfCharacterId),
+            realName: session.name,
+          },
+          peers,
+          everPeers: peers,
+          notices: [],
+        };
+      });
+    },
+    onChatUpdate: (payload) => {
+      setMatch((prev) =>
+        prev?.kind === "live" && prev.chatId === payload.chatId
+          ? shrinkToPeers(prev, payload.peers)
+          : prev
+      );
+    },
+    onChatEnded: () => {
+      if (match?.kind === "live") {
+        setChatEnded(true);
+      } else {
+        // Post-refresh (or post-anything that lost the match from memory):
+        // there's no chat to show an ended screen for — go straight back
+        // to the queue instead of pretending.
+        returnToLobby();
+      }
     },
   });
 
@@ -437,15 +576,38 @@ export function JoinActivityPage() {
       ) : activity && session && match ? (
         // Chatting + chat ended, on this same route. Keyed per match so a
         // rematch always boots a fresh chat.
-        <ChatStage
-          key={match.seq}
-          studentName={session.name}
-          scenarioKey={match.scenarioKey}
-          onEndedChange={setChatEnded}
-          onBackToLobby={backToLobby}
-          classPaused={classPaused}
-          onClassPausedChange={setClassPaused}
-        />
+        match.kind === "demo" ? (
+          <ChatStage
+            key={match.seq}
+            studentName={session.name}
+            scenarioKey={match.scenarioKey}
+            onEndedChange={setChatEnded}
+            onBackToLobby={backToLobby}
+            classPaused={classPaused}
+            onClassPausedChange={setClassPaused}
+          />
+        ) : (
+          <LiveChatStage
+            key={match.chatId}
+            self={match.self}
+            peers={match.peers}
+            everPeers={match.everPeers}
+            notices={match.notices}
+            isEnded={chatEnded}
+            // Leaving a live chat means leaving the activity: landing on
+            // bare code entry runs the sign-out effect, and the presence
+            // hook's cleanup emits lobby:leave (back-as-reset, exactly the
+            // browser-back flow).
+            onLeaveActivity={() => navigate("/activity/join")}
+            // The ended screen's Back tap: the server returns the
+            // wrapping-up seat to the queue with a fresh clock, and the
+            // local match state clears.
+            onBackToLobby={() => {
+              returnToLobby();
+              backToLobby();
+            }}
+          />
+        )
       ) : stage === "lobby" && activity && session ? (
         presence === "full" ? (
           // The seat cap said no — the lobby gate's own copy, with a way to

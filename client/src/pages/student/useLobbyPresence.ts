@@ -1,22 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { StudentAuth } from "@chaverola/shared";
+import type { ChatPeer, StudentAuth } from "@chaverola/shared";
 
 import { createLobbySocket, type LobbySocket } from "@/lib/socket";
 import { mintNonce, type StudentSession } from "@/lib/studentSession";
 import { useLatestRef } from "@/lib/useLatestRef";
 
 /*
-  The student's live seat in a real activity's lobby. Owns the socket for
-  the lobby stage of real activities only — the demo (1234) never activates
-  it, so demo surfaces stay structurally zero-network.
+  The student's live seat in a real activity. Owns the socket for the whole
+  seated life — lobby, chatting, and the chat-ended screen — of real
+  activities only; the demo (1234) never activates it, so demo surfaces stay
+  structurally zero-network.
 
-  Exit semantics matter here: leaving the lobby stage through React (browser
-  back-as-reset, the removed flow) runs the effect cleanup, which emits
-  lobby:leave — an intentional exit, immediate seat removal. A refresh or
-  pagehide never runs React cleanup, so the socket just dies and the server
-  gives the seat its 2-minute grace window. That asymmetry is the design,
-  not an accident (see docs/plans/feature-2-live-lobby.md).
+  Exit semantics matter here: leaving the seated stages through React
+  (browser back-as-reset, the removed flow) runs the effect cleanup, which
+  emits lobby:leave — an intentional exit, immediate seat removal, and
+  mid-chat also the intentional leave-the-chat path. A refresh or pagehide
+  never runs React cleanup, so the socket just dies and the server gives the
+  seat its grace window (none while matched — a matched seat waits for its
+  student until the activity dies). That asymmetry is the design, not an
+  accident (see docs/plans/feature-2-live-lobby.md).
 */
 
 export type LobbyPresence =
@@ -61,7 +64,14 @@ function buildStudentAuth(
  * `onRemoved` / `onEnded` fire from the socket's own callbacks (the remove
  * event or a tombstoned-token rejection; the ended event or an
  * activity_gone rejection) — the page reacts there, where reacting with
- * setState is the subscription pattern the hooks lint asks for.
+ * setState is the subscription pattern the hooks lint asks for. The chat
+ * callbacks work the same way: `onChatStarted` is both the match and every
+ * resume into it (refresh, wifi recovery, duplicate-tab takeover),
+ * `onChatUpdate` is a membership change, `onChatEnded` the below-2 ending —
+ * re-sent on resume while the seat is wrapping up.
+ *
+ * `returnToLobby` is the ended screen's Back tap: it asks the server to
+ * return the wrapping-up seat to the queue with a fresh wait clock.
  */
 export function useLobbyPresence({
   active,
@@ -70,6 +80,9 @@ export function useLobbyPresence({
   updateSession,
   onRemoved,
   onEnded,
+  onChatStarted,
+  onChatUpdate,
+  onChatEnded,
 }: {
   active: boolean;
   joinCode: string | undefined;
@@ -79,7 +92,19 @@ export function useLobbyPresence({
   ) => void;
   onRemoved?: () => void;
   onEnded?: () => void;
-}): { presence: LobbyPresence; retrying: boolean; retry: () => void } {
+  onChatStarted?: (payload: {
+    chatId: string;
+    selfCharacterId: string;
+    peers: ChatPeer[];
+  }) => void;
+  onChatUpdate?: (payload: { chatId: string; peers: ChatPeer[] }) => void;
+  onChatEnded?: (payload: { reason: "teacher" }) => void;
+}): {
+  presence: LobbyPresence;
+  retrying: boolean;
+  retry: () => void;
+  returnToLobby: () => void;
+} {
   const [presence, setPresence] = useState<LobbyPresence>("connected");
   const [retrying, setRetrying] = useState(false);
   const socketRef = useRef<LobbySocket | null>(null);
@@ -88,6 +113,9 @@ export function useLobbyPresence({
   const presenceRef = useLatestRef(presence);
   const onRemovedRef = useLatestRef(onRemoved);
   const onEndedRef = useLatestRef(onEnded);
+  const onChatStartedRef = useLatestRef(onChatStarted);
+  const onChatUpdateRef = useLatestRef(onChatUpdate);
+  const onChatEndedRef = useLatestRef(onChatEnded);
 
   // Sessions from before the live lobby have no nonce — mint one before the
   // first connect so their fresh joins are idempotent too.
@@ -132,6 +160,15 @@ export function useLobbyPresence({
     socket.on("activity:ended", () => {
       setPresence("ended");
       onEndedRef.current?.();
+    });
+    socket.on("chat:started", (payload) => {
+      onChatStartedRef.current?.(payload);
+    });
+    socket.on("chat:update", (payload) => {
+      onChatUpdateRef.current?.(payload);
+    });
+    socket.on("chat:ended", (payload) => {
+      onChatEndedRef.current?.(payload);
     });
     socket.on("connect_error", (error) => {
       setRetrying(false);
@@ -191,6 +228,9 @@ export function useLobbyPresence({
     presenceRef,
     onRemovedRef,
     onEndedRef,
+    onChatStartedRef,
+    onChatUpdateRef,
+    onChatEndedRef,
   ]);
 
   const retry = () => {
@@ -200,5 +240,10 @@ export function useLobbyPresence({
     socket.connect();
   };
 
-  return { presence, retrying, retry };
+  // A no-op on anything but a wrapping-up seat, so a stray call is safe.
+  const returnToLobby = () => {
+    socketRef.current?.emit("lobby:back");
+  };
+
+  return { presence, retrying, retry, returnToLobby };
 }
