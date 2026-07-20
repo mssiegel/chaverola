@@ -233,6 +233,14 @@ export function useLobbyPresence({
         // (caught on a real phone, 2026-07-20). So let the socket keep
         // reconnecting and flush the leave when it lands, then close. The
         // server's grace window covers us if the network never comes back.
+        //
+        // Freeze the credentials first. Leaving navigates to the code
+        // screen, which signs the student out — and the auth callback reads
+        // the session fresh on EVERY attempt, so the reconnect would present
+        // an empty auth and be rejected as `invalid`, taking the buffered
+        // leave down with it. A frozen copy keeps the seat resumable just
+        // long enough to say goodbye.
+        socket.auth = buildStudentAuth(joinCode, sessionRef.current);
         const giveUp = setTimeout(() => socket.disconnect(), LEAVE_RETRY_MS);
         socket.once("connect", () => {
           setTimeout(() => {
