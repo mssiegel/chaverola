@@ -35,6 +35,13 @@ function isTerminal(presence: LobbyPresence): boolean {
  *  never scaled — live socket timing is never compressed. */
 const LEAVE_FLUSH_MS = 300;
 
+/** How long a socket that was ALREADY down at cleanup keeps trying to
+ *  reconnect so its buffered lobby:leave can land. Disconnecting instead
+ *  would abandon the packet and strand the student's chat partner (found on
+ *  a real handset, 2026-07-20). The server's grace window is the backstop if
+ *  this never succeeds, so this only has to cover a short blip. */
+const LEAVE_RETRY_MS = 30_000;
+
 function buildStudentAuth(
   joinCode: string,
   session: StudentSession | null
@@ -208,15 +215,32 @@ export function useLobbyPresence({
       // dead socket the emit is a harmless no-op.
       socket.emit("lobby:leave");
       socket.removeAllListeners();
-      // The disconnect must NOT follow the emit in the same flush: the
-      // socket.io server drops any packet it processes after the
-      // disconnect, and over wifi the leave and close frames coalesce
-      // into one read — the leave silently dies and the seat rides the
-      // 2-minute grace (caught on a real phone, 2026-07-19). The gap puts
-      // the leave in its own segment, well ahead of the close. If another
-      // socket resumes the seat inside this window, the currentSocketId
-      // guard makes the late leave a no-op.
-      setTimeout(() => socket.disconnect(), LEAVE_FLUSH_MS);
+      if (socket.connected) {
+        // The disconnect must NOT follow the emit in the same flush: the
+        // socket.io server drops any packet it processes after the
+        // disconnect, and over wifi the leave and close frames coalesce
+        // into one read — the leave silently dies and the seat rides the
+        // 2-minute grace (caught on a real phone, 2026-07-19). The gap puts
+        // the leave in its own segment, well ahead of the close. If another
+        // socket resumes the seat inside this window, the currentSocketId
+        // guard makes the late leave a no-op.
+        setTimeout(() => socket.disconnect(), LEAVE_FLUSH_MS);
+      } else {
+        // The socket was already down when they left — a lock screen, a
+        // lift, airplane mode. The emit above only reached socket.io's send
+        // buffer, and disconnecting now would throw it away: mid-chat that
+        // strands the partner in a room with a member who never returns
+        // (caught on a real phone, 2026-07-20). So let the socket keep
+        // reconnecting and flush the leave when it lands, then close. The
+        // server's grace window covers us if the network never comes back.
+        const giveUp = setTimeout(() => socket.disconnect(), LEAVE_RETRY_MS);
+        socket.once("connect", () => {
+          setTimeout(() => {
+            clearTimeout(giveUp);
+            socket.disconnect();
+          }, LEAVE_FLUSH_MS);
+        });
+      }
       setPresence("connected");
       setRetrying(false);
     };

@@ -99,11 +99,13 @@ Load-bearing flow facts (the reasoning for each is in DECISIONS.md):
     `tickWorld` runs the SIMULATION's auto-match and must never see a
     real student. Where the live engine needs the same derivation, it
     keeps a deliberate local copy.
-  - **A matched seat is never grace-reaped.** A student who drops
-    mid-chat can resume into that chat until the activity dies; only a
-    chat ending underneath an already-disconnected member arms a fresh
-    grace (so abandoned seats don't hold cap slots). Don't "fix" the
-    missing timer.
+  - **Every seat gets the same 120s grace, matched or waiting — and a
+    matched seat that runs it out leaves its CHAT, not just its seat.**
+    A student who drops mid-chat can resume into that chat for two
+    minutes; past that, their membership goes inactive and the partner
+    is freed. Matched seats used to arm no timer at all, which stranded
+    a partner forever when a `lobby:leave` died in transit (found on a
+    real handset 2026-07-20). Don't "restore" the missing timer.
   - **Auto-match runs only while a teacher socket is connected** —
     armed on the 0→1st, released on the last. A closed laptop holding
     pairing is the product, not a bug (founder call).
@@ -191,7 +193,7 @@ Run from the repo root:
   reservation; a student socket being ignored on every teacher command;
   the seat-resume `currentSocketId` race guard; and the one lifecycle
   rule that would silently strand real students — a matched seat's drop
-  arming no grace timer, with a resume re-delivering `chat:started`
+  arming the grace timer, with a resume re-delivering `chat:started`
   (`live/lobby.test.ts`). `live/matching.test.ts` covers the pure
   pairing rules a browser pass can't cheaply pin). Both suites are
   deliberately small; see DECISIONS.md → "Testing stays small" entries

@@ -337,12 +337,17 @@ below.
   time. Everything else (the record, `settings.autoMatch`, the threshold,
   eligibility) is read fresh inside the tick, so settings edits and
   manual pairing never touch the timer.
-- **A matched seat is never grace-reaped.** A student who drops mid-chat
-  keeps their seat until the activity dies and can resume into the same
-  chat; only their card membership dims. The one exception is
-  bookkeeping: if a chat ends underneath an already-disconnected member,
-  a fresh 120s grace starts then, so abandoned seats don't hold cap slots
-  forever.
+- **Every seat gets the same 120s grace, matched or waiting.** A student
+  who drops mid-chat keeps their seat and can resume into the same chat
+  for two minutes; their card membership dims meanwhile. When the grace
+  runs out, a matched seat leaves its **chat** as well as its seat — the
+  membership goes inactive, and if that drops the room under two active
+  members the chat ends for the peer exactly as a removal would. Matched
+  seats used to arm no timer at all so a resume always worked; that made
+  a student whose `lobby:leave` died in transit indistinguishable from
+  one mid-blip and stranded their partner until the activity expired
+  (found on a real handset, 2026-07-20). The grace is the backstop:
+  whatever the client fails to say, the silence eventually frees the peer.
 - **Below 2 active members ends the chat.** Whether the teacher removed
   someone or a student left, a room that would drop under two ends with
   `endReason: "teacher"`. The remaining peer's seat goes **wrapping up**:

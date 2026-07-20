@@ -93,6 +93,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Disabled ending controls share one hint line, not one per card](#disabled-ending-controls-share-one-hint-line-not-one-per-card)
   - [The live card's count-up clock appears only after the first minute](#the-live-cards-count-up-clock-appears-only-after-the-first-minute)
   - [An empty live transcript explains itself; a finished one doesn't](#an-empty-live-transcript-explains-itself-a-finished-one-doesnt)
+  - [A matched seat gets the same 2 minutes as any other, and leaves its chat when they run out](#a-matched-seat-gets-the-same-2-minutes-as-any-other-and-leaves-its-chat-when-they-run-out)
   - [Matching's production pass reruns the matching story, not the restart story](#matchings-production-pass-reruns-the-matching-story-not-the-restart-story)
   - [Feature 3 makes matching real; messaging, ending, and pause stay placeholders](#feature-3-makes-matching-real-messaging-ending-and-pause-stay-placeholders)
   - [Auto-match runs on the server, and only while the teacher is connected](#auto-match-runs-on-the-server-and-only-while-the-teacher-is-connected)
@@ -1377,6 +1378,52 @@ _Implemented in
 (which passes `emptyHint`) and
 [ChatCard](client/src/components/Teacher/ChatCard/index.tsx)._
 
+### A matched seat gets the same 2 minutes as any other, and leaves its chat when they run out
+
+_2026-07-20_
+
+**Decision:** Every dropped seat arms the same 120s grace, matched or
+waiting. When a matched seat's grace expires, it leaves its **chat** as well
+as its seat: membership goes inactive, and if that puts the room under two
+active members the chat ends for the peer exactly as a removal would. This
+replaces the rule that a matched seat armed no timer at all. On the client,
+a leave emitted while the socket is down no longer disconnects immediately —
+the socket keeps reconnecting for up to 30s so the buffered `lobby:leave` can
+land.
+
+**Why:** The old rule was a good idea that a real phone disproved. Matched
+seats armed no timer so a student could always resume into their chat, which
+is right for a wifi blip. But the server cannot tell "dropped and coming
+back" from "left, and the goodbye never arrived" — and on 2026-07-20 the
+founder's handset produced exactly the second case: screen-locked, tapped
+End, and the `lobby:leave` died in socket.io's send buffer because the socket
+was down. The chat stayed `active` with a ghost member and the partner sat in
+a dead room. With no grace timer there was nothing to repair it; the chat
+would have lived until the 12h TTL.
+
+Two minutes is not a new number — it is what `LOBBY_GRACE_SECONDS` already
+is for waiting seats, and what the demo already simulates as the mid-chat
+reconnect window. Longer would leave a student waiting on someone who is not
+coming back; shorter would destroy working chats every time a phone crosses a
+building with bad wifi. The client fix makes the ordinary case instant, so
+the grace only ever applies to someone who might genuinely return; the server
+fix means no client bug can strand anyone again.
+
+**Still owed:** the partner sees nothing while they wait — the "lost
+connection" tag is teacher-only. A silent two minutes is confusing where
+"Herzl lost connection, hang tight" would not be. That needs a wire change
+(peer connection state on `ChatPeer`, which today is allowlist-pinned to
+`characterId` alone) and new copy, so it is its own piece of work rather than
+a rider on a safety fix.
+
+_Implemented in [lobby.ts](server/src/live/lobby.ts) (`armSeatTimers`'s grace
+expiry now settles chat membership before reaping; the disconnect handler
+arms the grace unconditionally) and
+[useLobbyPresence](client/src/pages/student/useLobbyPresence.ts)
+(`LEAVE_RETRY_MS`). Reproduction and regression test:
+`f3p5-leave-offline-repro.mjs`, described in
+[the verify skill](.claude/skills/verify/SKILL.md)._
+
 ### Matching's production pass reruns the matching story, not the restart story
 
 _2026-07-20_
@@ -1497,13 +1544,19 @@ timed drop would kick students out of chats that lose nothing by waiting,
 and a peer-countdown banner would alarm the remaining student over nothing.
 Both activate when messaging ships.
 
-_Implemented in [lobby.ts](server/src/live/lobby.ts) (a matched seat's
-disconnect arms the broadcast-delay timer and passes `null` for the
-grace — pinned by a test in `lobby.test.ts`, since a regression here
-would silently strand real students) and
+_Implemented in [lobby.ts](server/src/live/lobby.ts) and
 [ChatCardHeader](client/src/components/Teacher/ChatCard/ChatCardHeader.tsx)
 (the dimmed row and its "lost connection" pill, reusing the queue-row
 styling)._
+
+_Partly superseded 2026-07-20 — the "nothing happens automatically" half is
+retired. A matched seat now takes the same 120s grace every other seat does,
+and leaves its chat when that expires. The reasoning below (silent rooms lose
+nothing by waiting) held right up until a real handset proved that "wait
+forever" and "we never heard you leave" are the same state to the server. See
+[A matched seat gets the same 2 minutes as any other, and leaves its chat when they run out](#a-matched-seat-gets-the-same-2-minutes-as-any-other-and-leaves-its-chat-when-they-run-out).
+The rest of the entry — the "lost connection" tag, the quiet-exit ×, no
+peer-connection UI for students — still stands._
 
 ### Settings edits sync for real; characters, scenario, and host name stay local
 

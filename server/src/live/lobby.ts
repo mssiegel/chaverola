@@ -225,6 +225,16 @@ export function attachLobby(
           { joinCode: record.joinCode, studentId: seat.studentId },
           "seat reaped after grace"
         );
+        // A seat that ran out its grace inside a chat has to leave the chat
+        // too, or the partner sits in a room with a member who no longer
+        // exists. This is the backstop that makes a lost `lobby:leave`
+        // survivable: whatever the client failed to say, the silence itself
+        // eventually frees the peer.
+        const chat = findActiveChatOf(record, seat.studentId);
+        if (chat) {
+          const result = markInactive(record, chat.id, seat.studentId);
+          if (result) settleMembershipChange(record, result);
+        }
         reapSeat(record, seat);
         broadcastState(record);
       },
@@ -595,14 +605,15 @@ export function attachLobby(
         { joinCode: data.joinCode, studentId: dropped.studentId, reason },
         "student connection lost"
       );
-      // A matched seat's disconnect arms NO grace timer — the student can
-      // resume into their chat until the activity dies (founder call).
-      const matched = matchedStudentIds(current).has(dropped.studentId);
-      armSeatTimers(
-        current,
-        dropped,
-        matched ? null : LOBBY_GRACE_SECONDS * 1000
-      );
+      // Every seat gets the same grace, matched or waiting. Matched seats
+      // used to arm no timer at all so a student could always resume into
+      // their chat — but that made a dropped student indistinguishable from
+      // one who left and whose `lobby:leave` never arrived, and it stranded
+      // their partner in a dead room until the activity died (found on a
+      // real handset, 2026-07-20). 120s is long enough to walk back into
+      // your chat after a lift or a lock screen, and short enough that
+      // nobody waits on someone who is never coming back.
+      armSeatTimers(current, dropped, LOBBY_GRACE_SECONDS * 1000);
     });
   });
 

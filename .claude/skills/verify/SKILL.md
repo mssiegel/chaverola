@@ -323,9 +323,20 @@ What this pass paid for:
   `lobby:leave`-then-disconnect: with the client's real 300ms flush, 20/20
   delivered on both transports; with a 0ms flush on **websocket**, only 6/10
   — a probabilistic ~40% loss. Polling was unaffected both ways. This matters
-  more than it did in feature 2 because a matched seat arms no grace timer,
-  so a lost leave has no self-heal: the partner sits in a dead room until the
-  teacher removes the ghost. Never "simplify" that flush away.
+  more than it did in feature 2. Never "simplify" that flush away.
+- **The real-handset leg found what the scripts could not** (2026-07-20). A
+  phone whose socket was down when the student tapped End emitted
+  `lobby:leave` into socket.io's send buffer, and the 300ms flush then called
+  `disconnect()` and abandoned it. Because a matched seat armed no grace
+  timer, nothing reaped the ghost: the chat stayed `active` with the phone as
+  a member and the partner stranded until the 12h TTL. Fixed on both sides —
+  matched seats now take the same 120s grace and leave their chat when it
+  expires, and a cleanup on an already-down socket keeps reconnecting to
+  flush the leave instead of dropping it. `f3p5-leave-offline-repro.mjs` is
+  the regression test: it cuts the network with CDP, waits out the ping
+  cycle, taps End, and asserts the partner is freed. The lesson generalises —
+  **a headless browser on broadband never actually loses its connection, so
+  it cannot test what a user does while offline.** Only a real device can.
 - **`?fast` reaches nothing on production** — `demoTime.ts` returns 1 unless
   `import.meta.env.DEV`. The demo lobby's auto-pair takes the real ~20s
   (measured 20.4s). Budget real time; don't pass the param and wonder.

@@ -282,7 +282,7 @@ describe("the live lobby", () => {
     expect(chat.inactiveStudentIds).toEqual([]);
   });
 
-  it("a matched seat's drop arms no grace timer, and a resume re-delivers chat:started", async () => {
+  it("a matched seat's drop arms a grace timer, and a resume re-delivers chat:started", async () => {
     const studentA = connect({
       role: "student",
       joinCode: activity.joinCode,
@@ -306,11 +306,18 @@ describe("the live lobby", () => {
 
     studentA.disconnect();
     await sleep(100);
-    // `!` — the drop keeps the seat; only a grace expiry could reap it.
+    // `!` — the drop keeps the seat; only a grace expiry reaps it.
     const seat = activity.seats.byId.get(welcomeA.studentId)!;
     expect(seat.connected).toBe(false);
     expect(seat.timers.broadcast).toBeDefined();
-    expect(seat.timers.grace).toBeUndefined();
+    // A matched seat arms the SAME grace a waiting one does. It used to arm
+    // none, which meant a student whose lobby:leave died in transit was
+    // indistinguishable from one mid-blip, and their partner sat in a dead
+    // room until the activity expired (found on a real handset 2026-07-20).
+    // What happens when this fires — the seat leaves its chat, not just its
+    // seat — is proven by f3p5-leave-offline-repro.mjs against production;
+    // grace TIMING stays out of this file by design (see the header).
+    expect(seat.timers.grace).toBeDefined();
 
     const resumed = connect({
       role: "student",
