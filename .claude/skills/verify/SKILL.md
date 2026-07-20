@@ -288,3 +288,76 @@ Two lessons this pass paid for:
   `/activities` request to fake an outage silently lets the duplicate
   through and the page loads fine — gate the abort on a flag you flip when
   the "server" should come back, not on a request count.
+
+The **feature-3 (matching) prod pass**, 2026-07-20, is a shared harness plus
+six scripts in the same dir. `f3p5-lib.mjs` holds everything common (prod
+URLs, `check`/`summary`/`exitWith` fail-soft collection, `createActivity`,
+`joinStudent`, `openTeacher`, and the scoped selectors below) — import it
+rather than re-deriving any of it:
+
+- `f3p5-coldwake.mjs` — cold-start wake UX; **run first**, same rule as
+  feature 2's.
+- `f3p5-a-manual.mjs` — tap-to-pair, Pair everyone, card anatomy, the
+  characterIds-only privacy pin, duo removal → ended screen → back-to-lobby
+  re-queue, the 60s elapsed chip.
+- `f3p5-a2-trio.mjs` — the trio split, removing one member (room survives at
+  2 active) then a second (below 2 ends it), and the 2-character leftover.
+- `f3p5-b-automatch.mjs` — teacher gating, the ≥3s gap, the closed-laptop
+  hold and resume, the rail switch.
+- `f3p5-c-resilience.mjs` — mid-chat drop/resume, refresh-into-chat, and the
+  R1 leave hunt with a 3-minute recheck.
+- `f3p5-d-settings.mjs` — settings sync across two host devices, both
+  directions, plus a behavioural proof the server really got the update.
+- `f3p5-e-demo.mjs` — the feature-3-aware demo sweep (zero `/socket.io/`).
+- `f3p5-r1-hammer.mjs` — a raw socket.io-client driver, no browser; see below.
+
+What this pass paid for:
+
+- **A raw `socket.io-client` driver works fine against prod** (`auth: {role:
+"teacher", hostKey}` / `{role: "student", joinCode, name}`; `lobby:welcome`
+  returns `{studentId, token}`). It is the right tool for anything statistical
+  or timing-sensitive — a browser can run a race once, this runs it fifty
+  times across the transport matrix.
+- **The mid-chat leave race is real on production, and `LEAVE_FLUSH_MS = 300`
+  is the only thing standing between it and a stranded student.** Hammering
+  `lobby:leave`-then-disconnect: with the client's real 300ms flush, 20/20
+  delivered on both transports; with a 0ms flush on **websocket**, only 6/10
+  — a probabilistic ~40% loss. Polling was unaffected both ways. This matters
+  more than it did in feature 2 because a matched seat arms no grace timer,
+  so a lost leave has no self-heal: the partner sits in a dead room until the
+  teacher removes the ghost. Never "simplify" that flush away.
+- **`?fast` reaches nothing on production** — `demoTime.ts` returns 1 unless
+  `import.meta.env.DEV`. The demo lobby's auto-pair takes the real ~20s
+  (measured 20.4s). Budget real time; don't pass the param and wonder.
+- **Don't await a slow-hint selector before you await the navigation.**
+  `f2p5-coldwake.mjs` waited up to 20s for the "just waking up" copy and only
+  then started timing the URL change, so on a warm server it reported a 20s
+  "cold start" that was entirely its own timeout. Race both against the
+  navigation. And a fast create still _flashes_ the pending button, so
+  "pending was seen" is not evidence of a cold start — only elapsed time and
+  the 5s patience hint are.
+- **Two `f2p5-demo.mjs` assertions are dead** and must not be carried into new
+  demo scripts: the ones asserting the pairing UI is demo-only. Feature 3
+  removed the `isDemo` gate, so `Pair your students` and `Pair everyone 1:1`
+  now render on live host pages too. The surviving discriminator is
+  **"A real class does all this by itself."**
+- **Render is a single free-tier instance** (`numInstances: 1`, no
+  autoscaling, virginia) — the in-memory store and seat-resume logic depend
+  on that. Re-check it before assuming any of this survives scaling.
+
+Selector traps specific to the host page (all cost a run if missed):
+
+- The pairing panel is mounted **twice** — the desktop `<aside>` and a
+  `lg:hidden` collapsible. Scope every queue selector to `page.locator("aside")`
+  or hit strict-mode. `Pair everyone 1:1` appears three times on a fresh live
+  page.
+- Chat cards are `section.shadow-md`; an ended one adds `.opacity-95`.
+  `CollapsibleSection` is `shadow-sm`, so `section.shadow-md` selects cards
+  and nothing else — but `locator("section", {hasText})` resolves to the outer
+  collapsible and breaks silently with two chats open.
+- Anchor the auto-match copy on the **colon** (`/Auto-match is on:/`): the
+  paused-hold and returned-here lines both match a looser regex.
+- `getByText("Live")` substring-matches the `Your activity is live` h1 — always
+  card-scope it.
+- `Edit activity settings` is `defaultOpen={false}` and its content stays
+  mounted but `inert`; click the header before touching the stepper.

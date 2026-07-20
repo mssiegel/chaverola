@@ -570,3 +570,32 @@ version of this caught a prod-breaking bug; treat it as a hunt.
    verification. Tick the final checkbox — matching is real.
 
 **Done when:** everything above passes on production.
+
+### Pass record — 2026-07-20
+
+Scripted pass green: **282 assertions, zero failures**, against
+chaverola.com on commit `192d127`. The scripts and the traps they paid for
+are described in [the verify skill](../../.claude/skills/verify/SKILL.md);
+they live in `%TEMP%\chaverola-verify\f3p5-*`.
+
+- Manual pairing, card anatomy, the characterIds-only privacy pin, duo
+  removal → ended screen → back-to-lobby re-queue, the 60s elapsed chip.
+- Trios: the split, one removal (room survives at 2 active), a second
+  removal (below 2 ends it), and the 2-character leftover case.
+- Auto-match: teacher gating, the ≥3s gap (measured 3180ms), the
+  closed-laptop hold and resume, the rail switch.
+- Settings sync across two host devices, both directions, surviving a
+  reload, with a behavioural proof the server received the update.
+- Mid-chat drop → "lost connection" → resume; refresh-into-chat.
+- Demo sweep: zero `/socket.io/` traffic, 44/44.
+- The mid-chat leave race hammered over the transport matrix: the client's
+  300ms flush delivered 20/20; a 0ms flush lost ~40% on websocket. The
+  mitigation is load-bearing, not padding.
+
+Item 3 (cold start) was **not exercisable** — the server was warm from the
+Prompt 4 deploy nine minutes earlier, and the plan forbids manufacturing a
+spin-down. Item 2 (the restart story) was deliberately skipped; the
+reasoning is recorded in DECISIONS.md.
+
+**Still owed:** the real-handset-on-cellular leg. Until it is run and
+reported, this checkbox stays unticked.

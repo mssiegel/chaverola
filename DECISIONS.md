@@ -93,6 +93,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Disabled ending controls share one hint line, not one per card](#disabled-ending-controls-share-one-hint-line-not-one-per-card)
   - [The live card's count-up clock appears only after the first minute](#the-live-cards-count-up-clock-appears-only-after-the-first-minute)
   - [An empty live transcript explains itself; a finished one doesn't](#an-empty-live-transcript-explains-itself-a-finished-one-doesnt)
+  - [Matching's production pass reruns the matching story, not the restart story](#matchings-production-pass-reruns-the-matching-story-not-the-restart-story)
   - [Feature 3 makes matching real; messaging, ending, and pause stay placeholders](#feature-3-makes-matching-real-messaging-ending-and-pause-stay-placeholders)
   - [Auto-match runs on the server, and only while the teacher is connected](#auto-match-runs-on-the-server-and-only-while-the-teacher-is-connected)
   - [Mid-chat, drops show and Remove works — nothing happens automatically](#mid-chat-drops-show-and-remove-works--nothing-happens-automatically)
@@ -1375,6 +1376,35 @@ _Implemented in
 [ChatsInProgressSection](client/src/components/Teacher/HostActivity/ChatsInProgressSection.tsx)
 (which passes `emptyHint`) and
 [ChatCard](client/src/components/Teacher/ChatCard/index.tsx)._
+
+### Matching's production pass reruns the matching story, not the restart story
+
+_2026-07-20_
+
+**Decision:** Feature 3's production verification covered the full matching
+gauntlet on chaverola.com but deliberately skipped re-running the restart
+story (a redeploy while a chat is live). Feature 2's pass verified that path
+on 2026-07-19 and it stands as the record for both features.
+
+**Why:** The restart story tests the server's teardown, and matching didn't
+change it. A deploy sends SIGTERM, the process dies, and every client's
+auto-reconnect presents a token the fresh instance has never seen and is
+rejected with `connect_error: activity_gone` — chats are not consulted on
+that path any more than seats were. Re-running it costs a deploy that ends
+every live class on the site, and the only way to observe it is to do that
+during school hours or wait for the evening. Paying that to re-derive a
+known answer about unchanged code is a bad trade. If the teardown path
+itself ever changes — an `io.close()` hook, a graceful drain, persistence
+behind the store — the restart story stops being settled and gets re-run.
+
+**The one leg still owed:** a real handset on cellular. The scripted pass
+runs headless Chrome on broadband, which cannot reproduce a mobile browser's
+timer throttling under screen-lock, or a wifi-to-cellular handoff. That is
+the same gap feature 2 left to the founder's own device, and it is where the
+2026-07-19 `lobby:leave` bug actually surfaced.
+
+_Verified with the `f3p5-*` scripts described in
+[the verify skill](.claude/skills/verify/SKILL.md)._
 
 ### Feature 3 makes matching real; messaging, ending, and pause stay placeholders
 
