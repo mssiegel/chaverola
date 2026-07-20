@@ -182,6 +182,29 @@ trying to hurry matching along from the client.
 
 ## Gotchas
 
+- **Never round-trip a scratch script through PowerShell 5.1 text cmdlets.**
+  `Get-Content`/`Set-Content`/`-replace` pipelines decode UTF-8 as cp1252,
+  silently mangling emoji and arrows in the copy — and on 2026-07-20 two
+  mangled copies of a prod socket script hung outright where the
+  byte-identical clean file passed 16/16. Author scratch `.mjs` files with
+  the agent's file tools and copy them with `node -e
+"require('fs').copyFileSync(...)"`, never with PS string surgery. If a
+  script that "worked before" hangs or fails oddly after a PS edit,
+  suspect the file, not the server.
+- **"Waiting for your match" renders before the seat lands.** The lobby
+  shows immediately on sign-in while the socket is still handshaking, so a
+  script that joins N students and clicks "Pair everyone 1:1" straight
+  away can pair a subset (pair-everyone acts on whoever is eligible at
+  that instant — cost a prod run on 2026-07-20, invisible on localhost
+  where seats land in ms). Wait for the teacher rail to show all N rows
+  (`aside li button[aria-pressed]`, `.nth(N-1)`) before pairing.
+- The feature-4 messaging scripts live in the same dir:
+  `f4p2-prod-socket-dbg.mjs` (raw socket, lifecycle-logged: fan-out with
+  sender echo, both cap directions, exactly-10-of-14 through the rate
+  limiter, resume backlog, privacy shape, teacher silence) and
+  `f4p2-prod-browser2.mjs` (browser: trio messaging, refresh backlog,
+  everPeers after a departure, the below-2 ending, the teacher hints).
+  Both mint real activities — off-hours only against prod.
 - Hero chat lines appear **twice** on the homepage — the teacher preview
   card mirrors the hero chat live — so `getByText` on a message trips
   Playwright's strict mode; use `.first()`.
