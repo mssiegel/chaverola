@@ -143,8 +143,7 @@ export function ChatsInProgressSection({
               same sentence across the grid (founder call, 2026-07-20). */}
           {!endingEnabled && (
             <p className="-mt-2 mb-4 text-xs text-muted-foreground">
-              Ending and pausing come in the next update, along with messaging
-              itself.
+              Ending and pausing chats come in a later update.
             </p>
           )}
           {paused && (
@@ -178,11 +177,14 @@ export function ChatsInProgressSection({
                 elapsedSeconds={chat.elapsedSeconds ?? null}
                 // Only live cards get the hint: a demo card's silence is
                 // just a beat between simulated lines, not a missing
-                // feature.
+                // feature. Gating on endingEnabled is a proxy (it really
+                // means "live activity") — fair while the teacher
+                // transcript hasn't shipped; the transcript prompt
+                // decouples it.
                 emptyHint={
                   endingEnabled
                     ? undefined
-                    : "Nothing to read yet. Students can't type until messaging arrives in the next update."
+                    : "Students can type now. Their messages show up here in the next update."
                 }
                 inactiveParticipantIds={new Set(chat.inactiveStudentIds)}
                 reconnectingParticipantIds={

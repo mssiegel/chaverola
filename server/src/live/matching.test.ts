@@ -1,18 +1,27 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_ACTIVITY_SETTINGS } from "@chaverola/shared";
+import {
+  CHAT_TRANSCRIPT_MAX_LINES,
+  DEFAULT_ACTIVITY_SETTINGS,
+} from "@chaverola/shared";
 import type { Character } from "@chaverola/shared";
 
 import type { StoredActivity } from "../store/activityStore";
-import { createChat, markInactive, planPairEveryone } from "./matching";
+import {
+  appendLine,
+  createChat,
+  markInactive,
+  planPairEveryone,
+} from "./matching";
 import { createSeatState } from "./seats";
 import type { Seat } from "./seats";
 
 /*
   Deliberately light (see the feature-3 plan): the eligibility filter, the
-  character deal, the odd-count branch, and the below-2 ending — the pure
+  character deal, the odd-count branch, the below-2 ending, and the
+  transcript's safety rules (membership guard, the line cap) — the pure
   rules a browser pass can't cheaply pin. Everything else (even counts,
-  clamping, removals, timing) is covered by the later prompts' browser
+  clamping, removals, timing) is covered by the feature prompts' browser
   passes.
 */
 
@@ -82,6 +91,7 @@ describe("createChat", () => {
         },
       ],
       inactiveStudentIds: [],
+      lines: [],
       startedAt: 0,
       status: "active",
       endReason: null,
@@ -158,5 +168,71 @@ describe("markInactive", () => {
     expect(result).toEqual({ ended: true, chat });
     expect(chat.status).toBe("ended");
     expect(chat.endReason).toBe("teacher");
+  });
+});
+
+describe("appendLine", () => {
+  it("appends for an active member, stamping id and time", () => {
+    const activity = makeActivity(ROSTER);
+    const [a, b] = [addSeat(activity), addSeat(activity)];
+    const chat = createChat(activity, [a.studentId, b.studentId], 10_000)!;
+
+    const result = appendLine(activity, chat.id, a.studentId, "hi", 11_000);
+    expect(result).toBeDefined();
+    expect(result!.chat).toBe(chat);
+    expect(result!.line.id).toBeTruthy();
+    expect(result!.line).toMatchObject({
+      studentId: a.studentId,
+      text: "hi",
+      sentAt: 11_000,
+    });
+    expect(chat.lines).toEqual([result!.line]);
+  });
+
+  it("refuses non-members, inactive members, and ended chats", () => {
+    const activity = makeActivity(ROSTER);
+    const [a, b, c] = [addSeat(activity), addSeat(activity), addSeat(activity)];
+    const trio = createChat(
+      activity,
+      [a.studentId, b.studentId, c.studentId],
+      10_000
+    )!;
+    const outsider = addSeat(activity);
+
+    expect(
+      appendLine(activity, trio.id, outsider.studentId, "hi", 11_000)
+    ).toBeUndefined();
+
+    markInactive(activity, trio.id, c.studentId); // trio continues without c
+    expect(
+      appendLine(activity, trio.id, c.studentId, "hi", 11_000)
+    ).toBeUndefined();
+
+    markInactive(activity, trio.id, b.studentId); // below 2 — the chat ends
+    expect(
+      appendLine(activity, trio.id, a.studentId, "hi", 11_000)
+    ).toBeUndefined();
+    expect(trio.lines).toEqual([]);
+  });
+
+  it("caps the transcript, dropping the oldest line", () => {
+    const activity = makeActivity(ROSTER);
+    const [a, b] = [addSeat(activity), addSeat(activity)];
+    const chat = createChat(activity, [a.studentId, b.studentId], 10_000)!;
+    for (let i = 0; i < CHAT_TRANSCRIPT_MAX_LINES; i++) {
+      chat.lines.push({
+        id: `line-${i}`,
+        studentId: a.studentId,
+        text: `line ${i}`,
+        sentAt: 10_000 + i,
+      });
+    }
+
+    const result = appendLine(activity, chat.id, b.studentId, "newest", 20_000);
+    expect(result).toBeDefined();
+    expect(chat.lines).toHaveLength(CHAT_TRANSCRIPT_MAX_LINES);
+    // `!` — length just pinned to the (non-zero) cap.
+    expect(chat.lines[0]!.id).toBe("line-1"); // line-0 dropped
+    expect(chat.lines[chat.lines.length - 1]!).toBe(result!.line);
   });
 });

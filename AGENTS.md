@@ -46,17 +46,22 @@ and it can't happen then, record it in
 [docs/pending-manual-tests.md](docs/pending-manual-tests.md) rather than
 letting the ask evaporate.
 
-**Messaging is the next feature, and a lot hangs off that.** It is now
-planned — [docs/plans/feature-4-messaging.md](docs/plans/feature-4-messaging.md),
-the first feature cut as end-to-end slices rather than layers. No chat
-message has ever crossed the wire: the rooms matching creates are
-silent, so the student's composer is disabled with honest copy, and
-"End chat", "End all chats", "Pause all chats", the auto-end clock, and
-the name reveal all render as honest placeholders on real activities
-(the demo still simulates every one of them). The single structural
+**Messaging is landing, slice by slice** —
+[docs/plans/feature-4-messaging.md](docs/plans/feature-4-messaging.md),
+the first feature cut as end-to-end slices rather than layers. Its
+first code slice is live: **students in a real chat send each other
+messages** (`chat:send` → targeted `chat:line`, a capped 200-line
+in-memory transcript, resume re-delivering the backlog through
+`chat:started.lines`), with the composer enabled for real. What hasn't
+shipped: the **teacher's read-only transcript is the very next prompt**
+(until it lands, the teacher's cards can't show what students type —
+acceptable only while no real classes run on production), and "End
+chat", "End all chats", "Pause all chats", the auto-end clock, and the
+name reveal still render as honest placeholders on real activities (the
+demo still simulates every one of them). The single structural
 exception: a chat whose active membership drops below 2 ends for the
 remaining peer with reason `"teacher"` — otherwise a working Remove
-would strand a student alone in a silent room.
+would strand a student alone in a room.
 
 The demo flows are a **permanent product surface** — the homepage links to
 them and the founder pitches with them — not scaffolding; see the working
@@ -127,8 +132,10 @@ Load-bearing flow facts (the reasoning for each is in DECISIONS.md):
     passing rather than loosening them.
   - **`endingEnabled` is the ending-era seam.** Ending/pausing render
     disabled on live activities through that one engine flag (demo
-    `true`, live `false`) — when messaging makes them real, it's an
-    engine change, not a UI hunt.
+    `true`, live `false`) — when ending ships, flipping it is an engine
+    change, not a UI hunt. Messaging shipped with the flag still `false`,
+    on purpose: ending and pausing are their own later feature, not a
+    messaging rider.
   - **Live socket timers never pass through `scaledMs`**; demo
     simulation always does.
 - The student flow renders navbar-free inside `StudentWorldLayout` (purple
@@ -146,11 +153,13 @@ Load-bearing flow facts (the reasoning for each is in DECISIONS.md):
   header and on teacher chat cards). A 1:1 reconnect timeout ends the chat;
   a group timeout drops the peer with a notice instead. **Both are demo
   behavior only.** A real room fills the same contract with
-  `peerState: "connected"` and `autoEndSecondsLeft: null` — students are
-  deliberately blind to peer drops while the rooms are silent, and no
-  auto-end clock runs server-side. They activate with messaging.
-  `Student/LiveChatStage.tsx` builds that static state beside the demo's
-  `ChatStage.tsx` — a component split, never a conditional hook.
+  `peerState: "connected"` and `autoEndSecondsLeft: null` — messaging
+  shipped without them, on purpose: `ChatPeer` is allowlist-pinned to
+  `characterId` alone, so peer connection state has no slot on the
+  student wire, and no auto-end clock runs server-side; each is its own
+  later slice, not a leftover. `Student/LiveChatStage.tsx` builds that
+  quiet-except-messages state beside the demo's `ChatStage.tsx` — a
+  component split, never a conditional hook.
 - The setup form and the host page's live settings panel share their field
   components and validation; live edits propagate on a 1-second pause,
   last-valid-wins, with stable character ids (`lib/hostActivity.ts`).
@@ -206,10 +215,11 @@ Run from the repo root:
   the seat-resume `currentSocketId` race guard; and the one lifecycle
   rule that would silently strand real students — a matched seat's drop
   arming the grace timer, with a resume re-delivering `chat:started`
-  (`live/lobby.test.ts`). `live/matching.test.ts` covers the pure
-  pairing rules a browser pass can't cheaply pin). Both suites are
-  deliberately small; see DECISIONS.md → "Testing stays small" entries
-  before adding tests.
+  (`live/lobby.test.ts` — which also pins the message cap's code-point
+  unit). `live/matching.test.ts` covers the pure pairing and transcript
+  rules a browser pass can't cheaply pin). Both suites are deliberately
+  small; see DECISIONS.md → "Testing stays small" entries before adding
+  tests.
 - **Preview:** `pnpm preview` — serve the production build
 - **Format:** `pnpm format` / `pnpm format:check` — Prettier over the whole repo.
   `prettier-plugin-tailwindcss` sorts Tailwind classes (including inside `cn()`/

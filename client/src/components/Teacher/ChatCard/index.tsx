@@ -24,16 +24,16 @@ export interface ChatCardProps {
   /** Omit to hide the End chat button (e.g. the homepage preview card). */
   onEndChat?: () => void;
   /** Renders the End chat button disabled — the live page's honest
-   *  placeholder until ending ships with messaging (the section-level hint
-   *  explains it once for all cards). */
+   *  placeholder until ending ships (the section-level hint explains it
+   *  once for all cards). */
   endChatDisabled?: boolean;
   /** Seconds left on the chat's auto-end clock (null/omitted: no clock). */
   autoEndSecondsLeft?: number | null;
   /** Seconds since the chat started (live cards) — the count-up chip. */
   elapsedSeconds?: number | null;
   /** Shown in the conversation area while there are no messages (live
-   *  cards: real chats can't message yet, and a silent card needs to say
-   *  why). Omit to render an empty feed. */
+   *  cards: the teacher transcript hasn't shipped, and a silent card needs
+   *  to say why). Omit to render an empty feed. */
   emptyHint?: string;
   /**
    * Participants who left the room mid-chat (removed by the teacher). Their

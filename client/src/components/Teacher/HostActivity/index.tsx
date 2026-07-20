@@ -38,7 +38,7 @@ interface HostActivityDashboardProps {
  * on phones it's stacked minimizable sections; on desktop the pairing queue
  * becomes a sticky left rail beside the chats. What still differs: the demo
  * gets its steering panel (demoTriggers), and a real activity's
- * ending/pausing controls render disabled until messaging ships
+ * ending/pausing controls render disabled until ending ships
  * (engine.endingEnabled).
  */
 export function HostActivityDashboard({
@@ -295,6 +295,14 @@ export function HostActivityDashboard({
             <CompletedChatsSection
               chats={engine.completedChats}
               activity={activity}
+              // Live ended cards have empty transcripts until the teacher
+              // transcript ships; the demo's are always full, so it never
+              // shows this line.
+              emptyHint={
+                engine.endingEnabled
+                  ? undefined
+                  : "You can't read this chat yet. Transcripts arrive in the next update."
+              }
             />
 
             {/* Demo steering for what a real classroom would do on its own —

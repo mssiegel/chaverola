@@ -49,6 +49,15 @@ export interface ChatPeer {
   characterId: string;
 }
 
+/** Student-facing chat message: the sender is a characterId, never a
+ *  studentId and never a name — the same load-bearing pin as ChatPeer. */
+export interface ChatLine {
+  id: string;
+  characterId: string;
+  text: string;
+  sentAt: number; // epoch ms, server clock
+}
+
 /** socket.handshake.auth payloads. */
 export interface TeacherAuth {
   role: "teacher";
@@ -77,15 +86,25 @@ export interface ServerToClientEvents {
     chats: ChatSnapshot[];
     leftoverStudentId: string | null; // pair-everyone's odd one out
   }) => void;
-  /** Student only, targeted; re-sent on every resume while matched. */
+  /** Student only, targeted; re-sent on every resume while matched. `lines`
+   *  is the transcript backlog and is authoritative on every delivery — the
+   *  chat:line fan-out skips disconnected seats, so this payload is the only
+   *  channel that heals a blip. `everPeers` is everyone ever in the room
+   *  minus self (peers still shrinks on chat:update), so a departed member's
+   *  lines keep resolving after a refresh. */
   "chat:started": (payload: {
     chatId: string;
     selfCharacterId: string;
     peers: ChatPeer[];
+    everPeers: ChatPeer[];
+    lines: ChatLine[];
   }) => void;
   /** Student only: remaining ACTIVE peers after a membership change; the
    *  client diffs against what it had and renders a local notice. */
   "chat:update": (payload: { chatId: string; peers: ChatPeer[] }) => void;
+  /** Student only, targeted at each connected active member (the sender's
+   *  own echo included — it is the delivery receipt). */
+  "chat:line": (payload: { chatId: string; line: ChatLine }) => void;
   /** Student only, targeted; re-sent on resume while the seat is wrappingUp. */
   "chat:ended": (payload: { reason: "teacher" }) => void;
   /** Teacher room minus the sender — keeps a second host device coherent. */
@@ -113,6 +132,10 @@ export interface ClientToServerEvents {
   /** Student: the ended screen's Back-to-the-lobby tap — returns a
    *  wrappingUp seat to waiting with a fresh clock. Otherwise a no-op. */
   "lobby:back": () => void;
+  /** Student only. Trimmed, capped at CHAT_MESSAGE_MAX_CHARS by code
+   *  points, rate-limited per socket. Every rejection is a silent no-op,
+   *  like every other socket event — there is no error channel today. */
+  "chat:send": (payload: { text: string }) => void;
 }
 
 /**
@@ -127,9 +150,11 @@ export interface ClientToServerEvents {
  * The window starts at DETECTED disconnect — a dark phone sends no close
  * frame, so detection is Socket.IO's ping cycle (~45s at the default
  * pingInterval 25s + pingTimeout 20s). Note: `RECONNECT_WINDOW_SECONDS = 120`
- * in useChatDemo.ts is the same product window, still simulated — the
- * mid-chat reconnect clock only becomes real with messaging, and this shared
- * constant becomes the one source then.
+ * in useChatDemo.ts simulates the same product window for the demo's
+ * peer-drop UI. Messaging shipped without that UI on real rooms, on
+ * purpose: ChatPeer is allowlist-pinned to characterId alone, so peer
+ * connection state has no slot on the student wire — giving students the
+ * countdown is its own feature, and this constant becomes its one source.
  */
 export const LOBBY_GRACE_SECONDS = 120;
 

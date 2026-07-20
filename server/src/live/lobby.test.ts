@@ -21,8 +21,11 @@ import { createChat } from "./matching";
 /*
   Deliberately light (see the plan doc): the safety invariants and one happy
   path, over real sockets against an ephemeral server. Grace timing, the
-  broadcast delay, duplicate-tab takeover, the cap, TTL touch, and shutdown
-  are covered by the feature's browser passes and the deploy logs.
+  broadcast delay, duplicate-tab takeover, the seat cap, TTL touch, the
+  send rate limit, and shutdown are covered by the feature's browser and
+  production passes and the deploy logs. The one messaging guard pinned
+  here is the cap's UNIT — code points — because a .length regression
+  would eat emoji-heavy messages invisibly in any browser pass.
 */
 
 type ClientSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -91,6 +94,13 @@ const nextChatStarted = (socket: ClientSocket) =>
     peers: { characterId: string }[];
   }>((resolve) => {
     socket.once("chat:started", resolve);
+  });
+const nextChatLine = (socket: ClientSocket) =>
+  new Promise<{
+    chatId: string;
+    line: { id: string; characterId: string; text: string; sentAt: number };
+  }>((resolve) => {
+    socket.once("chat:line", resolve);
   });
 /** Queue snapshots also fire on every join — wait for the one that matters. */
 const snapshotWhere = (
@@ -280,6 +290,36 @@ describe("the live lobby", () => {
     await sleep(100);
     expect(chat.status).toBe("active");
     expect(chat.inactiveStudentIds).toEqual([]);
+  });
+
+  it("measures the chat:send cap in code points, not UTF-16 units", async () => {
+    const studentA = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Rachel",
+      nonce: "nonce-a",
+    });
+    const studentB = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Noa",
+      nonce: "nonce-b",
+    });
+    const welcomeA = await nextWelcome(studentA);
+    const welcomeB = await nextWelcome(studentB);
+    // `!` — both members are eligible; the chat just built above them.
+    createChat(activity, [welcomeA.studentId, welcomeB.studentId], Date.now())!;
+
+    // 75 emoji: exactly the cap in code points, twice it in .length —
+    // a .length guard would silently eat this message. The composer counts
+    // the same way (charCount), so what it accepts must land.
+    const text = "😀".repeat(75);
+    expect(text.length).toBe(150);
+    const lineAtB = nextChatLine(studentB);
+    studentA.emit("chat:send", { text });
+
+    const payload = await lineAtB;
+    expect(payload.line.text).toBe(text);
   });
 
   it("a matched seat's drop arms a grace timer, and a resume re-delivers chat:started", async () => {

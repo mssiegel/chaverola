@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import {
   AUTO_MATCH_GAP_SECONDS,
+  CHAT_MESSAGE_MAX_CHARS,
   DEMO_JOIN_CODE,
   HOST_KEY_PATTERN,
   JOIN_CODE_PATTERN,
@@ -30,6 +31,7 @@ import {
 import type { StoredActivity } from "../store/activityStore";
 import {
   toChatEnded,
+  toChatLine,
   toChatSnapshot,
   toChatStarted,
   toChatUpdate,
@@ -37,6 +39,7 @@ import {
 } from "../store/projections";
 import {
   activeMembers,
+  appendLine,
   createChat,
   findAutoMatchPair,
   markInactive,
@@ -63,8 +66,10 @@ import type { Seat } from "./seats";
   The Socket.IO layer. engine.io intercepts /socket.io/ on the http.Server
   BEFORE Express runs, so nothing in app.ts applies here: Express cors()
   never sees the handshake (the Server's own cors option does), pino-http
-  logs nothing (we log through the shared pino logger), and the rate
-  limiters never fire (MAX_STUDENTS_PER_ACTIVITY is the abuse guard).
+  logs nothing (we log through the shared pino logger), and Express's rate
+  limiters never see socket traffic — the socket layer carries its own
+  abuse guards: the seat cap (MAX_STUDENTS_PER_ACTIVITY), the per-socket
+  chat:send rate limit, and the per-message character cap.
 
   Auth lives in the middleware — including student seating, so every
   rejection ("activity_gone" / "removed" / "full" / "invalid") rides
@@ -78,6 +83,13 @@ import type { Seat } from "./seats";
  *  often (getByHostKey is the refresh path). Student sockets never refresh
  *  — enumeration must not keep activities alive. */
 const TEACHER_KEEPALIVE_MS = 5 * 60 * 1000;
+
+/** chat:send's sliding window: 10 messages per 10 seconds per socket —
+ *  loose enough that chained one-word messages never trip it, tight enough
+ *  that a script gets nowhere. The first unbounded student→server event in
+ *  the system; Express's limiters provably don't reach sockets. */
+const CHAT_SEND_WINDOW_MS = 10_000;
+const CHAT_SEND_WINDOW_LIMIT = 10;
 
 interface TeacherSocketData {
   role: "teacher";
@@ -589,6 +601,40 @@ export function attachLobby(
         "student back in the queue"
       );
       broadcastState(current);
+    });
+
+    // The send budget lives in the connection closure, not on socket.data:
+    // it dies with the socket, so there is no map to clean up and no way to
+    // leak one student's budget into another's.
+    const sendTimes: number[] = [];
+
+    socket.on("chat:send", (payload) => {
+      if (typeof payload?.text !== "string") return;
+      const text = payload.text.trim();
+      if (text.length === 0) return;
+      // Counted by code points — matching the composer's charCount, so a
+      // multi-unit emoji is one character on both sides of the wire.
+      if (Array.from(text).length > CHAT_MESSAGE_MAX_CHARS) return;
+      const now = Date.now();
+      while (sendTimes.length > 0 && now - sendTimes[0]! > CHAT_SEND_WINDOW_MS)
+        sendTimes.shift();
+      if (sendTimes.length >= CHAT_SEND_WINDOW_LIMIT) return;
+      const current = getByJoinCode(data.joinCode);
+      if (!current) return;
+      const chat = findActiveChatOf(current, data.studentId);
+      if (!chat) return;
+      const result = appendLine(current, chat.id, data.studentId, text, now);
+      if (!result) return;
+      sendTimes.push(now);
+      // One projection for everyone — the line is already character-only.
+      const line = toChatLine(result.chat, result.line);
+      for (const member of activeMembers(result.chat)) {
+        const seat = current.seats.byId.get(member.studentId);
+        if (!seat?.connected) continue;
+        io.sockets.sockets
+          .get(seat.currentSocketId)
+          ?.emit("chat:line", { chatId: result.chat.id, line });
+      }
     });
 
     socket.on("disconnect", (reason) => {

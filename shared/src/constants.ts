@@ -20,6 +20,15 @@ export const SCENE_MAX_WORDS = 20;
 /** Hard byte-ish backstop for the scene (the word cap is the real limit). */
 export const SCENE_MAX_CHARS = 500;
 
+/** One chat message, counted in code points (a multi-unit emoji is one) —
+ *  the composer and the server's `chat:send` guard read the same cap, so
+ *  the composer can't accept what the server rejects. */
+export const CHAT_MESSAGE_MAX_CHARS = 75;
+
+/** Per-chat transcript cap: oldest lines drop past this. A class period is
+ *  ~10 minutes of chat — nobody is building a message archive here. */
+export const CHAT_TRANSCRIPT_MAX_LINES = 200;
+
 export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** RFC 5321's practical ceiling for a whole address. */
 export const EMAIL_MAX_CHARS = 254;

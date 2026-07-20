@@ -11,15 +11,21 @@ import type { HostedChat } from "./hostWorld";
 interface CompletedChatsSectionProps {
   chats: HostedChat[];
   activity: HostedActivity;
+  /** Shown in a card whose transcript is empty (live activities: the
+   *  teacher transcript hasn't shipped, so every ended card is). Omit to
+   *  render an empty feed — a demo card's transcript is never empty. */
+  emptyHint?: string;
 }
 
 /**
  * Wrapped-up chats stay on the page in the muted card variant (no End chat
- * button, expand/minimize kept) so the teacher can reread what was said.
+ * button, expand/minimize kept). Once teacher transcripts ship, this is
+ * where the teacher rereads what was said.
  */
 export function CompletedChatsSection({
   chats,
   activity,
+  emptyHint,
 }: CompletedChatsSectionProps) {
   return (
     <CollapsibleSection
@@ -30,14 +36,13 @@ export function CompletedChatsSection({
       collapsedHint={
         chats.length === 0
           ? "Ended chats land here"
-          : `${chats.length} wrapped up. Expand any card to reread it`
+          : `${chats.length} wrapped up`
       }
     >
       {chats.length === 0 ? (
         <EmptyState className="py-6">
           <p className="text-sm text-muted-foreground">
-            Nothing here yet. Chats stick around after they end, so you can
-            always look back at what was said.
+            Nothing here yet. When a chat ends, its card moves down here.
           </p>
         </EmptyState>
       ) : (
@@ -48,6 +53,7 @@ export function CompletedChatsSection({
               participants={withCurrentCharacters(chat.participants, activity)}
               messages={chat.messages}
               isEnded
+              emptyHint={emptyHint}
               inactiveParticipantIds={new Set(chat.inactiveStudentIds)}
             />
           ))}

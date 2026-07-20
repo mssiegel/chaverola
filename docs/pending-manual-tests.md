@@ -91,3 +91,62 @@ Background: DECISIONS.md →
 [A matched seat gets the same 2 minutes as any other](../DECISIONS.md), and
 the pass record in
 [the feature-3 plan](plans/feature-3-real-matching.md).
+
+## 2. Messaging's production pass on a real handset
+
+**Asked:** 2026-07-20 (feature 4, Prompt 2's "Done when"). **Blocked:** the
+prompt ran in an autonomous session with no founder at hand to drive a
+phone.
+
+**Needs:** a phone on cellular (wifi off), a laptop for the teacher page,
+and one browser tab as the second student.
+
+### Why it's worth doing
+
+Messaging is the first feature where a student's screen shows content that
+only exists on the wire — and the resume backlog (`chat:started.lines`) is
+the only channel that heals a phone that blinked. Every scripted leg passed
+(see below), but the standing lesson from feature 3 applies with more force
+now: headless Chrome on broadband never actually loses its connection, so
+it cannot test what a phone does through a lock screen or a lift.
+
+### Steps
+
+1. Make an activity, join it from the phone and from a laptop tab, pair
+   them from the teacher page.
+2. Chat both directions. Send an emoji-heavy message from the phone.
+3. **Lock the phone for ~60 seconds** while the laptop student sends three
+   more lines. Unlock.
+4. Refresh the phone's tab mid-chat too.
+5. On the phone, paste-and-send a message over 75 characters, then send
+   ~14 messages as fast as possible.
+6. Have the laptop student leave the chat (browser back → confirm).
+
+### What should happen
+
+- Both directions arrive within a beat; the emoji message lands whole.
+- After the unlock AND after the refresh, the three missed lines are all
+  there, in order — that's the backlog doing its job. (The unlock may take
+  up to ~45s to reconnect — that's ping-cycle detection, not a bug.)
+- The over-75 message silently doesn't send (the composer already blocks
+  typing past 75 — pasting is the interesting path); of the fast burst,
+  exactly 10 land and the rest silently don't. No error UI anywhere —
+  silent no-ops are the socket contract.
+- The leave puts the phone on the ended screen (duo) with the transcript
+  still readable above it.
+
+**Bug:** missed lines that never appear after an unlock — that's the
+resume-backlog channel failing, the exact class of bug this prompt's plan
+warned about.
+
+### What covers it in the meantime
+
+- A scripted production pass ran on 2026-07-20 right after the deploy:
+  raw-socket fan-out/cap/rate-limit checks and a browser leg (messages
+  both directions, mid-chat refresh with the backlog intact, a peer
+  leaving mid-conversation) — all against chaverola.com.
+- Locally: 16/16 socket-script checks, 15/15 browser checks, and the
+  server suite pins the cap's code-point unit and `appendLine`'s rules.
+
+So the residual risk is specifically the real-radio path: a socket that
+died without a close frame resuming with the backlog intact.

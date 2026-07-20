@@ -740,7 +740,14 @@ _Implemented in [lobby.ts](server/src/live/lobby.ts)'s `chat:send` handler._
 
 ### Leaving a live chat means leaving the activity (until messaging ships)
 
-_2026-07-19_
+_2026-07-19 · The "until messaging ships" clause came due 2026-07-20 —
+messaging shipped — and is **deliberately left open** rather than resolved:
+leaving a live chat still leaves the activity. The server already ends a
+duo and continues a trio on `lobby:leave`; what's missing is a
+leave-the-chat-but-keep-your-seat path (return to the queue instead of
+signing out), which is its own slice with its own wire event, not a rider
+on messaging. Until it ships, the confirm's copy stays honest about
+leaving the activity._
 
 **Decision:** In the real chat room, the header's exit control and browser
 back both open a confirm that says the student will leave the activity;
@@ -1387,7 +1394,9 @@ transcripts with real names since the demo._
 
 ### Disabled ending controls share one hint line, not one per card
 
-_2026-07-20_
+_2026-07-20 · Copy updated 2026-07-20: messaging shipped, so the line
+stopped promising it — it now reads "Ending and pausing chats come in a
+later update." The one-shared-line structure stands unchanged._
 
 **Decision:** On a live activity, "End all chats", "Pause all chats", and
 every card's "End chat" render disabled, explained by a single muted hint
@@ -1423,7 +1432,15 @@ _Implemented in [ElapsedClock](client/src/components/Teacher/ChatCard/ElapsedClo
 
 ### An empty live transcript explains itself; a finished one doesn't
 
-_2026-07-20_
+_2026-07-20 · Superseded 2026-07-20 by the messaging slice, which made both
+halves of the copy untrue: students CAN type now (the hint became "Students
+can type now. Their messages show up here in the next update."), and a
+finished card DOES need a line — ended chats are reachable and their cards
+would otherwise show a blank box under copy promising a reread, so
+`CompletedChatsSection` gained its own `emptyHint` ("You can't read this
+chat yet. Transcripts arrive in the next update."). Both hints still ride
+`endingEnabled`, now as a bare live-activity proxy; the teacher-transcript
+slice decouples them and replaces both with a real empty state._
 
 **Decision:** On a real activity, a card in "Chats in progress" with no
 messages fills its transcript area with one centered line — "Nothing to read
@@ -1527,7 +1544,12 @@ _Verified with the `f3p5-*` scripts described in
 
 ### Feature 3 makes matching real; messaging, ending, and pause stay placeholders
 
-_2026-07-19_
+_2026-07-19 · Partly superseded 2026-07-20 by feature 4's first messaging
+slice: students now send real messages — the composer is live, `chat:send`
+→ `chat:line` on the wire, and the transcript survives a refresh. Ending,
+pausing, and the auto-end clock remain placeholders exactly as described
+below (`endingEnabled` stays `false`); the teacher's read-only transcript
+is the next slice._
 
 **Decision:** Real host pages get the demo's full matching experience,
 working: tap-to-select (2 up to `min(4, roster)`), "Pair everyone 1:1", the

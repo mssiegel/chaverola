@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 
+import { CHAT_TRANSCRIPT_MAX_LINES } from "@chaverola/shared";
+
 import type { StoredActivity } from "../store/activityStore";
 import type { Seat } from "./seats";
 
@@ -13,6 +15,17 @@ import type { Seat } from "./seats";
   unreachable and pairing is greedy in queue order.
 */
 
+/** One stored transcript line. Deliberately lean: no characterId, no name
+ *  — both live on `chat.members`, and `appendLine` refuses a non-member,
+ *  so the projectors resolve through it. One truth, not a denormalized
+ *  copy. */
+export interface StoredChatLine {
+  id: string; // randomUUID
+  studentId: string;
+  text: string;
+  sentAt: number;
+}
+
 /** One chat as the server tracks it. Never on the wire — projections.ts
  *  decides what leaves (students get characterIds only). */
 export interface StoredChat {
@@ -21,6 +34,9 @@ export interface StoredChat {
    *  start, so a removed seat's card label survives. */
   members: { studentId: string; name: string; characterId: string }[];
   inactiveStudentIds: string[];
+  /** The transcript, capped at CHAT_TRANSCRIPT_MAX_LINES (oldest drop).
+   *  In memory like everything else — a deploy wipes it. */
+  lines: StoredChatLine[];
   startedAt: number;
   status: "active" | "ended";
   endReason: "teacher" | null;
@@ -102,6 +118,7 @@ export function createChat(
       characterId: cast[index]!.id,
     })),
     inactiveStudentIds: [],
+    lines: [],
     startedAt: now,
     status: "active",
     endReason: null,
@@ -186,4 +203,35 @@ export function markInactive(
     chat.endReason = "teacher";
   }
   return { ended, chat };
+}
+
+/**
+ * A member speaks: mint the line, append, trim to the transcript cap
+ * (oldest dropped). Undefined when the chat isn't active or the sender
+ * isn't an active member — idempotent-silent, like every socket rule.
+ * No io, no emits; the fan-out is lobby.ts's job.
+ */
+export function appendLine(
+  activity: StoredActivity,
+  chatId: string,
+  studentId: string,
+  text: string,
+  now: number
+): { chat: StoredChat; line: StoredChatLine } | undefined {
+  const chat = activity.chats.find((c) => c.id === chatId);
+  if (!chat || chat.status !== "active") return undefined;
+  if (!activeMembers(chat).some((m) => m.studentId === studentId)) {
+    return undefined;
+  }
+  const line: StoredChatLine = {
+    id: randomUUID(),
+    studentId,
+    text,
+    sentAt: now,
+  };
+  chat.lines.push(line);
+  if (chat.lines.length > CHAT_TRANSCRIPT_MAX_LINES) {
+    chat.lines.splice(0, chat.lines.length - CHAT_TRANSCRIPT_MAX_LINES);
+  }
+  return { chat, line };
 }

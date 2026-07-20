@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { ChatPeer, StudentAuth } from "@chaverola/shared";
+import type { ChatLine, ChatPeer, StudentAuth } from "@chaverola/shared";
 
 import { createLobbySocket, type LobbySocket } from "@/lib/socket";
 import { mintNonce, type StudentSession } from "@/lib/studentSession";
@@ -17,9 +17,9 @@ import { useLatestRef } from "@/lib/useLatestRef";
   emits lobby:leave — an intentional exit, immediate seat removal, and
   mid-chat also the intentional leave-the-chat path. A refresh or pagehide
   never runs React cleanup, so the socket just dies and the server gives the
-  seat its grace window (none while matched — a matched seat waits for its
-  student until the activity dies). That asymmetry is the design, not an
-  accident (see docs/plans/feature-2-live-lobby.md).
+  seat its grace window — the same 120s whether waiting or matched (a
+  matched seat that runs it out leaves its chat too). That asymmetry is the
+  design, not an accident (see docs/plans/feature-2-live-lobby.md).
 */
 
 export type LobbyPresence =
@@ -74,11 +74,14 @@ function buildStudentAuth(
  * setState is the subscription pattern the hooks lint asks for. The chat
  * callbacks work the same way: `onChatStarted` is both the match and every
  * resume into it (refresh, wifi recovery, duplicate-tab takeover),
- * `onChatUpdate` is a membership change, `onChatEnded` the below-2 ending —
- * re-sent on resume while the seat is wrapping up.
+ * `onChatUpdate` is a membership change, `onChatLine` an incoming message
+ * (the student's own send echoes back through it too), `onChatEnded` the
+ * below-2 ending — re-sent on resume while the seat is wrapping up.
  *
  * `returnToLobby` is the ended screen's Back tap: it asks the server to
  * return the wrapping-up seat to the queue with a fresh wait clock.
+ * `sendChatMessage` emits `chat:send`; rejections are silent server-side
+ * and the echoed `chat:line` is the delivery receipt.
  */
 export function useLobbyPresence({
   active,
@@ -89,6 +92,7 @@ export function useLobbyPresence({
   onEnded,
   onChatStarted,
   onChatUpdate,
+  onChatLine,
   onChatEnded,
 }: {
   active: boolean;
@@ -103,14 +107,18 @@ export function useLobbyPresence({
     chatId: string;
     selfCharacterId: string;
     peers: ChatPeer[];
+    everPeers: ChatPeer[];
+    lines: ChatLine[];
   }) => void;
   onChatUpdate?: (payload: { chatId: string; peers: ChatPeer[] }) => void;
+  onChatLine?: (payload: { chatId: string; line: ChatLine }) => void;
   onChatEnded?: (payload: { reason: "teacher" }) => void;
 }): {
   presence: LobbyPresence;
   retrying: boolean;
   retry: () => void;
   returnToLobby: () => void;
+  sendChatMessage: (text: string) => void;
 } {
   const [presence, setPresence] = useState<LobbyPresence>("connected");
   const [retrying, setRetrying] = useState(false);
@@ -122,6 +130,7 @@ export function useLobbyPresence({
   const onEndedRef = useLatestRef(onEnded);
   const onChatStartedRef = useLatestRef(onChatStarted);
   const onChatUpdateRef = useLatestRef(onChatUpdate);
+  const onChatLineRef = useLatestRef(onChatLine);
   const onChatEndedRef = useLatestRef(onChatEnded);
 
   // Sessions from before the live lobby have no nonce — mint one before the
@@ -173,6 +182,9 @@ export function useLobbyPresence({
     });
     socket.on("chat:update", (payload) => {
       onChatUpdateRef.current?.(payload);
+    });
+    socket.on("chat:line", (payload) => {
+      onChatLineRef.current?.(payload);
     });
     socket.on("chat:ended", (payload) => {
       onChatEndedRef.current?.(payload);
@@ -262,6 +274,7 @@ export function useLobbyPresence({
     onEndedRef,
     onChatStartedRef,
     onChatUpdateRef,
+    onChatLineRef,
     onChatEndedRef,
   ]);
 
@@ -277,5 +290,12 @@ export function useLobbyPresence({
     socketRef.current?.emit("lobby:back");
   };
 
-  return { presence, retrying, retry, returnToLobby };
+  // Fire-and-forget, exactly like returnToLobby: every server-side
+  // rejection (cap, rate limit, not in a chat) is a silent no-op, and the
+  // echoed chat:line is what actually puts the message on screen.
+  const sendChatMessage = (text: string) => {
+    socketRef.current?.emit("chat:send", { text });
+  };
+
+  return { presence, retrying, retry, returnToLobby, sendChatMessage };
 }

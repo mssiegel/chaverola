@@ -2,6 +2,7 @@ import { LOBBY_DISCONNECT_BROADCAST_DELAY_MS } from "@chaverola/shared";
 import type {
   Activity,
   Character,
+  ChatLine,
   ChatPeer,
   ChatSnapshot,
   HostedActivity,
@@ -9,7 +10,7 @@ import type {
 } from "@chaverola/shared";
 
 import { activeMembers } from "../live/matching";
-import type { StoredChat } from "../live/matching";
+import type { StoredChat, StoredChatLine } from "../live/matching";
 import type { Seat } from "../live/seats";
 import type { StoredActivity } from "./activityStore";
 
@@ -130,16 +131,47 @@ function toChatPeers(chat: StoredChat, studentId: string): ChatPeer[] {
     .map((member) => ({ characterId: member.characterId }));
 }
 
+/** Everyone ever in the room minus self, seat order — chat.members, NOT
+ *  activeMembers: departed members stay in it forever, which is what makes
+ *  this the refresh-invariant roster a resumed client rebuilds lines and
+ *  colors from. Additive to `peers`, never a replacement. */
+function toChatEverPeers(chat: StoredChat, studentId: string): ChatPeer[] {
+  return chat.members
+    .filter((member) => member.studentId !== studentId)
+    .map((member) => ({ characterId: member.characterId }));
+}
+
+/** The student projection of a transcript line: characterId, never the
+ *  sender's studentId or name. */
+export function toChatLine(chat: StoredChat, line: StoredChatLine): ChatLine {
+  // appendLine refuses a non-member, so the find can't miss.
+  const sender = chat.members.find((m) => m.studentId === line.studentId)!;
+  return {
+    id: line.id,
+    characterId: sender.characterId,
+    text: line.text,
+    sentAt: line.sentAt,
+  };
+}
+
 export function toChatStarted(
   chat: StoredChat,
   studentId: string
-): { chatId: string; selfCharacterId: string; peers: ChatPeer[] } {
+): {
+  chatId: string;
+  selfCharacterId: string;
+  peers: ChatPeer[];
+  everPeers: ChatPeer[];
+  lines: ChatLine[];
+} {
   // Callers only project a chat for its own members — the find can't miss.
   const self = chat.members.find((m) => m.studentId === studentId)!;
   return {
     chatId: chat.id,
     selfCharacterId: self.characterId,
     peers: toChatPeers(chat, studentId),
+    everPeers: toChatEverPeers(chat, studentId),
+    lines: chat.lines.map((line) => toChatLine(chat, line)),
   };
 }
 

@@ -26,6 +26,7 @@ const fullRecord: StoredActivity = {
   characters: [
     { id: "brutus", name: "Brutus", emoji: "🔪" },
     { id: "caesar", name: "Caesar" },
+    { id: "cicero", name: "Cicero" },
   ],
   scenario: "Rome, 44 BC, the night before the Ides of March.",
   teacherEmail: "cohen@example.com",
@@ -49,13 +50,21 @@ const fullSeat: Seat = {
   timers: {},
 };
 
+// The third member is INACTIVE on purpose: with only active members,
+// `peers` and `everPeers` project identically and wiring everPeers to
+// activeMembers would pass anyway. The departed member is what tells the
+// two rosters apart.
 const fullChat: StoredChat = {
   id: "chat-1",
   members: [
     { studentId: "student-1", name: "Rachel", characterId: "brutus" },
     { studentId: "student-2", name: "Noa", characterId: "caesar" },
+    { studentId: "student-3", name: "Dana", characterId: "cicero" },
   ],
-  inactiveStudentIds: [],
+  inactiveStudentIds: ["student-3"],
+  lines: [
+    { id: "line-1", studentId: "student-2", text: "Et tu?", sentAt: 21_000 },
+  ],
   startedAt: 20_000,
   status: "active",
   endReason: null,
@@ -117,7 +126,7 @@ describe("toChatSnapshot (teacher chat card)", () => {
       "reconnectingStudentIds",
       "status",
     ]);
-    expect(snapshot.participants).toHaveLength(2);
+    expect(snapshot.participants).toHaveLength(3);
     for (const participant of snapshot.participants) {
       expect(Object.keys(participant).sort()).toEqual([
         "character",
@@ -133,12 +142,35 @@ describe("toChatStarted (the student wire)", () => {
     const started = toChatStarted(fullChat, "student-1");
     expect(Object.keys(started).sort()).toEqual([
       "chatId",
+      "everPeers",
+      "lines",
       "peers",
       "selfCharacterId",
     ]);
+    // peers is the ACTIVE roster (the inactive third member is out);
+    // everPeers is everyone ever, which is what a resumed client rebuilds
+    // lines and colors from.
     expect(started.peers).toHaveLength(1);
-    for (const peer of started.peers) {
+    expect(started.everPeers).toHaveLength(2);
+    for (const peer of [...started.peers, ...started.everPeers]) {
       expect(Object.keys(peer)).toEqual(["characterId"]);
     }
+  });
+
+  it("projects lines as characterId-only — no studentId, no name", () => {
+    const started = toChatStarted(fullChat, "student-1");
+    // Guard the loop below against a fixture regression to lines: [] —
+    // an empty array would pass the key pin while proving nothing.
+    expect(started.lines).toHaveLength(1);
+    for (const line of started.lines) {
+      expect(Object.keys(line).sort()).toEqual([
+        "characterId",
+        "id",
+        "sentAt",
+        "text",
+      ]);
+    }
+    // `!` — length pinned to 1 just above.
+    expect(started.lines[0]!.characterId).toBe("caesar");
   });
 });

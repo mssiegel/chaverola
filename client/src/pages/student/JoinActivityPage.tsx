@@ -15,6 +15,7 @@ import {
   MAX_STUDENTS_PER_ACTIVITY,
   STUDENT_NAME_MAX_CHARS,
   type Character,
+  type ChatLine,
   type ChatPeer,
   type LobbyConnectionState,
 } from "@chaverola/shared";
@@ -84,10 +85,13 @@ interface LiveMatch {
   self: Participant;
   /** Peers still in the room; chat:update shrinks this. */
   peers: Participant[];
-  /** Everyone ever in the room — keeps colors and lines stable. */
+  /** Everyone ever in the room — keeps colors and lines stable. Built from
+   *  the wire's everPeers, never aliased to peers: a departed member has to
+   *  keep resolving or their backlog lines silently vanish. */
   everPeers: Participant[];
-  /** Local membership notices ("X left the chat"), built by diffing. */
-  notices: ChatMessage[];
+  /** The transcript: real lines (from chat:line and chat:started's backlog)
+   *  interleaved with local membership notices ("X left the chat"). */
+  messages: ChatMessage[];
 }
 
 type ActiveMatch = DemoMatch | LiveMatch;
@@ -98,6 +102,13 @@ type ActiveMatch = DemoMatch | LiveMatch;
  * the wire). The room still works; only the label is a mystery.
  */
 const FALLBACK_CHARACTER_NAME = "Mystery guest";
+
+/** A wire line as a renderable message. The sender IS the characterId —
+ *  participant ids in a live room are characterIds. No timestamp: the
+ *  server's array order is the order, and merges preserve it. */
+function toLiveMessage(line: ChatLine): ChatMessage {
+  return { id: line.id, senderId: line.characterId, text: line.text };
+}
 
 const PAGE_TITLES: Record<StudentStage, string> = {
   code: "Join an Activity",
@@ -347,6 +358,17 @@ export function JoinActivityPage() {
       name: FALLBACK_CHARACTER_NAME,
     };
 
+  // A wire peer as a room participant. Peers carry no real names by
+  // construction — the student wire never has them.
+  const toParticipant = (peer: ChatPeer): Participant => ({
+    // characterId doubles as the participant id — unique within a chat
+    // (each character is dealt once), and the only identity the student
+    // wire carries.
+    id: peer.characterId,
+    character: resolveCharacter(peer.characterId),
+    realName: "",
+  });
+
   // Reconcile a live match with the wire's current peer list: whoever
   // disappeared gets a local "left the chat" notice and drops out of
   // `peers`; `everPeers` keeps them so colors and lines stay stable.
@@ -357,8 +379,8 @@ export function JoinActivityPage() {
     return {
       ...prev,
       peers: prev.peers.filter((p) => currentIds.has(p.id)),
-      notices: [
-        ...prev.notices,
+      messages: [
+        ...prev.messages,
         ...gone.map((peer): ChatMessage => ({
           id: nextId("m"),
           senderId: NOTICE_SENDER_ID,
@@ -383,75 +405,101 @@ export function JoinActivityPage() {
   // - onEnded latches the dead activity's code, which flips the stage to
   //   the activity-gone screen.
   // - onChatStarted is both the match and every resume into it; a re-send
-  //   for a chat already in memory reconciles peers instead of resetting.
+  //   for a chat already in memory merges the missed transcript backlog,
+  //   then reconciles peers instead of resetting.
   // - onChatEnded with no match in memory is the post-refresh ended screen
   //   — nothing to show, so the seat goes straight back to the queue.
   const seated =
     baseStage === "lobby" || baseStage === "chatting" || baseStage === "ended";
-  const { presence, retrying, retry, returnToLobby } = useLobbyPresence({
-    active: seated && isRealActivity && !activityGoneFromSocket,
-    joinCode: activity?.joinCode,
-    session,
-    updateSession,
-    onRemoved: () => {
-      signOut();
-      setName("");
-      setRemovedByTeacher(true);
-      setMatch(null);
-      setChatEnded(false);
-    },
-    onEnded: () => {
-      if (activity) setGoneCode(activity.joinCode);
-    },
-    onChatStarted: (payload) => {
-      if (!session) return;
-      setChatEnded(false);
-      setMatch((prev) => {
-        if (prev?.kind === "live" && prev.chatId === payload.chatId) {
-          // A resume re-delivery of the chat already on screen: keep the
-          // notices, fold in any membership change missed while away.
-          return shrinkToPeers(prev, payload.peers);
+  const { presence, retrying, retry, returnToLobby, sendChatMessage } =
+    useLobbyPresence({
+      active: seated && isRealActivity && !activityGoneFromSocket,
+      joinCode: activity?.joinCode,
+      session,
+      updateSession,
+      onRemoved: () => {
+        signOut();
+        setName("");
+        setRemovedByTeacher(true);
+        setMatch(null);
+        setChatEnded(false);
+      },
+      onEnded: () => {
+        if (activity) setGoneCode(activity.joinCode);
+      },
+      onChatStarted: (payload) => {
+        if (!session) return;
+        setChatEnded(false);
+        setMatch((prev) => {
+          if (prev?.kind === "live" && prev.chatId === payload.chatId) {
+            // A resume re-delivery of the chat already on screen — and the
+            // ONLY channel that heals a blip: the chat:line fan-out skips
+            // disconnected seats, so whatever was said while this phone was
+            // locked exists nowhere but this backlog. Merge missed lines (by
+            // id — our own echoed sends must not double) BEFORE reconciling
+            // membership, so a "left the chat" notice discovered on the same
+            // resume lands after the lines it follows: the true order.
+            const known = new Set(prev.messages.map((m) => m.id));
+            const missed = payload.lines
+              .filter((line) => !known.has(line.id))
+              .map(toLiveMessage);
+            const caughtUp: LiveMatch = {
+              ...prev,
+              everPeers: payload.everPeers.map(toParticipant),
+              messages:
+                missed.length > 0
+                  ? [...prev.messages, ...missed]
+                  : prev.messages,
+            };
+            return shrinkToPeers(caughtUp, payload.peers);
+          }
+          return {
+            kind: "live",
+            chatId: payload.chatId,
+            self: {
+              id: payload.selfCharacterId,
+              character: resolveCharacter(payload.selfCharacterId),
+              realName: session.name,
+            },
+            peers: payload.peers.map(toParticipant),
+            everPeers: payload.everPeers.map(toParticipant),
+            // The server's order is already correct and already capped.
+            messages: payload.lines.map(toLiveMessage),
+          };
+        });
+      },
+      onChatLine: (payload) => {
+        setMatch((prev) => {
+          if (prev?.kind !== "live" || prev.chatId !== payload.chatId) {
+            return prev;
+          }
+          // A live line can race a resume backlog that already carried it —
+          // the id dedupe makes the replay harmless.
+          if (prev.messages.some((m) => m.id === payload.line.id)) return prev;
+          return {
+            ...prev,
+            messages: [...prev.messages, toLiveMessage(payload.line)],
+          };
+        });
+      },
+      onChatUpdate: (payload) => {
+        setMatch((prev) =>
+          prev?.kind === "live" && prev.chatId === payload.chatId
+            ? shrinkToPeers(prev, payload.peers)
+            : prev
+        );
+      },
+      onChatEnded: () => {
+        if (match?.kind === "live") {
+          setChatEnded(true);
+        } else {
+          // Post-refresh (or post-anything that lost the match from memory):
+          // there's no chat to show an ended screen for — go straight back
+          // to the queue instead of pretending.
+          returnToLobby();
         }
-        const peers = payload.peers.map((peer): Participant => ({
-          // characterId doubles as the participant id — unique within a
-          // chat (each character is dealt once), and the only identity
-          // the student wire carries.
-          id: peer.characterId,
-          character: resolveCharacter(peer.characterId),
-          realName: "",
-        }));
-        return {
-          kind: "live",
-          chatId: payload.chatId,
-          self: {
-            id: payload.selfCharacterId,
-            character: resolveCharacter(payload.selfCharacterId),
-            realName: session.name,
-          },
-          peers,
-          everPeers: peers,
-          notices: [],
-        };
-      });
-    },
-    onChatUpdate: (payload) => {
-      setMatch((prev) =>
-        prev?.kind === "live" && prev.chatId === payload.chatId
-          ? shrinkToPeers(prev, payload.peers)
-          : prev
-      );
-    },
-    onChatEnded: () => {
-      if (match?.kind === "live") {
-        setChatEnded(true);
-      } else {
-        // Post-refresh (or post-anything that lost the match from memory):
-        // there's no chat to show an ended screen for — go straight back
-        // to the queue instead of pretending.
-        returnToLobby();
-      }
-    },
-  });
+      },
+    });
 
   // The demo lobby's pretend wifi blip: flips the pill to reconnecting for
   // a few seconds, then back. Pure simulation (hence scaledMs) — on real
@@ -592,8 +640,9 @@ export function JoinActivityPage() {
             self={match.self}
             peers={match.peers}
             everPeers={match.everPeers}
-            notices={match.notices}
+            messages={match.messages}
             isEnded={chatEnded}
+            onSend={sendChatMessage}
             // Leaving a live chat means leaving the activity: landing on
             // bare code entry runs the sign-out effect, and the presence
             // hook's cleanup emits lobby:leave (back-as-reset, exactly the

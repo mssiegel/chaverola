@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import type { EmojiClickData } from "emoji-picker-react";
 import { SendHorizontal, Smile } from "lucide-react";
 
+import { CHAT_MESSAGE_MAX_CHARS } from "@chaverola/shared";
+
 import { LazyEmojiPicker } from "@/components/chat/LazyEmojiPicker";
 import {
   Popover,
@@ -11,7 +13,9 @@ import {
 import { charCount, clampChars } from "@/lib/text";
 import { cn } from "@/lib/utils";
 
-const MAX_CHARS = 75;
+/** The shared wire cap — the server's chat:send guard reads the same
+ *  constant, so the composer can't accept what the server rejects. */
+const MAX_CHARS = CHAT_MESSAGE_MAX_CHARS;
 const COUNTER_VISIBLE_AT = 60;
 
 interface MessageComposerProps {
@@ -25,8 +29,8 @@ interface MessageComposerProps {
    */
   disabled?: boolean;
   /**
-   * What the locked field says while `disabled`. Defaults to the pause copy;
-   * live rooms pass their own line (messaging hasn't shipped yet).
+   * What the locked field says while `disabled`. Defaults to the pause
+   * copy, the only locked state a room has today.
    */
   disabledPlaceholder?: string;
 }

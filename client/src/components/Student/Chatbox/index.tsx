@@ -30,12 +30,6 @@ export interface ChatboxProps {
   endConfirmOpen?: boolean;
   onEndConfirmOpenChange?: (open: boolean) => void;
   /**
-   * Lock the composer independently of the pause state, with its own
-   * placeholder — live rooms use this while messaging hasn't shipped.
-   */
-  composerDisabled?: boolean;
-  composerDisabledPlaceholder?: string;
-  /**
    * Override the exit confirm's body copy. Live rooms need it: there,
    * walking out means leaving the whole activity, and the default copy's
    * "back to the lobby whenever you're ready" would be a lie.
@@ -66,8 +60,6 @@ export function Chatbox({
   onBackToLobby,
   endConfirmOpen,
   onEndConfirmOpenChange,
-  composerDisabled = false,
-  composerDisabledPlaceholder,
   exitDescriptions,
   endedSecretLine,
 }: ChatboxProps) {
@@ -212,10 +204,7 @@ export function Chatbox({
         <MessageComposer
           onSend={onSend}
           selfCharacterLabel={characterLabel(self)}
-          disabled={isPaused || composerDisabled}
-          disabledPlaceholder={
-            composerDisabled ? composerDisabledPlaceholder : undefined
-          }
+          disabled={isPaused}
         />
       )}
 

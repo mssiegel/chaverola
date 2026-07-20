@@ -16,9 +16,11 @@ automatically via Vercel).
 > queue in real time, with reconnect handling built for classroom phones.
 > **Matching is real too:** the teacher pairs students (or lets
 > server-side auto-match do it), characters are dealt, and each matched
-> student's phone moves into a chat room. The rooms are still silent —
-> messaging is the next feature, so the composer, "End chat", pausing,
-> and the name reveal are honest placeholders for now. See
+> student's phone moves into a chat room. **And students now talk in
+> them:** messages travel the wire in real time, attributed by character,
+> with the transcript surviving a refresh. The teacher's read-only view
+> of those transcripts is the next slice; "End chat", pausing, and the
+> name reveal are honest placeholders for now. See
 > [Shared_Project_Context.md](Shared_Project_Context.md)
 > for the full brief and [docs/plans/](docs/plans/) for the current feature plan.
 

@@ -7,13 +7,15 @@ types here mirror `shared/src/api.ts` (REST) and `shared/src/socket.ts`
 the server; if the two ever disagree, the code is right and this file has
 a bug.
 
-Implemented by `server/`: feature 1 (create & join) over REST, then two
+Implemented by `server/`: feature 1 (create & join) over REST, then the
 Socket.IO features documented in [Socket events](#socket-events) below —
-feature 2 (the live lobby, i.e. the waiting queue) and feature 3
-(matching: the server creates chats, tracks them, and ends them). **No
-chat message has ever crossed the wire.** The rooms matching creates are
-silent by design; messaging, ending, pausing, the auto-end clock, and the
-name reveal all arrive with the next feature.
+feature 2 (the live lobby, i.e. the waiting queue), feature 3 (matching:
+the server creates chats, tracks them, and ends them), and feature 4's
+first messaging slice: **students in a chat send real messages to each
+other** (`chat:send` → targeted `chat:line`, with a capped in-memory
+transcript re-delivered on resume). The teacher's read-only transcript is
+the next slice; ending, pausing, the auto-end clock, and the name reveal
+are further out still.
 
 ## Conventions
 
@@ -147,10 +149,14 @@ the client types its socket
 `Socket<ServerToClientEvents, ClientToServerEvents>`.
 
 engine.io intercepts `/socket.io/` on the `http.Server` **before Express
-runs**, so none of the REST conventions above apply here: no rate
-limiters (the seat cap below is the socket layer's own abuse guard), no
-16kb body cap, no `Cache-Control` header, and CORS comes from the
-`Server` constructor's own option, not the Express middleware.
+runs**, so none of the REST conventions above apply here: Express's rate
+limiters never see socket traffic, there is no 16kb body cap and no
+`Cache-Control` header, and CORS comes from the `Server` constructor's
+own option, not the Express middleware. The socket layer carries its own
+three abuse guards instead: the seat cap
+(`MAX_STUDENTS_PER_ACTIVITY`), the per-socket `chat:send` rate limit
+(10 messages per sliding 10 seconds), and the per-message character cap
+(`CHAT_MESSAGE_MAX_CHARS`, counted in code points).
 
 ### Connecting
 
@@ -214,15 +220,22 @@ export interface ServerToClientEvents {
     chats: ChatSnapshot[];
     leftoverStudentId: string | null; // pair-everyone's odd one out
   }) => void;
-  /** Student only, targeted; re-sent on every resume while matched. */
+  /** Student only, targeted; re-sent on every resume while matched.
+   *  `lines` is the transcript backlog (authoritative on every delivery);
+   *  `everPeers` is everyone ever in the room minus self. */
   "chat:started": (payload: {
     chatId: string;
     selfCharacterId: string;
     peers: ChatPeer[];
+    everPeers: ChatPeer[];
+    lines: ChatLine[];
   }) => void;
   /** Student only: remaining ACTIVE peers after a membership change; the
    *  client diffs against what it had and renders a local notice. */
   "chat:update": (payload: { chatId: string; peers: ChatPeer[] }) => void;
+  /** Student only, targeted at each connected active member of the chat —
+   *  the sender's own echo included (it is the delivery receipt). */
+  "chat:line": (payload: { chatId: string; line: ChatLine }) => void;
   /** Student only, targeted; re-sent on resume while the seat is wrappingUp. */
   "chat:ended": (payload: { reason: "teacher" }) => void;
   /** Teacher room minus the sender — keeps a second host device coherent. */
@@ -255,6 +268,15 @@ export interface ChatSnapshot {
 /** Student-facing: characterIds only — never names, never peer studentIds. */
 export interface ChatPeer {
   characterId: string;
+}
+
+/** Student-facing chat message: the sender is a characterId, never a
+ *  studentId and never a name — the same load-bearing pin as ChatPeer. */
+export interface ChatLine {
+  id: string;
+  characterId: string;
+  text: string;
+  sentAt: number; // epoch ms, server clock
 }
 ```
 
@@ -294,6 +316,10 @@ export interface ClientToServerEvents {
   /** Student: the ended screen's Back-to-the-lobby tap — returns a
    *  wrappingUp seat to waiting with a fresh clock. Otherwise a no-op. */
   "lobby:back": () => void;
+  /** Student only. Trimmed, capped at CHAT_MESSAGE_MAX_CHARS by code
+   *  points, rate-limited per socket. Every rejection is a silent no-op,
+   *  like every other socket event — there is no error channel today. */
+  "chat:send": (payload: { text: string }) => void;
 }
 ```
 
@@ -368,6 +394,39 @@ below.
   ever in it (with the name captured at chat start), so a card still
   reads correctly after a member's seat is gone.
 
+### Messaging: the operational truths
+
+- **Sending is `chat:send`, delivery is `chat:line`.** The server trims,
+  rejects empty, rejects over `CHAT_MESSAGE_MAX_CHARS` — counted in
+  **code points**, matching the composer, so a multi-unit emoji is one
+  character on both sides — rate-limits, appends to the chat's stored
+  transcript, and fans the projected line out to every **connected active
+  member**, the sender included (the echo is the delivery receipt; there
+  is no local optimistic append). Every rejection is a silent no-op.
+- **The rate limit is per socket:** 10 messages per sliding 10 seconds,
+  loose enough that chained one-word messages never trip it, tight enough
+  that a script gets nowhere. Its state lives in the connection closure
+  and dies with the socket.
+- **The server never inspects content.** Length and rate are the whole of
+  it — no wordlist, no masking (DECISIONS.md → "The server never inspects
+  what students write"). The teacher watching live with real names is the
+  moderation model.
+- **The transcript is capped and ephemeral.** `CHAT_TRANSCRIPT_MAX_LINES`
+  (200) per chat, oldest dropped, in memory, wiped by every deploy like
+  everything else.
+- **`chat:started`'s `lines` are the only healing channel.** The
+  `chat:line` fan-out skips disconnected seats and there is no
+  `connectionStateRecovery`, so a student who blinked gets the missed
+  messages exclusively from the resume payload. Clients must treat
+  `lines` as authoritative on **every** `chat:started`, not only the
+  first — the server re-emits it on every reconnect.
+- **`everPeers` is the roster lines resolve against.** `peers` is the
+  live roster and shrinks on `chat:update`; `everPeers` is everyone ever
+  in the room minus self, so a departed member's backlog lines (and their
+  character's color) survive a refresh.
+- **The teacher hears nothing yet.** No message reaches the teacher room
+  in this slice; the read-only transcript projection is the next one.
+
 ### Privacy rules
 
 The projection tradition extends to sockets: every payload is built by
@@ -382,11 +441,14 @@ Matching extends the same rule to chats, and this is the load-bearing
 one: **the student wire carries characterIds and nothing else.** A
 student learns their own `selfCharacterId` and their peers as bare
 `{ characterId }` objects — never a peer's real name, never a peer's
-studentId, not even at the end (there is no reveal yet). The
+studentId, not even at the end (there is no reveal yet). Messages follow
+the same split: a `ChatLine` attributes its sender by `characterId` only,
+even though the server stores the line under the sender's studentId. The
 who-am-I-talking-to mystery is the product, so it is pinned structurally:
-`toChatStarted`'s peers are allowlist-tested to be exactly
-`["characterId"]`. Real names live only on `ChatSnapshot`, which goes to
-the teacher's room — the same teacher-only surface as `QueueEntry`.
+`toChatStarted`'s peers, everPeers, and lines are all allowlist-tested
+(`["characterId"]` for peers; `["characterId","id","sentAt","text"]` for
+lines). Real names live only on `ChatSnapshot`, which goes to the
+teacher's room — the same teacher-only surface as `QueueEntry`.
 
 ### Timing truths a client author needs
 
@@ -406,18 +468,24 @@ the teacher's room — the same teacher-only surface as `QueueEntry`.
   listing a member in `reconnectingStudentIds`.
 - **Resume re-delivers, it doesn't replay.** Whatever a seat is in the
   middle of, the server re-states it on connect: a matched student gets
-  `chat:started` again (refresh, wifi recovery, duplicate-tab takeover
-  all land back in the same chat), and a wrapping-up seat gets
-  `chat:ended` again. Clients don't have to persist chat state.
+  `chat:started` again — now carrying the whole capped transcript in
+  `lines`, which is how a blip's missed messages arrive (refresh, wifi
+  recovery, duplicate-tab takeover all land back in the same chat) — and
+  a wrapping-up seat gets `chat:ended` again. Clients don't have to
+  persist chat state.
 - **Duplicate tabs.** Two sockets presenting the same seat token: the
   newer socket takes the seat, the older one is disconnected.
 
 Constants live in `shared/src/socket.ts` (`LOBBY_GRACE_SECONDS = 120`,
 `LOBBY_DISCONNECT_BROADCAST_DELAY_MS = 4000`,
 `MAX_STUDENTS_PER_ACTIVITY = 60`, `AUTO_MATCH_GAP_SECONDS = 3`);
-`STUDENT_NAME_MAX_CHARS = 40` sits with the other form caps in
-`shared/src/constants.ts`. Matched and wrapping-up seats count toward the
-seat cap — they still hold seats; tombstones don't.
+`STUDENT_NAME_MAX_CHARS = 40`, `CHAT_MESSAGE_MAX_CHARS = 75`, and
+`CHAT_TRANSCRIPT_MAX_LINES = 200` sit with the other shared caps in
+`shared/src/constants.ts` (the message cap is the composer's limit too —
+one constant, so the form can't accept what the server rejects). The
+send rate limit (10 per 10s) is server-internal, in `lobby.ts`. Matched
+and wrapping-up seats count toward the seat cap — they still hold seats;
+tombstones don't.
 
 ## curl smoke
 

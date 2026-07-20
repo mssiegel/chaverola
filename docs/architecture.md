@@ -153,9 +153,11 @@ Express `cors()` never sees the handshake (CORS is the `Server`
 constructor's own option, fed the same `allowedOrigins()` from
 `config.ts`), `pino-http` logs nothing (the lobby logs through the same
 plain `pino` logger instance `index.ts` shares between both layers), and
-the rate limiters never fire (`MAX_STUDENTS_PER_ACTIVITY` is the socket
-layer's own abuse guard). `serveClient: false` — the client bundles its
-own.
+Express's rate limiters never see socket traffic — the socket layer
+carries its own abuse guards: the seat cap
+(`MAX_STUDENTS_PER_ACTIVITY`), the per-socket `chat:send` rate limit,
+and the per-message character cap. `serveClient: false` — the client
+bundles its own.
 
 How the layer is put together (`server/src/live/`):
 
@@ -187,9 +189,11 @@ How the layer is put together (`server/src/live/`):
   (a local Fisher–Yates — client code is read for the rules, never
   imported), `planPairEveryone` is the demo's `pairEveryoneIn` minus
   rematch memory, `findAutoMatchPair` picks the two longest waiting past
-  the threshold, and `markInactive` owns the below-2 ending. The split
-  is the payoff: lobby.ts decides who may command what and who hears
-  about it; matching.ts decides what actually happens.
+  the threshold, `markInactive` owns the below-2 ending, and
+  `appendLine` owns the transcript (membership guard, id minting, the
+  200-line cap). The split is the payoff: lobby.ts decides who may
+  command what and who hears about it; matching.ts decides what actually
+  happens.
 - **Chats hang off the activity record** (`chats: StoredChat[]` plus
   `leftoverStudentId`), exactly like seats — one lifetime, one owner,
   and activity death takes everything with it. A `StoredChat` keeps
@@ -209,7 +213,7 @@ How the layer is put together (`server/src/live/`):
   nothing, the sync-bug surface is zero, and a dropped emit can't wedge
   a card. Students get only targeted emits (`lobby:welcome`,
   `lobby:removed`, `activity:ended`, `chat:started`, `chat:update`,
-  `chat:ended`), never a snapshot.
+  `chat:line`, `chat:ended`), never a snapshot.
 - **Teacher commands live on teacher sockets only.** `chat:start`,
   `match:pair-everyone`, `chat:remove`, `settings:update`, and
   `queue:remove` are registered inside the teacher branch of the
@@ -228,12 +232,19 @@ How the layer is put together (`server/src/live/`):
   seat changes, and manual pairing never have to touch the timer. The
   teacher-gating is a product decision, not a technical one: a closed
   laptop shouldn't keep putting kids in rooms.
-- **What is still simulated:** messages, ending, pausing, the auto-end
-  clock, and the name reveal. Chats are created and ended structurally
-  (`endReason: "teacher"` when membership drops below 2 is the only
-  reachable ending), but nothing has ever typed into one. The client's
-  `endingEnabled` engine flag is the seam that flips when they become
-  real.
+- **Messaging is real between students** (feature 4's first slice): a
+  student's `chat:send` appends to the chat's stored transcript
+  (`StoredChat.lines`, capped at 200, oldest dropped) and fans a
+  character-attributed `chat:line` out to the connected active members.
+  The resume re-delivery of `chat:started` carries the whole transcript,
+  which is the only channel that heals a blip — the fan-out skips
+  disconnected seats. **What is still simulated:** the teacher's
+  transcript (next slice — no message reaches the teacher room yet),
+  ending, pausing, the auto-end clock, typing indicators, student-facing
+  peer-drop UI, and the name reveal. Chats are created and ended
+  structurally (`endReason: "teacher"` when membership drops below 2 is
+  the only reachable ending). The client's `endingEnabled` engine flag
+  is the seam that flips when ending and pausing become real.
 - **The teacher socket is the TTL keep-alive:** while one is connected,
   a ~5-minute `.unref()`ed interval calls `getByHostKey`, so a live
   class can't expire at the 12h TTL mid-lesson. Student sockets never
