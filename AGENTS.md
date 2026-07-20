@@ -29,12 +29,19 @@ built and green locally 2026-07-20
 the host page's pairing rail seats real students, "Pair everyone 1:1"
 and server-run auto-match act on the real queue, live cards track real
 chats, settings edits sync, and a matched student's phone moves into a
-real chat room. The production pass ran 2026-07-20 and was clean —
-282 assertions across manual pairing, trios and the leftover case,
-teacher-gated auto-match (including the closed-laptop hold and resume),
-settings sync across two host devices, mid-chat drops and resumes, and
-the demo's zero-network sweep. **The one gap is the same one feature 2
-left: a real handset on cellular** — the founder's own device.
+real chat room. Feature 3 is **complete** — verified end to end on
+production 2026-07-20: 282 scripted assertions across manual pairing,
+trios and the leftover case, teacher-gated auto-match (including the
+closed-laptop hold and resume), settings sync across two host devices,
+mid-chat drops and resumes, and the demo's zero-network sweep.
+
+**The handset leg earned its keep.** A real phone on cellular found what
+every scripted leg missed: a student who left mid-chat while their socket
+was down stranded their partner in a dead room permanently. Fixed on both
+sides and re-verified (see DECISIONS.md → "A matched seat gets the same 2
+minutes as any other"). Keep sending real features to a real phone —
+headless Chrome on broadband never actually loses its connection, so it
+cannot test what a user does while offline.
 
 **Messaging is the next feature, and a lot hangs off that.** No chat
 message has ever crossed the wire: the rooms matching creates are

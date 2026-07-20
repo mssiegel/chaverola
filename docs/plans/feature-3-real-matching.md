@@ -37,7 +37,7 @@ When a prompt is done, tick its checkbox here (same commit).
 - [x] Prompt 2 — Student client: the real chat room (dormant until Prompt 3)
 - [x] Prompt 3 — Teacher client + arm auto-match (the feature completes)
 - [x] Prompt 4 — Docs + stale-reference sweep
-- [ ] Prompt 5 — End-to-end production verification
+- [x] Prompt 5 — End-to-end production verification
 
 Repo rules that apply to every prompt (details in `AGENTS.md`): run
 `pnpm format` before committing; run every piece of new user-facing copy
@@ -622,10 +622,16 @@ Fixed on both sides and verified on production:
 Recorded in DECISIONS.md →
 [A matched seat gets the same 2 minutes as any other](../../DECISIONS.md).
 
-**Still owed:** a confirming run on the real handset. The whole lesson of
-this pass is that a headless browser cannot lose its connection the way a
-phone does, so the fix deserves the same gate that caught the bug. Until
-that is run and reported, this checkbox stays unticked.
+**The confirming handset run was not performed** — the founder had no
+cellular service available, and accepted the scripted verification instead
+(2026-07-20). Worth knowing what that does and doesn't leave open. The
+server half needs no client cooperation at all and was measured directly, so
+it holds on any device. The client half was verified through CDP-simulated
+offline rather than a real radio, and its mechanism (frozen auth, buffered
+flush on reconnect) is not device-specific — but a headless browser still
+cannot lose its connection the way a phone does, which is exactly how the
+original bug hid. If the client half is ever silently broken, the symptom is
+a partner freed in 120s instead of instantly, not a stranded one.
 
 **Deferred, deliberately:** the partner sees nothing while they wait out the
 grace — the "lost connection" tag is teacher-only. That needs peer connection

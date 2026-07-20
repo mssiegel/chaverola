@@ -1444,11 +1444,16 @@ known answer about unchanged code is a bad trade. If the teardown path
 itself ever changes — an `io.close()` hook, a graceful drain, persistence
 behind the store — the restart story stops being settled and gets re-run.
 
-**The one leg still owed:** a real handset on cellular. The scripted pass
-runs headless Chrome on broadband, which cannot reproduce a mobile browser's
-timer throttling under screen-lock, or a wifi-to-cellular handoff. That is
-the same gap feature 2 left to the founder's own device, and it is where the
-2026-07-19 `lobby:leave` bug actually surfaced.
+**The handset leg was run, and it paid for itself immediately** — it found a
+bug that stranded a student's chat partner permanently, which every scripted
+leg had missed. See
+[A matched seat gets the same 2 minutes as any other](#a-matched-seat-gets-the-same-2-minutes-as-any-other-and-leaves-its-chat-when-they-run-out).
+The confirming run after the fix was not performed (no cellular service
+available); the fix's server half was measured directly and needs no client
+cooperation, so the residual exposure is a slower path, not a stranded one.
+The standing lesson: headless Chrome on broadband never actually loses its
+connection, so it cannot test what a user does while offline. Keep sending
+real features to a real phone.
 
 _Verified with the `f3p5-*` scripts described in
 [the verify skill](.claude/skills/verify/SKILL.md)._
