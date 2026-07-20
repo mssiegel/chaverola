@@ -3483,10 +3483,24 @@ independent pipelines that race. Client-lands-first means a UI talking to a
 server that lacks the handler, and Socket.IO drops an unhandled event
 silently. The replacement rule: **after pushing a slice, poll `/healthz` for
 the new server commit before treating the feature as live**, and where a
-client-ahead-of-server window would actually hurt a real user, split that
-slice's push into a server commit then a client commit — still one session
-and one working thing. Don't undo this by quietly going back to layered
+client-ahead-of-server window would actually hurt a real user, split the
+slice into a server commit and a client commit pushed **separately**, waiting
+for `/healthz` between. Don't undo this by quietly going back to layered
 prompts; the deploy race has a rule, the demonstrability problem didn't.
+
+**A sharper edge found while planning feature 4:** Vercel's skip check diffs
+only the **tip commit** of a push, not the range since the last deployment,
+while Render's filter diffs against the last **deployed** commit. A push of N
+commits is one deployment per side. So a code commit followed by a docs-only
+commit, pushed together, deploys the server and silently skips the client —
+a permanent split, not a race, with green history on both dashboards.
+**The tip commit of any push must itself touch `client/`, `shared/`, or a
+root manifest.** `/healthz` does not catch this; only Vercel's deployment
+status does. The check lives solely in the Vercel dashboard
+(`client/vercel.json` holds nothing but rewrites), so it is invisible to
+anyone reading the repo — moving it into a range-correct `ignoreCommand` that
+defaults to building whenever it can't tell would retire the discipline
+altogether, and is worth doing on its own sometime.
 
 _Recorded in [AGENTS.md](AGENTS.md) → Working Rules for AI Agents._
 

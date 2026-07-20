@@ -397,10 +397,27 @@ Run from the repo root:
     unhandled event **silently**, so there is no error anywhere. After
     pushing a slice, **poll `/healthz` for the new server commit before
     treating the feature as live or testing it**. Where a
-    client-ahead-of-server window would actually hurt a real user, split that
-    slice's push into a server commit then a client commit — still one
-    session, still one working thing. Layering used to buy this for free
-    (feature 2: "Prompt 1 before everything"); don't quietly go back to it.
+    client-ahead-of-server window would actually hurt a real user, split the
+    slice into a server commit and a client commit and **push them
+    separately, waiting for `/healthz` between** — pushing both at once buys
+    nothing, since one push is one deployment per side however many commits
+    it carries. Layering used to buy this for free (feature 2: "Prompt 1
+    before everything"); don't quietly go back to it.
+  - **The tip commit of any push must touch `client/`, `shared/`, or a root
+    manifest, or the client will not rebuild.** Vercel's skip check diffs
+    only the TIP commit (`git diff --quiet HEAD^ HEAD -- . ../shared …`), not
+    the range since the last deployment, and a push of N commits produces
+    exactly one deployment. Render's filter diffs against the last DEPLOYED
+    commit instead. So a code commit followed by a docs-only commit, pushed
+    together, deploys the server and **silently skips the client** — not a
+    race but a permanent split: new server, old client, indefinitely, green
+    on both dashboards. Push the code commit on its own; a docs-only
+    follow-up goes in its own push. `/healthz` does NOT catch this (the
+    server commit is new and the check passes while the client is stale) —
+    confirm Vercel's latest production deployment is Ready, not Canceled, for
+    the SHA you expect. This config lives only in the Vercel dashboard;
+    `client/vercel.json` has nothing but rewrites, so it is ungreppable from
+    the repo.
 - **Humanize all copy you write.** Any user-facing text you create or change — UI
   strings, button labels, empty states, mock chat messages, error/success copy — must be
   run through the **humanizer** skill ([blader/humanizer](https://github.com/blader/humanizer))
