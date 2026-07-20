@@ -48,20 +48,22 @@ letting the ask evaporate.
 
 **Messaging is landing, slice by slice** —
 [docs/plans/feature-4-messaging.md](docs/plans/feature-4-messaging.md),
-the first feature cut as end-to-end slices rather than layers. Its
-first code slice is live: **students in a real chat send each other
-messages** (`chat:send` → targeted `chat:line`, a capped 200-line
-in-memory transcript, resume re-delivering the backlog through
-`chat:started.lines`), with the composer enabled for real. What hasn't
-shipped: the **teacher's read-only transcript is the very next prompt**
-(until it lands, the teacher's cards can't show what students type —
-acceptable only while no real classes run on production), and "End
-chat", "End all chats", "Pause all chats", the auto-end clock, and the
-name reveal still render as honest placeholders on real activities (the
-demo still simulates every one of them). The single structural
-exception: a chat whose active membership drops below 2 ends for the
-remaining peer with reason `"teacher"` — otherwise a working Remove
-would strand a student alone in a room.
+the first feature cut as end-to-end slices rather than layers. Two code
+slices are live: **students in a real chat send each other messages**
+(`chat:send` → targeted `chat:line`, a capped 200-line in-memory
+transcript, resume re-delivering the backlog through
+`chat:started.lines`), and **the teacher reads every chat live with
+real names attached** — each `chat:send` also emits
+`chat:transcript-line` to the teacher room (the one delta on the
+teacher wire; `chats:snapshot` carries the whole transcript in
+`ChatSnapshot.messages`, so a dropped delta heals and a refresh
+restores every card). What hasn't shipped: "End chat", "End all
+chats", "Pause all chats", the auto-end clock, and the name reveal
+still render as honest placeholders on real activities (the demo still
+simulates every one of them). The single structural exception: a chat
+whose active membership drops below 2 ends for the remaining peer with
+reason `"teacher"` — otherwise a working Remove would strand a student
+alone in a room.
 
 The demo flows are a **permanent product surface** — the homepage links to
 them and the founder pitches with them — not scaffolding; see the working
@@ -216,8 +218,10 @@ Run from the repo root:
   rule that would silently strand real students — a matched seat's drop
   arming the grace timer, with a resume re-delivering `chat:started`
   (`live/lobby.test.ts` — which also pins the message cap's code-point
-  unit). `live/matching.test.ts` covers the pure pairing and transcript
-  rules a browser pass can't cheaply pin). Both suites are deliberately
+  unit and the teacher transcript's room boundary: real names never
+  reach a student socket). `live/matching.test.ts` covers the pure
+  pairing and transcript rules a browser pass can't cheaply pin). Both
+  suites are deliberately
   small; see DECISIONS.md → "Testing stays small" entries before adding
   tests.
 - **Preview:** `pnpm preview` — serve the production build

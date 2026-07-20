@@ -92,6 +92,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Setup sections each carry one brand accent; settings stays the quiet one](#setup-sections-each-carry-one-brand-accent-settings-stays-the-quiet-one)
 - [Teacher live activity page](#teacher-live-activity-page)
   - [The teacher reads every chat, and that ships with messaging — not after it](#the-teacher-reads-every-chat-and-that-ships-with-messaging--not-after-it)
+  - [Message lines are the one delta on the teacher wire](#message-lines-are-the-one-delta-on-the-teacher-wire)
   - [Disabled ending controls share one hint line, not one per card](#disabled-ending-controls-share-one-hint-line-not-one-per-card)
   - [The live card's count-up clock appears only after the first minute](#the-live-cards-count-up-clock-appears-only-after-the-first-minute)
   - [An empty live transcript explains itself; a finished one doesn't](#an-empty-live-transcript-explains-itself-a-finished-one-doesnt)
@@ -1358,7 +1359,9 @@ _Implemented in
 
 ### The teacher reads every chat, and that ships with messaging — not after it
 
-_2026-07-20_
+_2026-07-20 · Shipped 2026-07-21: `chat:transcript-line` to the teacher
+room per message, the whole capped transcript on `ChatSnapshot.messages`,
+and the homepage's teacher bullet is true again._
 
 **Decision:** Live chat cards fill with the real transcript as students type,
 each line prefixed with the sender's real name in the established format
@@ -1391,6 +1394,32 @@ _Implemented in
 (the snapshot mapping and the delta merge) and
 [ChatCard](client/src/components/Teacher/ChatCard/), which has rendered
 transcripts with real names since the demo._
+
+### Message lines are the one delta on the teacher wire
+
+_2026-07-21_
+
+**Decision:** The teacher wire stays snapshots-over-deltas everywhere
+except message lines: each accepted `chat:send` emits one
+`chat:transcript-line` to the teacher room, and the client appends it to
+the matching card. Everything else about a chat still arrives only whole,
+via `chats:snapshot` — which **also** carries the full capped transcript
+(`ChatSnapshot.messages`).
+
+**Why:** A full `broadcastState` per message would be far too fat — a
+classroom of chatting students would re-send every card's whole state on
+every keystroke's worth of talk. The deviation is safe precisely because
+the snapshot remains authoritative: a dropped delta heals on the next seat
+change or reconnect instead of wedging a card, so the delta is an
+optimization, never the only path. The same shape as the student side's
+`chat:line` vs `chat:started.lines` — deltas for liveness, a fat resume
+payload for truth. Don't extend deltas to membership, status, or clocks;
+those stay snapshot-only.
+
+_Implemented in [lobby.ts](server/src/live/lobby.ts) (the `chat:send`
+handler's room emit) and
+[useHostActivityLive.ts](client/src/components/Teacher/HostActivity/useHostActivityLive.ts)
+(the id-deduped, cap-mirroring merge)._
 
 ### Disabled ending controls share one hint line, not one per card
 
@@ -1441,6 +1470,14 @@ would otherwise show a blank box under copy promising a reread, so
 chat yet. Transcripts arrive in the next update."). Both hints still ride
 `endingEnabled`, now as a bare live-activity proxy; the teacher-transcript
 slice decouples them and replaces both with a real empty state._
+
+_Closed out 2026-07-21 by the teacher-transcript slice: both hints are now
+real empty states, unconditional, and `endingEnabled` gates only the
+ending controls. A silent live card says "No messages yet. They'll show up
+here as students type." (also visible for a beat on a freshly paired demo
+chat, where it's equally true); an empty ended card says "This chat ended
+before anyone said anything." — reachable when the below-2 rule ends a duo
+before its first message._
 
 **Decision:** On a real activity, a card in "Chats in progress" with no
 messages fills its transcript area with one centered line — "Nothing to read

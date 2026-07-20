@@ -45,7 +45,7 @@ When a prompt is done, tick its checkbox here (same commit).
 
 - [x] Prompt 1 — The handset fix's leftovers (cleanup; no behavior change)
 - [x] Prompt 2 — Students send each other messages (end to end)
-- [ ] Prompt 3 — The teacher reads them (end to end)
+- [x] Prompt 3 — The teacher reads them (end to end)
 - [ ] Prompt 4 — The cross-cutting production sweep
 
 Repo rules that apply to every prompt (details in `AGENTS.md`): run

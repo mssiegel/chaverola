@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
+import { CHAT_TRANSCRIPT_MAX_LINES } from "@chaverola/shared";
 import type {
   ActivitySettings,
   ChatSnapshot,
+  ChatTranscriptLine,
   LobbyConnectionState,
   QueueEntry,
 } from "@chaverola/shared";
@@ -10,18 +12,22 @@ import type {
 import { createLobbySocket, type LobbySocket } from "@/lib/socket";
 import { useLatestRef } from "@/lib/useLatestRef";
 
+import type { ChatMessage } from "@/types/chat";
+
 import type { HostEngine } from "./hostEngine";
 import type { HostedChat, WaitingStudent } from "./hostWorld";
 
 /*
   The teacher's live engine: one Socket.IO connection per mounted host page
   (auth `{ role: "teacher", hostKey }`). Queue truth comes from the server's
-  `queue:snapshot` broadcasts and chat truth from `chats:snapshot` — the
-  matching commands (chat:start, match:pair-everyone, chat:remove,
-  settings:update) emit over the same socket. Deliberately imports nothing
-  from hostWorld.ts beyond types — tickWorld runs the SIMULATION's
-  auto-match and must never see a real student. Ending/pausing stay inert
-  (endingEnabled: false) until the messaging feature makes them real.
+  `queue:snapshot` broadcasts and chat truth from `chats:snapshot`, with
+  per-message `chat:transcript-line` deltas keeping transcripts live
+  between snapshots — the matching commands (chat:start,
+  match:pair-everyone, chat:remove, settings:update) emit over the same
+  socket. Deliberately imports nothing from hostWorld.ts beyond types —
+  tickWorld runs the SIMULATION's auto-match and must never see a real
+  student. Ending/pausing stay inert (endingEnabled: false) until ending
+  ships.
 
   The server refreshes the activity's TTL while this socket is connected
   (the teacher socket is the keep-alive), so an open host page keeps its
@@ -38,6 +44,18 @@ function toWaitingStudent(entry: QueueEntry): WaitingStudent {
   };
 }
 
+/** Server truth → the card's message shape. `senderId` is the STUDENT id —
+ *  what toHostedChat keys participants by — and `ChatSnapshot.participants`
+ *  is everyone ever in the room, so a removed student's lines still resolve
+ *  instead of silently disappearing from the card. */
+function toTranscriptMessage(line: ChatTranscriptLine): ChatMessage {
+  return {
+    id: line.id,
+    senderId: line.studentId,
+    text: line.text,
+  };
+}
+
 /** Server truth → the chat shape the dashboard renders. The wire's
  *  `character` is the SERVER roster's copy, which withCurrentCharacters
  *  keeps as the fallback when a local edit dropped the character. */
@@ -50,9 +68,7 @@ function toHostedChat(snapshot: ChatSnapshot): HostedChat {
       character: p.character,
     })),
     inactiveStudentIds: snapshot.inactiveStudentIds,
-    // Messaging isn't wired yet — the card renders its empty-transcript
-    // hint until the messaging feature fills this in.
-    messages: [],
+    messages: snapshot.messages.map(toTranscriptMessage),
     status: snapshot.status,
     endReason: snapshot.endReason,
     autoEndSecondsLeft: null,
@@ -125,6 +141,27 @@ export function useHostActivityLive({
     socket.on("chats:snapshot", (payload) => {
       setChats(payload.chats.map(toHostedChat));
       setLeftoverStudentId(payload.leftoverStudentId);
+    });
+    socket.on("chat:transcript-line", ({ chatId, line }) => {
+      // The one delta on the teacher wire (message lines only — a snapshot
+      // per message would be far too fat). Safe because chats:snapshot also
+      // carries the transcript: a dropped delta heals on the next seat
+      // change or reconnect instead of wedging a card.
+      setChats((prev) =>
+        prev.map((chat) => {
+          if (chat.id !== chatId) return chat;
+          // Dedupe by line id — cheap insurance against an emit-order
+          // change landing a line's snapshot before its delta.
+          if (chat.messages.some((m) => m.id === line.id)) return chat;
+          const messages = [...chat.messages, toTranscriptMessage(line)];
+          // Mirror the server's transcript cap so a long-lived card never
+          // outgrows stored truth between snapshots.
+          if (messages.length > CHAT_TRANSCRIPT_MAX_LINES) {
+            messages.splice(0, messages.length - CHAT_TRANSCRIPT_MAX_LINES);
+          }
+          return { ...chat, messages };
+        })
+      );
     });
     socket.on("settings:changed", ({ settings }) => {
       onSettingsSyncRef.current(settings);
@@ -230,7 +267,7 @@ export function useHostActivityLive({
     isExactRematch: () => false,
     startChat,
     pairEveryone,
-    // Ending/pausing stay placeholders until messaging ships.
+    // Ending/pausing stay placeholders until ending ships.
     endChat: noop,
     endAllChats: noop,
     paused: false,

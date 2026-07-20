@@ -211,7 +211,12 @@ How the layer is put together (`server/src/live/`):
   `broadcastState` re-sends both to the room after **every** seat or
   chat change. Snapshots over deltas — at ≤60 entries the bandwidth is
   nothing, the sync-bug surface is zero, and a dropped emit can't wedge
-  a card. Students get only targeted emits (`lobby:welcome`,
+  a card. The one delta is `chat:transcript-line` (one line per
+  `chat:send` to the room — a snapshot per message would be far too
+  fat), and it is safe under the same rule because `chats:snapshot`
+  also carries the transcript, so a dropped delta heals on the next
+  snapshot (see DECISIONS.md → "Message lines are the one delta on the
+  teacher wire"). Students get only targeted emits (`lobby:welcome`,
   `lobby:removed`, `activity:ended`, `chat:started`, `chat:update`,
   `chat:line`, `chat:ended`), never a snapshot.
 - **Teacher commands live on teacher sockets only.** `chat:start`,
@@ -232,19 +237,23 @@ How the layer is put together (`server/src/live/`):
   seat changes, and manual pairing never have to touch the timer. The
   teacher-gating is a product decision, not a technical one: a closed
   laptop shouldn't keep putting kids in rooms.
-- **Messaging is real between students** (feature 4's first slice): a
-  student's `chat:send` appends to the chat's stored transcript
-  (`StoredChat.lines`, capped at 200, oldest dropped) and fans a
-  character-attributed `chat:line` out to the connected active members.
-  The resume re-delivery of `chat:started` carries the whole transcript,
-  which is the only channel that heals a blip — the fan-out skips
-  disconnected seats. **What is still simulated:** the teacher's
-  transcript (next slice — no message reaches the teacher room yet),
-  ending, pausing, the auto-end clock, typing indicators, student-facing
-  peer-drop UI, and the name reveal. Chats are created and ended
-  structurally (`endReason: "teacher"` when membership drops below 2 is
-  the only reachable ending). The client's `endingEnabled` engine flag
-  is the seam that flips when ending and pausing become real.
+- **Messaging is real, both directions of the split** (feature 4's
+  first two slices): a student's `chat:send` appends to the chat's
+  stored transcript (`StoredChat.lines`, capped at 200, oldest dropped)
+  and fans a character-attributed `chat:line` out to the connected
+  active members, while the teacher room hears the same stored line as
+  a `chat:transcript-line` with the real name resolved — one store, two
+  projections (`toChatLine` / `toChatTranscriptLine`), which is the
+  slice seam between prompts 2 and 3. The resume re-delivery of
+  `chat:started` carries the whole transcript for students, and
+  `ChatSnapshot.messages` does the same for the teacher — each side's
+  only channel that heals a blip, since the fan-out skips disconnected
+  seats. **What is still simulated:** ending, pausing, the auto-end
+  clock, typing indicators, student-facing peer-drop UI, and the name
+  reveal. Chats are created and ended structurally
+  (`endReason: "teacher"` when membership drops below 2 is the only
+  reachable ending). The client's `endingEnabled` engine flag is the
+  seam that flips when ending and pausing become real.
 - **The teacher socket is the TTL keep-alive:** while one is connected,
   a ~5-minute `.unref()`ed interval calls `getByHostKey`, so a live
   class can't expire at the 12h TTL mid-lesson. Student sockets never

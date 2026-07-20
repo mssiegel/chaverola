@@ -39,6 +39,7 @@ export interface ChatSnapshot {
   participants: ChatParticipant[]; // everyone ever in the room, seat order
   inactiveStudentIds: string[]; // removed / left mid-chat
   reconnectingStudentIds: string[]; // active members dropped past the 4s delay
+  messages: ChatTranscriptLine[]; // the whole capped transcript, oldest first
   elapsedSeconds: number; // computed server-side at emit; client ticks between
   status: "active" | "ended";
   endReason: "teacher" | null; // the only reachable reason this feature
@@ -53,6 +54,17 @@ export interface ChatPeer {
  *  studentId and never a name — the same load-bearing pin as ChatPeer. */
 export interface ChatLine {
   id: string;
+  characterId: string;
+  text: string;
+  sentAt: number; // epoch ms, server clock
+}
+
+/** Teacher-only projection of the same stored line (room lobby:${joinCode})
+ *  — real names are fine here, exactly as on ChatParticipant. */
+export interface ChatTranscriptLine {
+  id: string;
+  studentId: string;
+  name: string;
   characterId: string;
   text: string;
   sentAt: number; // epoch ms, server clock
@@ -105,6 +117,15 @@ export interface ServerToClientEvents {
   /** Student only, targeted at each connected active member (the sender's
    *  own echo included — it is the delivery receipt). */
   "chat:line": (payload: { chatId: string; line: ChatLine }) => void;
+  /** Teacher room: one line per chat:send, real name attached — the one
+   *  delta on the teacher wire (a full snapshot per message would be far
+   *  too fat). Safe because chats:snapshot also carries the transcript, so
+   *  a dropped delta heals on the next seat change or reconnect instead of
+   *  wedging a card. */
+  "chat:transcript-line": (payload: {
+    chatId: string;
+    line: ChatTranscriptLine;
+  }) => void;
   /** Student only, targeted; re-sent on resume while the seat is wrappingUp. */
   "chat:ended": (payload: { reason: "teacher" }) => void;
   /** Teacher room minus the sender — keeps a second host device coherent. */

@@ -295,14 +295,6 @@ export function HostActivityDashboard({
             <CompletedChatsSection
               chats={engine.completedChats}
               activity={activity}
-              // Live ended cards have empty transcripts until the teacher
-              // transcript ships; the demo's are always full, so it never
-              // shows this line.
-              emptyHint={
-                engine.endingEnabled
-                  ? undefined
-                  : "You can't read this chat yet. Transcripts arrive in the next update."
-              }
             />
 
             {/* Demo steering for what a real classroom would do on its own —

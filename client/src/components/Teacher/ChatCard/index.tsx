@@ -31,9 +31,9 @@ export interface ChatCardProps {
   autoEndSecondsLeft?: number | null;
   /** Seconds since the chat started (live cards) — the count-up chip. */
   elapsedSeconds?: number | null;
-  /** Shown in the conversation area while there are no messages (live
-   *  cards: the teacher transcript hasn't shipped, and a silent card needs
-   *  to say why). Omit to render an empty feed. */
+  /** Shown in the conversation area while there are no messages — a real
+   *  empty state, since a live card is silent until its first message and
+   *  a chat can end before one. Omit to render an empty feed. */
   emptyHint?: string;
   /**
    * Participants who left the room mid-chat (removed by the teacher). Their

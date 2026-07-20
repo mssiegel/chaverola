@@ -5,6 +5,7 @@ import type {
   ChatLine,
   ChatPeer,
   ChatSnapshot,
+  ChatTranscriptLine,
   HostedActivity,
   QueueEntry,
 } from "@chaverola/shared";
@@ -117,9 +118,29 @@ export function toChatSnapshot(
         return seat !== undefined && isReconnecting(seat, now);
       })
       .map((member) => member.studentId),
+    messages: chat.lines.map((line) => toChatTranscriptLine(chat, line)),
     elapsedSeconds: Math.max(0, Math.floor((now - chat.startedAt) / 1000)),
     status: chat.status,
     endReason: chat.endReason,
+  };
+}
+
+/** The teacher projection of a transcript line — real name attached, same
+ *  teacher-only surface as ChatSnapshot. The second, richer view of the
+ *  exact stored line toChatLine projects for students. */
+export function toChatTranscriptLine(
+  chat: StoredChat,
+  line: StoredChatLine
+): ChatTranscriptLine {
+  // appendLine refuses a non-member, so the find can't miss.
+  const sender = chat.members.find((m) => m.studentId === line.studentId)!;
+  return {
+    id: line.id,
+    studentId: line.studentId,
+    name: sender.name,
+    characterId: sender.characterId,
+    text: line.text,
+    sentAt: line.sentAt,
   };
 }
 

@@ -15,7 +15,7 @@ interface ChatsInProgressSectionProps {
   activity: HostedActivity;
   studentsChattingCount: number;
   waitingCount: number;
-  /** False on live activities until messaging ships: End chat / End all /
+  /** False on live activities until ending ships: End chat / End all /
    *  Pause all render disabled, with one shared hint line saying why
    *  (honest-placeholder pattern; founder call, 2026-07-20). */
   endingEnabled: boolean;
@@ -175,17 +175,12 @@ export function ChatsInProgressSection({
                 endChatDisabled={!endingEnabled}
                 autoEndSecondsLeft={chat.autoEndSecondsLeft}
                 elapsedSeconds={chat.elapsedSeconds ?? null}
-                // Only live cards get the hint: a demo card's silence is
-                // just a beat between simulated lines, not a missing
-                // feature. Gating on endingEnabled is a proxy (it really
-                // means "live activity") — fair while the teacher
-                // transcript hasn't shipped; the transcript prompt
-                // decouples it.
-                emptyHint={
-                  endingEnabled
-                    ? undefined
-                    : "Students can type now. Their messages show up here in the next update."
-                }
+                // A real empty state, not a feature notice: transcripts are
+                // live, so a silent card just hasn't had its first message.
+                // Unconditional (no endingEnabled gate) — on a freshly
+                // paired demo chat it shows for a beat until the first
+                // scripted line, and it's just as true there.
+                emptyHint="No messages yet. They'll show up here as students type."
                 inactiveParticipantIds={new Set(chat.inactiveStudentIds)}
                 reconnectingParticipantIds={
                   new Set(chat.reconnectingStudentIds ?? [])

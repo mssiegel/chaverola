@@ -11,11 +11,12 @@ Implemented by `server/`: feature 1 (create & join) over REST, then the
 Socket.IO features documented in [Socket events](#socket-events) below —
 feature 2 (the live lobby, i.e. the waiting queue), feature 3 (matching:
 the server creates chats, tracks them, and ends them), and feature 4's
-first messaging slice: **students in a chat send real messages to each
-other** (`chat:send` → targeted `chat:line`, with a capped in-memory
-transcript re-delivered on resume). The teacher's read-only transcript is
-the next slice; ending, pausing, the auto-end clock, and the name reveal
-are further out still.
+messaging slices: **students in a chat send real messages to each other**
+(`chat:send` → targeted `chat:line`, with a capped in-memory transcript
+re-delivered on resume) and **the teacher reads every chat live with real
+names attached** (`chat:transcript-line` to the teacher room, with the
+whole transcript riding `ChatSnapshot.messages`). Ending, pausing, the
+auto-end clock, and the name reveal are further out still.
 
 ## Conventions
 
@@ -236,6 +237,13 @@ export interface ServerToClientEvents {
   /** Student only, targeted at each connected active member of the chat —
    *  the sender's own echo included (it is the delivery receipt). */
   "chat:line": (payload: { chatId: string; line: ChatLine }) => void;
+  /** Teacher room: one line per chat:send, real name attached — the one
+   *  delta on the teacher wire; chats:snapshot also carries the transcript,
+   *  so a dropped delta heals instead of wedging a card. */
+  "chat:transcript-line": (payload: {
+    chatId: string;
+    line: ChatTranscriptLine;
+  }) => void;
   /** Student only, targeted; re-sent on resume while the seat is wrappingUp. */
   "chat:ended": (payload: { reason: "teacher" }) => void;
   /** Teacher room minus the sender — keeps a second host device coherent. */
@@ -260,6 +268,7 @@ export interface ChatSnapshot {
   participants: ChatParticipant[]; // everyone ever in the room, seat order
   inactiveStudentIds: string[]; // removed / left mid-chat
   reconnectingStudentIds: string[]; // active members dropped past the 4s delay
+  messages: ChatTranscriptLine[]; // the whole capped transcript, oldest first
   elapsedSeconds: number; // computed server-side at emit; client ticks between
   status: "active" | "ended";
   endReason: "teacher" | null; // the only reachable reason so far
@@ -278,11 +287,27 @@ export interface ChatLine {
   text: string;
   sentAt: number; // epoch ms, server clock
 }
+
+/** Teacher-only projection of the same stored line — real names are fine
+ *  here, exactly as on ChatParticipant. */
+export interface ChatTranscriptLine {
+  id: string;
+  studentId: string;
+  name: string;
+  characterId: string;
+  text: string;
+  sentAt: number; // epoch ms, server clock
+}
 ```
 
 Both teacher-facing snapshots always arrive **whole**, never as deltas —
 at ≤60 seats and a classroom's worth of chats, snapshots buy zero sync
-bugs, and a dropped emit can't wedge a card. `queue:snapshot` excludes
+bugs, and a dropped emit can't wedge a card. **Message lines are the one
+exception:** `chat:transcript-line` is a per-message delta, because a
+full snapshot per message would be far too fat. It stays safe under the
+same rule, since `chats:snapshot` also carries the transcript — a dropped
+delta heals on the next seat change or reconnect; the delta is an
+optimization, never the only path. `queue:snapshot` excludes
 matched and wrapping-up seats, so the queue is exactly the pool the
 pairing rail can act on. The two clocks (`waitSeconds`, `elapsedSeconds`)
 are computed server-side at emit and ticked locally by the client between
@@ -424,8 +449,13 @@ below.
   live roster and shrinks on `chat:update`; `everPeers` is everyone ever
   in the room minus self, so a departed member's backlog lines (and their
   character's color) survive a refresh.
-- **The teacher hears nothing yet.** No message reaches the teacher room
-  in this slice; the read-only transcript projection is the next one.
+- **The teacher reads everything, live, with real names.** Every accepted
+  `chat:send` also emits one `chat:transcript-line` to the teacher room —
+  the same stored line the students got, projected with `studentId` and
+  `name` attached (read-only; teachers still never send). The whole capped
+  transcript rides `ChatSnapshot.messages` too, so a teacher refresh or a
+  second host device rebuilds every card's transcript from the on-join
+  snapshot alone.
 
 ### Privacy rules
 
@@ -447,8 +477,10 @@ even though the server stores the line under the sender's studentId. The
 who-am-I-talking-to mystery is the product, so it is pinned structurally:
 `toChatStarted`'s peers, everPeers, and lines are all allowlist-tested
 (`["characterId"]` for peers; `["characterId","id","sentAt","text"]` for
-lines). Real names live only on `ChatSnapshot`, which goes to the
-teacher's room — the same teacher-only surface as `QueueEntry`.
+lines). Real names live only on `ChatSnapshot` and `ChatTranscriptLine`,
+which go to the teacher's **room** and nowhere else — the same
+teacher-only surface as `QueueEntry`, and pinned by a socket test: a
+student socket hears neither `chats:snapshot` nor `chat:transcript-line`.
 
 ### Timing truths a client author needs
 

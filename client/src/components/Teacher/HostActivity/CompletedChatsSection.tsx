@@ -11,21 +11,16 @@ import type { HostedChat } from "./hostWorld";
 interface CompletedChatsSectionProps {
   chats: HostedChat[];
   activity: HostedActivity;
-  /** Shown in a card whose transcript is empty (live activities: the
-   *  teacher transcript hasn't shipped, so every ended card is). Omit to
-   *  render an empty feed — a demo card's transcript is never empty. */
-  emptyHint?: string;
 }
 
 /**
  * Wrapped-up chats stay on the page in the muted card variant (no End chat
- * button, expand/minimize kept). Once teacher transcripts ship, this is
- * where the teacher rereads what was said.
+ * button, expand/minimize kept). This is where the teacher rereads what was
+ * said — the full transcript rides every card.
  */
 export function CompletedChatsSection({
   chats,
   activity,
-  emptyHint,
 }: CompletedChatsSectionProps) {
   return (
     <CollapsibleSection
@@ -53,7 +48,9 @@ export function CompletedChatsSection({
               participants={withCurrentCharacters(chat.participants, activity)}
               messages={chat.messages}
               isEnded
-              emptyHint={emptyHint}
+              // A real empty state: a chat can end before its first message
+              // (the below-2 rule), and the blank box needs to say so.
+              emptyHint="This chat ended before anyone said anything."
               inactiveParticipantIds={new Set(chat.inactiveStudentIds)}
             />
           ))}

@@ -94,9 +94,10 @@ the pass record in
 
 ## 2. Messaging's production pass on a real handset
 
-**Asked:** 2026-07-20 (feature 4, Prompt 2's "Done when"). **Blocked:** the
-prompt ran in an autonomous session with no founder at hand to drive a
-phone.
+**Asked:** 2026-07-20 (feature 4, Prompt 2's "Done when"); extended
+2026-07-21 with Prompt 3's teacher-side checks — same setup, so run both
+in one sitting. **Blocked:** both prompts ran in autonomous sessions with
+no founder at hand to drive a phone.
 
 **Needs:** a phone on cellular (wifi off), a laptop for the teacher page,
 and one browser tab as the second student.
@@ -135,9 +136,21 @@ it cannot test what a phone does through a lock screen or a lift.
 - The leave puts the phone on the ended screen (duo) with the transcript
   still readable above it.
 
+While the steps run, keep the host page in view (Prompt 3's teacher-side
+leg, added 2026-07-21):
+
+- Every message from the phone appears on the chat card within a beat,
+  prefixed with the sender's real name — the burst included (exactly the
+  10 that landed for the peer, no more).
+- Refresh the host page mid-chat: the card comes back with the whole
+  transcript, names intact.
+- After the leave ends the duo, the card moves to Completed with the
+  transcript still readable.
+
 **Bug:** missed lines that never appear after an unlock — that's the
 resume-backlog channel failing, the exact class of bug this prompt's plan
-warned about.
+warned about. On the teacher side: a card whose lines lag or vanish where
+the students' own screens have them.
 
 ### What covers it in the meantime
 

@@ -122,6 +122,7 @@ describe("toChatSnapshot (teacher chat card)", () => {
       "endReason",
       "id",
       "inactiveStudentIds",
+      "messages",
       "participants",
       "reconnectingStudentIds",
       "status",
@@ -134,6 +135,31 @@ describe("toChatSnapshot (teacher chat card)", () => {
         "name",
       ]);
     }
+  });
+
+  it("projects transcript lines with the sender resolved off the members", () => {
+    const snapshot = toChatSnapshot(fullChat, fullRecord, 30_000);
+    // Guard the loop below against a fixture regression to lines: [] —
+    // an empty array would pass the key pin while proving nothing.
+    expect(snapshot.messages).toHaveLength(1);
+    for (const line of snapshot.messages) {
+      expect(Object.keys(line).sort()).toEqual([
+        "characterId",
+        "id",
+        "name",
+        "sentAt",
+        "studentId",
+        "text",
+      ]);
+    }
+    // `!` — length pinned to 1 just above. The name and characterId are
+    // the resolved sender's, not anyone else's.
+    expect(snapshot.messages[0]!).toMatchObject({
+      studentId: "student-2",
+      name: "Noa",
+      characterId: "caesar",
+      text: "Et tu?",
+    });
   });
 });
 

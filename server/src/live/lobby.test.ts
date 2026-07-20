@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { DEFAULT_ACTIVITY_SETTINGS } from "@chaverola/shared";
 import type {
+  ChatTranscriptLine,
   ClientToServerEvents,
   QueueEntry,
   ServerToClientEvents,
@@ -23,9 +24,11 @@ import { createChat } from "./matching";
   path, over real sockets against an ephemeral server. Grace timing, the
   broadcast delay, duplicate-tab takeover, the seat cap, TTL touch, the
   send rate limit, and shutdown are covered by the feature's browser and
-  production passes and the deploy logs. The one messaging guard pinned
-  here is the cap's UNIT — code points — because a .length regression
-  would eat emoji-heavy messages invisibly in any browser pass.
+  production passes and the deploy logs. Two messaging guards are pinned
+  here: the cap's UNIT — code points — because a .length regression would
+  eat emoji-heavy messages invisibly in any browser pass, and the teacher
+  transcript's ROOM boundary — real names ride chat:transcript-line and
+  chats:snapshot, so neither may ever reach a student socket.
 */
 
 type ClientSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -101,6 +104,10 @@ const nextChatLine = (socket: ClientSocket) =>
     line: { id: string; characterId: string; text: string; sentAt: number };
   }>((resolve) => {
     socket.once("chat:line", resolve);
+  });
+const nextTranscriptLine = (socket: ClientSocket) =>
+  new Promise<{ chatId: string; line: ChatTranscriptLine }>((resolve) => {
+    socket.once("chat:transcript-line", resolve);
   });
 /** Queue snapshots also fire on every join — wait for the one that matters. */
 const snapshotWhere = (
@@ -320,6 +327,54 @@ describe("the live lobby", () => {
 
     const payload = await lineAtB;
     expect(payload.line.text).toBe(text);
+  });
+
+  it("delivers the transcript line, real name attached, to the teacher room only", async () => {
+    const teacher = connect({ role: "teacher", hostKey: activity.hostKey });
+    await nextSnapshot(teacher);
+    const studentA = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Rachel",
+      nonce: "nonce-a",
+    });
+    const studentB = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Noa",
+      nonce: "nonce-b",
+    });
+    const welcomeA = await nextWelcome(studentA);
+    const welcomeB = await nextWelcome(studentB);
+    // `!` — both members are eligible; the chat just built above them.
+    createChat(activity, [welcomeA.studentId, welcomeB.studentId], Date.now())!;
+
+    // The room boundary: names ride chat:transcript-line and chats:snapshot,
+    // and a student socket must never hear either.
+    const studentLeaks: unknown[] = [];
+    for (const socket of [studentA, studentB]) {
+      socket.on("chat:transcript-line", (p) => studentLeaks.push(p));
+      socket.on("chats:snapshot", (p) => studentLeaks.push(p));
+    }
+
+    const transcriptAtTeacher = nextTranscriptLine(teacher);
+    const lineAtB = nextChatLine(studentB);
+    studentA.emit("chat:send", { text: "Et tu?" });
+
+    const teacherPayload = await transcriptAtTeacher;
+    expect(teacherPayload.line).toMatchObject({
+      studentId: welcomeA.studentId,
+      name: "Rachel",
+      text: "Et tu?",
+    });
+    // Same stored line, two projections: what the teacher reads is exactly
+    // what the peers received.
+    const peerPayload = await lineAtB;
+    expect(teacherPayload.line.id).toBe(peerPayload.line.id);
+    expect(teacherPayload.line.characterId).toBe(peerPayload.line.characterId);
+
+    await sleep(100);
+    expect(studentLeaks).toEqual([]);
   });
 
   it("a matched seat's drop arms a grace timer, and a resume re-delivers chat:started", async () => {

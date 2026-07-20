@@ -34,6 +34,7 @@ import {
   toChatLine,
   toChatSnapshot,
   toChatStarted,
+  toChatTranscriptLine,
   toChatUpdate,
   toLobbyWelcome,
 } from "../store/projections";
@@ -626,7 +627,7 @@ export function attachLobby(
       const result = appendLine(current, chat.id, data.studentId, text, now);
       if (!result) return;
       sendTimes.push(now);
-      // One projection for everyone — the line is already character-only.
+      // One projection for every student — the line is character-only.
       const line = toChatLine(result.chat, result.line);
       for (const member of activeMembers(result.chat)) {
         const seat = current.seats.byId.get(member.studentId);
@@ -635,6 +636,14 @@ export function attachLobby(
           .get(seat.currentSocketId)
           ?.emit("chat:line", { chatId: result.chat.id, line });
       }
+      // The teacher room gets the same stored line with the real name
+      // attached — the one delta on the teacher wire (a snapshot per
+      // message would be far too fat); a dropped delta heals on the next
+      // chats:snapshot, which also carries the transcript.
+      io.to(room(data.joinCode)).emit("chat:transcript-line", {
+        chatId: result.chat.id,
+        line: toChatTranscriptLine(result.chat, result.line),
+      });
     });
 
     socket.on("disconnect", (reason) => {
