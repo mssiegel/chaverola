@@ -14,8 +14,11 @@ automatically via Vercel).
 > create activities and host them at a private `hostKey` URL, and the
 > waiting lobby is live over Socket.IO — students appear in the teacher's
 > queue in real time, with reconnect handling built for classroom phones.
-> Matching and chat inside a session are still simulated until the next
-> feature. See
+> **Matching is real too:** the teacher pairs students (or lets
+> server-side auto-match do it), characters are dealt, and each matched
+> student's phone moves into a chat room. The rooms are still silent —
+> messaging is the next feature, so the composer, "End chat", pausing,
+> and the name reveal are honest placeholders for now. See
 > [Shared_Project_Context.md](Shared_Project_Context.md)
 > for the full brief and [docs/plans/](docs/plans/) for the current feature plan.
 
@@ -82,9 +85,10 @@ now). Routes are canonical: don't invent new ones beyond the project brief's tab
 The test suites are deliberately small while the product is an MVP: on the
 client, pure-logic tests over the validators and the host page's world
 model (no DOM); on the server, just the safety invariants — projection
-privacy, the hostKey boundary (REST and socket editions), the `1234`
-reservation, and the lobby's seat-resume race guard. See DECISIONS.md →
-the "Testing stays small" entries.
+privacy (including the pin that a student never receives a peer's name or
+id), the hostKey boundary (REST and socket editions), the `1234`
+reservation, the lobby's seat-resume race guard, and the pure matching
+rules. See DECISIONS.md → the "Testing stays small" entries.
 
 ## Deployment
 

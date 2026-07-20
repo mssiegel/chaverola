@@ -36,7 +36,7 @@ When a prompt is done, tick its checkbox here (same commit).
       built but NOT armed)
 - [x] Prompt 2 — Student client: the real chat room (dormant until Prompt 3)
 - [x] Prompt 3 — Teacher client + arm auto-match (the feature completes)
-- [ ] Prompt 4 — Docs + stale-reference sweep
+- [x] Prompt 4 — Docs + stale-reference sweep
 - [ ] Prompt 5 — End-to-end production verification
 
 Repo rules that apply to every prompt (details in `AGENTS.md`): run

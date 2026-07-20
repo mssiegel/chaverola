@@ -34,6 +34,20 @@ before driving the app, and drive only the surfaces the change touches.
   that opens `/activity/host/<hostKey>`. The in-memory store forgets
   everything on every server restart.
 
+  **Check that the server you're driving is YOURS.** A dev server left
+  running by an earlier session holds port 3001, your `pnpm dev:server`
+  dies with `EADDRINUSE` in the background where you won't see it, and
+  the stale process happily serves the OLD code without your
+  `CLIENT_ORIGINS` override — which surfaces as the host page rendering
+  "We can't reach Chaverola" and looks exactly like a CORS bug in your
+  change (cost a debugging detour on 2026-07-20). Confirm the owner
+  before diagnosing anything:
+
+  ```powershell
+  Get-NetTCPConnection -LocalPort 3001 | Select-Object OwningProcess
+  Stop-Process -Id <pid> -Force   # then restart with the override
+  ```
+
 ## Drive (headless browser)
 
 No Playwright in the repo, and no bundled browsers needed: install
@@ -78,31 +92,47 @@ Useful, stable handles:
   condensed "waiting to chat" bar stands down for it — assert that bar
   only on real activities), seeded pretend classroom, demo steering panel.
   A REAL host page (24-char key) fetches over the API — expect a "Finding
-  your activity…" beat — and renders the LIVE page (feature 2): a teacher
-  socket connects (`/socket.io/` traffic — the demo has zero) and the
-  layout is NOT the demo grid: one full-width "Who's joined" section, an
-  honest matching-is-coming copy block instead of the pairing CTAs, and
-  no chat sections, no banner, no demo panel. Live queue rows are plain
-  rows — the `ul li button[aria-pressed]` tap-to-select and the desktop
-  pairing rail (`aside`) are DEMO-only — but the remove control is the
-  same everywhere: `button[aria-label="Remove <name> from the
-activity"]`. A dropped student's row dims with an amber "lost
-  connection" tag (allow the ~45s ping-cycle detection + 4s broadcast
+  your activity…" beat — and opens a teacher socket (`/socket.io/`
+  traffic; the demo has zero). **Since feature 3 both render the SAME
+  grid** — sticky desktop pairing rail (`aside`, "Pair your students") +
+  the chat sections — so demo-vs-live is no longer a layout difference.
+  What still differs on a real page: no golden banner, no demo steering
+  panel, ending controls disabled ("End all chats" / "Pause all chats" /
+  each card's "End chat") under one shared hint line, an empty-transcript
+  hint on live cards, and a count-up clock that appears only after a
+  chat's first 60s (the demo shows an auto-end countdown instead).
+  Tap-to-select rows are `ul li button[aria-pressed]` on both now; the
+  remove control is the same everywhere:
+  `button[aria-label="Remove <name> from the activity"]`. A dropped
+  student dims with an amber "lost connection" tag — in the queue AND on
+  the chat card (allow the ~45s ping-cycle detection + 4s broadcast
   delay); the teacher's own drop shows a `role="status"` "Reconnecting
-  to your class…" banner over the dimmed queue. The
-  live-settings panel IS present on real activities, but its edits are
-  local-only until edit-sync ships (they never reach student lobbies and a
-  refresh refetches the server copy — expected, not a bug). Dead host
-  links (garbage keys, stale 4-digit codes) render "That activity isn't
-  running" with no demo redirect; an unreachable server renders "We can't
-  reach Chaverola" whose Try again refetches in place.
-  Section headers are buttons whose `innerText` carries the
-  count pill (e.g. "Chats in progress 2" — chat sections demo-only for
-  now). All confirmations are one shared
-  dialog: scope to `getByRole("dialog")`, match the title with
-  `getByRole("heading")` (button labels repeat the title words), cancel is
-  "Never mind". Live-settings edits propagate ~1s after typing pauses
-  (assert on "Hosted by <new name>" in the header after ~1.6s).
+  to your class…" banner, and the whole grid below it dims AND goes
+  `pointer-events-none` (clicks won't land — don't read that as a broken
+  selector). The live-settings panel is present on real activities and
+  its **settings** edits are real now (they reach the server, survive a
+  refresh, and a second host page hears `settings:changed`);
+  character/scenario/host-name edits are still local-only and a refresh
+  reverts them — expected, not a bug. Dead host links (garbage keys,
+  stale 4-digit codes) render "That activity isn't running" with no demo
+  redirect; an unreachable server renders "We can't reach Chaverola"
+  whose Try again refetches in place. Section headers are buttons whose
+  `innerText` carries the count pill (e.g. "Chats in progress 2"). All
+  confirmations are one shared dialog: scope to `getByRole("dialog")`,
+  match the title with `getByRole("heading")` (button labels repeat the
+  title words), cancel is "Never mind". Live-settings edits propagate ~1s
+  after typing pauses (assert on "Hosted by <new name>" in the header
+  after ~1.6s).
+- Driving real matching: the rail's pairing CTAs only render when the
+  queue is non-empty (an empty queue shows the panel's empty state), so
+  join students before asserting on them. Auto-match is server-run and
+  **gated on a connected teacher socket** — with no host page open,
+  students past the threshold correctly never pair; expect one pair per
+  ~3s (`AUTO_MATCH_GAP_SECONDS`) once a teacher connects. A matched
+  student's phone shows the room by its disabled composer
+  (`getByPlaceholder(/No messages yet/)`) — the handiest "did they get
+  seated" probe. Create activities with a 2-character roster to force the
+  leftover branch ("first in line" tag) and 3+ to get trios.
 - Student join (`/activity/join`): code input accepts Enter; the code
   screen carries no demo hint (the old "Demo code 1234 always works" pill
   is gone). The name step swaps in-place — wait for
@@ -143,6 +173,12 @@ typing indicator (~120ms), and take "Chats in progress" assertions early
 (auto-end clocks expire in tens of real seconds). Production builds compile
 the whole mechanism out (`lib/demoTime.ts`); real-user timing like the
 live-settings ~1s typing debounce is never scaled.
+
+`?fast` reaches **nothing on a real activity** — it's a demo-simulation
+knob, and the server has never heard of it. Real auto-match runs at
+whatever `autoMatchSeconds` the activity was created with, so create test
+activities with a low value (bounds: min 5, max 120, step 5) instead of
+trying to hurry matching along from the client.
 
 ## Gotchas
 

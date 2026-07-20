@@ -6,7 +6,7 @@ This file is the canonical source of guidance for all AI agents (Claude Code, Cu
 
 Every UI surface is built and lives in its real flow (demo URLs exist but
 only as redirects). `server/` is a real Express 5 API implementing the
-create-and-join contract plus the live-lobby socket contract
+create-and-join contract plus the live-lobby and matching socket contract
 ([docs/api.md](docs/api.md)) — live at `https://api.chaverola.com`
 (Render, free tier), and **both sides of the client call it**: students
 resolve real codes through `GET /activities/:joinCode`, teachers create
@@ -23,9 +23,25 @@ live with Remove acting on the real world. The prod pass covered the
 reconnect gauntlet, duplicate-tab takeover, and the restart story (a live
 `render restart` ended the class honestly and `io.close()` exited clean
 with open sockets); a cellular pass on a physical handset is the one gap
-left to the founder's own device. Matching and chat stay simulated until
-the next feature, so real host pages show an honest placeholder where the
-pairing controls would be.
+left to the founder's own device. Feature 3 — **real matching** — is
+built and green locally 2026-07-20
+([docs/plans/feature-3-real-matching.md](docs/plans/feature-3-real-matching.md)):
+the host page's pairing rail seats real students, "Pair everyone 1:1"
+and server-run auto-match act on the real queue, live cards track real
+chats, settings edits sync, and a matched student's phone moves into a
+real chat room. Its production pass is the plan's last step, so treat
+matching as shipped-but-not-prod-verified.
+
+**Messaging is the next feature, and a lot hangs off that.** No chat
+message has ever crossed the wire: the rooms matching creates are
+silent, so the student's composer is disabled with honest copy, and
+"End chat", "End all chats", "Pause all chats", the auto-end clock, and
+the name reveal all render as honest placeholders on real activities
+(the demo still simulates every one of them). The single structural
+exception: a chat whose active membership drops below 2 ends for the
+remaining peer with reason `"teacher"` — otherwise a working Remove
+would strand a student alone in a silent room.
+
 The demo flows are a **permanent product surface** — the homepage links to
 them and the founder pitches with them — not scaffolding; see the working
 rule below. The map:
@@ -33,7 +49,7 @@ rule below. The map:
 | Surface               | Route                                     | Where it lives                                                                                                                                                                                                                                                                                                                                                                                |
 | --------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Homepage              | `/`                                       | `client/src/pages/HomePage.tsx` + `components/home/` — the hero chatbox and the teacher-view `ChatCard` mirror one live `useChatDemo` chat; demo section (`DemoSection.tsx`); founder's note with photo fallback                                                                                                                                                                              |
-| Student join flow     | `/activity/join[/:joinCode]`              | `client/src/pages/student/JoinActivityPage.tsx` — code → name → lobby → chatting → ended, all on one URL; the real lobby's live seat is `useLobbyPresence.ts` beside it; `components/Student/ChatStage.tsx` owns the chat stages, keyed per match                                                                                                                                             |
+| Student join flow     | `/activity/join[/:joinCode]`              | `client/src/pages/student/JoinActivityPage.tsx` — code → name → lobby → chatting → ended, all on one URL; the real lobby's live seat is `useLobbyPresence.ts` beside it; `components/Student/ChatStage.tsx` owns the demo's chat stages (keyed per match) and `LiveChatStage.tsx` the real room                                                                                               |
 | Teacher setup         | `/activity/create`                        | `client/src/components/Teacher/ActivitySetup/` — form UI; the caps, draft persistence, validation, and the `POST /activities` request mapping live in `client/src/lib/activitySetup.ts`                                                                                                                                                                                                       |
 | Teacher live activity | `/activity/host/:hostKey`                 | `client/src/components/Teacher/HostActivity/` — the dashboard takes an injected `HostEngine` (`hostEngine.ts`): the demo engine `useHostActivityDemo.ts` + pure world model `hostWorld.ts` for `1234`, the live engine `useHostActivityLive.ts` (teacher socket) for real keys, which resolve via `lib/useHostedActivityLookup.ts`; live-edit draft model in `client/src/lib/hostActivity.ts` |
 | Demo entry URLs       | `/demo`, `/demo/teacher`, `/demo/student` | Thin locale-aware redirects in `client/src/App.tsx` — teacher entries land on `/activity/host/1234`, the student entry on `/activity/join/1234` (name prefilled); never pages of their own (see DECISIONS.md → "Routes & app structure")                                                                                                                                                      |
@@ -51,25 +67,52 @@ Load-bearing flow facts (the reasoning for each is in DECISIONS.md):
   states (the host page's unreachable screen has a retry). The server is
   the only join-code issuer; an unknown host link gets a friendly
   not-found, never the old demo redirect. Real lobbies and host pages
-  show no demo furniture and never auto-pair. Two teacher-side gotchas: the create
-  submit deliberately has **no client-side timeout** (create isn't
-  idempotent — a retry could mint a second activity), and live-settings
-  edits on a real activity are **local-only** until edit-sync ships
-  (founder call; students' lobbies keep the server's copy, refresh
-  reverts — see DECISIONS.md).
-- The live lobby (feature 2): sockets connect at lobby entry (student,
-  `pages/student/useLobbyPresence.ts`) and host-page resolve (teacher,
+  show no demo furniture, and no client ever pairs anyone by itself — the
+  demo lobby's 20s auto-pair is simulation; on real activities pairing is
+  the server's job. Two teacher-side gotchas: the create submit
+  deliberately has **no client-side timeout** (create isn't idempotent —
+  a retry could mint a second activity), and live edits on a real
+  activity split by kind — **settings sync** (every commit that changes
+  them emits `settings:update`, and the teacher's other devices hear
+  `settings:changed`), while **character, scenario, and host-name edits
+  stay local-only** until roster sync ships, because those would have to
+  reach students' lobbies (founder call; a refresh reverts them — see
+  DECISIONS.md).
+- The live lobby and matching (features 2 and 3): sockets connect at
+  lobby entry (student, `pages/student/useLobbyPresence.ts` — which now
+  stays mounted through the chat and ended stages, not just the lobby)
+  and host-page resolve (teacher,
   `HostActivity/useHostActivityLive.ts`), both through the factory in
   `lib/socket.ts` (`autoConnect: false`, auth callback — the demo stays
-  structurally zero-network). A dropped student keeps their seat for 2
-  minutes, marked "lost connection" and fully unmatchable; detection is
-  the ping cycle (~45s — a latency, not a bug), and only in-app exits
-  (back-as-reset, sign-out, teacher remove) drop the seat instantly —
-  closing the tab or leaving the site rides the grace window by design
-  (DECISIONS.md). Tripwire on the teacher side: the live engine imports
-  nothing from `hostWorld.ts` beyond types — `tickWorld` runs auto-match
-  and must never see a real student. Live socket timers never pass
-  through `scaledMs`; demo simulation always does.
+  structurally zero-network). A dropped student **in the queue** keeps
+  their seat for 2 minutes, marked "lost connection" and fully
+  unmatchable; detection is the ping cycle (~45s — a latency, not a bug),
+  and only in-app exits (back-as-reset, sign-out, teacher remove) drop
+  the seat instantly — closing the tab or leaving the site rides the
+  grace window by design (DECISIONS.md).
+- Invariants worth tripping over, all of them load-bearing:
+  - **The live engine imports nothing from `hostWorld.ts` beyond types.**
+    `tickWorld` runs the SIMULATION's auto-match and must never see a
+    real student. Where the live engine needs the same derivation, it
+    keeps a deliberate local copy.
+  - **A matched seat is never grace-reaped.** A student who drops
+    mid-chat can resume into that chat until the activity dies; only a
+    chat ending underneath an already-disconnected member arms a fresh
+    grace (so abandoned seats don't hold cap slots). Don't "fix" the
+    missing timer.
+  - **Auto-match runs only while a teacher socket is connected** —
+    armed on the 0→1st, released on the last. A closed laptop holding
+    pairing is the product, not a bug (founder call).
+  - **The student wire carries characterIds only** — never a peer's
+    name, never a peer's studentId, in any payload, ever. Pinned by
+    exact-key allowlist tests in `projections.test.ts`; keep them
+    passing rather than loosening them.
+  - **`endingEnabled` is the ending-era seam.** Ending/pausing render
+    disabled on live activities through that one engine flag (demo
+    `true`, live `false`) — when messaging makes them real, it's an
+    engine change, not a UI hunt.
+  - **Live socket timers never pass through `scaledMs`**; demo
+    simulation always does.
 - The student flow renders navbar-free inside `StudentWorldLayout` (purple
   world, drifting doodles, brand pill that swaps for the student's name badge
   mid-chat); everything else sits under `AppLayout`, whose logo also hides on
@@ -83,7 +126,13 @@ Load-bearing flow facts (the reasoning for each is in DECISIONS.md):
   2-minute peer-reconnect window and the per-chat auto-end clock (reason
   `"timer"` at zero, rendered by `chat/AutoEndCountdown.tsx` in the student
   header and on teacher chat cards). A 1:1 reconnect timeout ends the chat;
-  a group timeout drops the peer with a notice instead.
+  a group timeout drops the peer with a notice instead. **Both are demo
+  behavior only.** A real room fills the same contract with
+  `peerState: "connected"` and `autoEndSecondsLeft: null` — students are
+  deliberately blind to peer drops while the rooms are silent, and no
+  auto-end clock runs server-side. They activate with messaging.
+  `Student/LiveChatStage.tsx` builds that static state beside the demo's
+  `ChatStage.tsx` — a component split, never a conditional hook.
 - The setup form and the host page's live settings panel share their field
   components and validation; live edits propagate on a 1-second pause,
   last-valid-wins, with stable character ids (`lib/hostActivity.ts`).
@@ -132,12 +181,17 @@ Run from the repo root:
 - **Test:** `pnpm test` — `pnpm -r test`: the client suite
   (`client/vitest.config.ts`, plain node environment over the pure logic
   layer) plus the server suite (`server/src/**/*.test.ts` — the safety
-  invariants: projection privacy — REST and socket payloads alike — the
-  hostKey boundary in both its REST and socket editions, the `1234`
-  reservation, a student socket's `queue:remove` being ignored, and the
-  seat-resume `currentSocketId` race guard in `live/lobby.test.ts`).
-  Both suites are deliberately small; see DECISIONS.md →
-  "Testing stays small" entries before adding tests.
+  invariants: projection privacy, REST and socket payloads alike, now
+  including the characterIds-only pin on the student chat wire; the
+  hostKey boundary in both its REST and socket editions; the `1234`
+  reservation; a student socket being ignored on every teacher command;
+  the seat-resume `currentSocketId` race guard; and the one lifecycle
+  rule that would silently strand real students — a matched seat's drop
+  arming no grace timer, with a resume re-delivering `chat:started`
+  (`live/lobby.test.ts`). `live/matching.test.ts` covers the pure
+  pairing rules a browser pass can't cheaply pin). Both suites are
+  deliberately small; see DECISIONS.md → "Testing stays small" entries
+  before adding tests.
 - **Preview:** `pnpm preview` — serve the production build
 - **Format:** `pnpm format` / `pnpm format:check` — Prettier over the whole repo.
   `prettier-plugin-tailwindcss` sorts Tailwind classes (including inside `cn()`/
@@ -336,10 +390,13 @@ Run from the repo root:
   memory store. This is a product-owner preference.
 - **Verify at the cheapest gate that catches the mistake.** Run
   `pnpm typecheck` on every change (incremental, seconds). Add `pnpm test`
-  when logic in `client/src/lib/` or `hostWorld.ts` changed, or when
-  anything in `server/src/` changed (`pnpm -r test` covers the server
-  suite). For server behavior beyond the tests' safety invariants, curl
-  against `pnpm dev:server` is the next rung. Drive the
+  when logic in `client/src/lib/`, `hostWorld.ts`, or `server/src/live/`
+  changed, or when anything else in `server/src/` changed (`pnpm -r test`
+  covers the server suite). For server behavior beyond the tests' safety
+  invariants, curl against `pnpm dev:server` is the next rung — and for
+  socket behavior, which curl can't reach, scratch `socket.io-client`
+  scripts driving a teacher and a couple of students (in the scratchpad,
+  never the repo) beat opening four browser tabs. Drive the
   browser (the `verify` skill) only when the change shows up in rendered
   UI — and then only the surfaces the change touches, at desktop and phone
   widths, with fast timers on (`?fast=10` on a dev build; see the skill).

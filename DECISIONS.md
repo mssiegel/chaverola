@@ -92,13 +92,12 @@ the affected part. Link related entries by title anchor, never by "above" /
 - [Teacher live activity page](#teacher-live-activity-page)
   - [Disabled ending controls share one hint line, not one per card](#disabled-ending-controls-share-one-hint-line-not-one-per-card)
   - [The live card's count-up clock appears only after the first minute](#the-live-cards-count-up-clock-appears-only-after-the-first-minute)
+  - [An empty live transcript explains itself; a finished one doesn't](#an-empty-live-transcript-explains-itself-a-finished-one-doesnt)
   - [Feature 3 makes matching real; messaging, ending, and pause stay placeholders](#feature-3-makes-matching-real-messaging-ending-and-pause-stay-placeholders)
   - [Auto-match runs on the server, and only while the teacher is connected](#auto-match-runs-on-the-server-and-only-while-the-teacher-is-connected)
   - [Mid-chat, drops show and Remove works — nothing happens automatically](#mid-chat-drops-show-and-remove-works--nothing-happens-automatically)
   - [Settings edits sync for real; characters, scenario, and host name stay local](#settings-edits-sync-for-real-characters-scenario-and-host-name-stay-local)
   - [Server pairing keeps no rematch memory this feature](#server-pairing-keeps-no-rematch-memory-this-feature)
-  - [The chat sections hide entirely on real activities until matching ships](#the-chat-sections-hide-entirely-on-real-activities-until-matching-ships)
-  - [Real host pages show an honest placeholder instead of pairing controls](#real-host-pages-show-an-honest-placeholder-instead-of-pairing-controls)
   - [A dropped student keeps their seat for 2 minutes, marked and unmatchable](#a-dropped-student-keeps-their-seat-for-2-minutes-marked-and-unmatchable)
   - [When the teacher's connection drops, the queue dims under a reconnecting banner](#when-the-teachers-connection-drops-the-queue-dims-under-a-reconnecting-banner)
   - [A rematch only counts when it's an exact rerun for everyone in it](#a-rematch-only-counts-when-its-an-exact-rerun-for-everyone-in-it)
@@ -189,6 +188,8 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [The Fable prompt series document was deleted, not archived](#the-fable-prompt-series-document-was-deleted-not-archived)
   - [DECISIONS.md stays one file, with a linked table of contents](#decisionsmd-stays-one-file-with-a-linked-table-of-contents)
 - [Superseded](#superseded)
+  - [The chat sections hide entirely on real activities until matching ships](#the-chat-sections-hide-entirely-on-real-activities-until-matching-ships)
+  - [Real host pages show an honest placeholder instead of pairing controls](#real-host-pages-show-an-honest-placeholder-instead-of-pairing-controls)
   - [Demo surfaces say so: a pretend-students chip on both views](#demo-surfaces-say-so-a-pretend-students-chip-on-both-views)
   - [Hero CTAs sit above the fold on phones](#hero-ctas-sit-above-the-fold-on-phones)
   - [Real activities hide the live-settings panel until edit sync ships](#real-activities-hide-the-live-settings-panel-until-edit-sync-ships)
@@ -257,6 +258,11 @@ _Implemented in
 [WaitingLobby](client/src/components/Student/WaitingLobby.tsx) (the
 `connection` pill variant), driven by
 [useLobbyPresence](client/src/pages/student/useLobbyPresence.ts)._
+
+_Resolved 2026-07-20: matching shipped and the copy needed no change —
+"Waiting for your match" became literally true, and the lobby now hands
+off to a real chat room. The decision to skip interim copy paid for
+itself._
 
 ### Two students can share a name; the queue tells them apart
 
@@ -717,8 +723,12 @@ one button in the room that does nothing. With no messages to protect,
 "leave the chat" and "leave the activity" are honestly the same act — the
 confirm just has to say so.
 
-_Planned in
-[docs/plans/feature-3-real-matching.md](docs/plans/feature-3-real-matching.md)._
+_Implemented in
+[LiveChatStage](client/src/components/Student/LiveChatStage.tsx) (the exit
+pill and the back-guard confirm both route to the leave flow) and
+[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)
+(back-as-reset → `lobby:leave`); the partner's chat ends server-side in
+[lobby.ts](server/src/live/lobby.ts)._
 
 ### The live ended screen returns to the lobby only on a tap, and shows no reveal
 
@@ -739,8 +749,11 @@ before they've looked up. The reveal is suppressed because claiming "your
 teacher hasn't revealed names yet" would be false: there is no reveal to
 wait for yet.
 
-_Planned in
-[docs/plans/feature-3-real-matching.md](docs/plans/feature-3-real-matching.md)._
+_Implemented in [seats.ts](server/src/live/seats.ts) (the seat's
+`wrappingUp` flag and `returnToQueue`), the `lobby:back` handler in
+[lobby.ts](server/src/live/lobby.ts), and
+[LiveChatStage](client/src/components/Student/LiveChatStage.tsx) (the
+neutral ended screen and its back CTA)._
 
 ### In a group the student leaves; only a 2-person chat can be ended
 
@@ -1339,6 +1352,30 @@ yet.
 
 _Implemented in [ElapsedClock](client/src/components/Teacher/ChatCard/ElapsedClock.tsx)._
 
+### An empty live transcript explains itself; a finished one doesn't
+
+_2026-07-20_
+
+**Decision:** On a real activity, a card in "Chats in progress" with no
+messages fills its transcript area with one centered line — "Nothing to read
+yet. Students can't type until messaging arrives in the next update."
+Completed cards get no such line, and demo cards never show it at all.
+
+**Why:** An empty transcript under a Live badge reads as a broken chat: the
+teacher's natural conclusion is that these students aren't talking, not that
+nobody in the building can type yet. The hint answers that where the
+question actually gets asked. On a completed card the same sentence is
+noise — the chat is over, the section header already says so, and nobody is
+monitoring it for signs of life. A demo card's silence needs no explanation
+either; it's just a beat between scripted lines. The hint rides the same
+`endingEnabled` flag as the section's ending hint, so both disappear
+together when messaging ships.
+
+_Implemented in
+[ChatsInProgressSection](client/src/components/Teacher/HostActivity/ChatsInProgressSection.tsx)
+(which passes `emptyHint`) and
+[ChatCard](client/src/components/Teacher/ChatCard/index.tsx)._
+
 ### Feature 3 makes matching real; messaging, ending, and pause stay placeholders
 
 _2026-07-19_
@@ -1366,8 +1403,15 @@ replaces
 and
 [Real host pages show an honest placeholder instead of pairing controls](#real-host-pages-show-an-honest-placeholder-instead-of-pairing-controls).
 
-_Planned in
-[docs/plans/feature-3-real-matching.md](docs/plans/feature-3-real-matching.md)._
+_Implemented across the feature (shipped 2026-07-20, plan in
+[docs/plans/feature-3-real-matching.md](docs/plans/feature-3-real-matching.md)):
+the pairing rules in [matching.ts](server/src/live/matching.ts), the
+socket wiring in [lobby.ts](server/src/live/lobby.ts), the student's room
+in [LiveChatStage](client/src/components/Student/LiveChatStage.tsx), and
+the teacher's dashboard in
+[useHostActivityLive](client/src/components/Teacher/HostActivity/useHostActivityLive.ts)
+— where `endingEnabled: false` is the single flag holding ending and
+pausing as placeholders until messaging flips it._
 
 ### Auto-match runs on the server, and only while the teacher is connected
 
@@ -1390,8 +1434,13 @@ fully unattended pairing puts kids in rooms no teacher is monitoring, and a
 placeholder switch makes the rail's footer copy a lie now that the page can
 keep the promise.
 
-_Planned in
-[docs/plans/feature-3-real-matching.md](docs/plans/feature-3-real-matching.md)._
+_Implemented in [lobby.ts](server/src/live/lobby.ts) — the `joinCode →
+{ timer, teacherCount, nextAt }` map, armed on the 0→1st teacher socket
+and cleared on the last disconnect — with the pairing itself in
+[matching.ts](server/src/live/matching.ts) (`findAutoMatchPair`).
+Verified 2026-07-20: with no teacher connected, two students past the
+threshold sat unpaired; the teacher's arrival matched them within a
+second._
 
 ### Mid-chat, drops show and Remove works — nothing happens automatically
 
@@ -1418,8 +1467,13 @@ timed drop would kick students out of chats that lose nothing by waiting,
 and a peer-countdown banner would alarm the remaining student over nothing.
 Both activate when messaging ships.
 
-_Planned in
-[docs/plans/feature-3-real-matching.md](docs/plans/feature-3-real-matching.md)._
+_Implemented in [lobby.ts](server/src/live/lobby.ts) (a matched seat's
+disconnect arms the broadcast-delay timer and passes `null` for the
+grace — pinned by a test in `lobby.test.ts`, since a regression here
+would silently strand real students) and
+[ChatCardHeader](client/src/components/Teacher/ChatCard/ChatCardHeader.tsx)
+(the dimmed row and its "lost connection" pill, reusing the queue-row
+styling)._
 
 ### Settings edits sync for real; characters, scenario, and host name stay local
 
@@ -1441,8 +1495,14 @@ no user-visible logic to the split. Roster/scenario sync stays out because
 those propagate to students' lobbies — a bigger feature than a settings
 echo. Founder call (feature-3 planning).
 
-_Planned in
-[docs/plans/feature-3-real-matching.md](docs/plans/feature-3-real-matching.md)._
+_Implemented in the `settings:update` handler in
+[lobby.ts](server/src/live/lobby.ts) (zod-validated against the same
+schema `POST /activities` uses, echoing `settings:changed` to the room
+minus the sender) and
+[HostActivityPage](client/src/pages/teacher/HostActivityPage.tsx), whose
+one `onActivityChange` wrapper catches every settings commit — the rail's
+switch, End-all's auto-match hold, and the panel alike — so no future
+control can quietly skip the sync._
 
 ### Server pairing keeps no rematch memory this feature
 
@@ -1462,63 +1522,11 @@ they'd rerun with has by then left the activity — an exact rerun is
 structurally impossible. Porting the memory now would be dead code
 pretending to be behavior.
 
-_Planned in
-[docs/plans/feature-3-real-matching.md](docs/plans/feature-3-real-matching.md)._
-
-### The chat sections hide entirely on real activities until matching ships
-
-_2026-07-19_
-
-**Decision:** Until matching ships, a real activity's host page renders no
-"Chats in progress" and no "Completed chats" section. The page is the header
-with the waiting count, the joining instructions, the settings panel, and
-the live "Who's joined" queue with its matching-is-coming note. The demo
-keeps both sections; they return to real pages with feature 3.
-
-**Why:** Founder call (2026-07-19, the prompt-3 session). The sections'
-empty states invite actions the page can't take yet ("Pair two students in
-the queue…" above a Pair everyone button), and two permanently empty boxes
-under a note that already says matching is coming read as broken rather
-than honest. The rejected alternative — keeping them with forward-looking
-copy — previews the eventual layout but charges every real class
-screen-space for it today.
-
-_Implemented in
-[`Teacher/HostActivity/index.tsx`](client/src/components/Teacher/HostActivity/index.tsx);
-the sibling call for the pairing controls is
-[Real host pages show an honest placeholder instead of pairing controls](#real-host-pages-show-an-honest-placeholder-instead-of-pairing-controls)._
-
-_Planned update (2026-07-19):
-[Feature 3 makes matching real; messaging, ending, and pause stay placeholders](#feature-3-makes-matching-real-messaging-ending-and-pause-stay-placeholders)
-returns both sections to real pages when it ships._
-
-### Real host pages show an honest placeholder instead of pairing controls
-
-_2026-07-19_
-
-**Decision:** Until matching ships (feature 3), real host pages render none
-of the pairing UI — no tap-to-select on queue rows, no "Pair everyone 1:1",
-no "Start their chat", no auto-match switch, and no auto-match footer copy.
-In its place stands one short copy block: matching is coming in the next
-update, and right now this page shows who's joined, live. Queue rows on real
-activities keep exactly two affordances — the name + wait clock display and
-Remove. The demo keeps the full pairing UI.
-
-**Why:** Founder call (feature-2 planning), choosing honest placeholder over
-the two alternatives: hiding the rail leaves an unexplained hole where the
-product's core action belongs, and disabled controls in front of a live class
-invite taps that do nothing. The auto-match footer had to go with the
-controls — "students pair up on their own after waiting 20 seconds" is a
-promise the page cannot keep yet, and the switch it explains edits a setting
-nothing consumes.
-
-_Implemented in
-[PairingPanel.tsx](client/src/components/Teacher/HostActivity/PairingPanel.tsx)
-(the `pairing` prop) and the live branch of
-[HostActivity/index.tsx](client/src/components/Teacher/HostActivity/index.tsx)._
-
-_Planned update (2026-07-19): the pairing controls become real with
-[Feature 3 makes matching real; messaging, ending, and pause stay placeholders](#feature-3-makes-matching-real-messaging-ending-and-pause-stay-placeholders)._
+_Implemented in [matching.ts](server/src/live/matching.ts) (greedy in
+queue order, no `lastPartners`); the client's live engine keeps the stubs
+`isExactRematch: () => false` and `rematchNotice: null` in
+[useHostActivityLive](client/src/components/Teacher/HostActivity/useHostActivityLive.ts),
+so the notices have somewhere to land when ending ships._
 
 ### A dropped student keeps their seat for 2 minutes, marked and unmatchable
 
@@ -1576,10 +1584,17 @@ is still useful information — a full overlay would take it hostage exactly
 when the teacher is juggling thirty kids. Dimming without the banner was
 rejected too: staleness needs words, not just opacity.
 
-_Implemented in the live branch of
+_Implemented in
 [HostActivity/index.tsx](client/src/components/Teacher/HostActivity/index.tsx),
 driven by the connection state in
 [useHostActivityLive](client/src/components/Teacher/HostActivity/useHostActivityLive.ts)._
+
+_Extended 2026-07-20 (feature 3): now that the page has a pairing rail and
+chat cards, the dim covers the **whole** grid, not just the queue — and it
+also turns the grid non-interactive (`pointer-events-none`). Readable but
+not actionable is the point: a tap on a stale rail would emit into a dead
+socket and appear to do nothing. The demo never reaches this state; its
+connection can't drop._
 
 ### A rematch only counts when it's an exact rerun for everyone in it
 
@@ -1646,9 +1661,13 @@ _Implemented in
 state is the only edit target) and
 [index.tsx](client/src/components/Teacher/HostActivity/index.tsx)._
 
-_Planned update (2026-07-19):
-[Settings edits sync for real; characters, scenario, and host name stay local](#settings-edits-sync-for-real-characters-scenario-and-host-name-stay-local)
-retires the settings half of this when it ships._
+_Partly superseded 2026-07-20 by
+[Settings edits sync for real; characters, scenario, and host name stay local](#settings-edits-sync-for-real-characters-scenario-and-host-name-stay-local):
+**settings edits are no longer local-only** — they reach the server and
+the teacher's other devices, and survive a refresh. The rest of this
+entry stands unchanged: the panel keeps rendering on real activities, and
+character, scenario, and host-name edits are still local to the
+teacher's page until roster sync ships._
 
 ### Start their chat sits below Pair everyone 1:1, nearest the names
 
@@ -2953,8 +2972,11 @@ peer studentIds buy the client nothing while no messages travel — every
 field a student doesn't get is a field that can't leak. Pinned by exact-key
 allowlist tests like every other projection.
 
-_Planned in
-[docs/plans/feature-3-real-matching.md](docs/plans/feature-3-real-matching.md)._
+_Implemented in [projections.ts](server/src/store/projections.ts)
+(`toChatStarted`, `toChatUpdate`, `toChatEnded`, `toChatSnapshot`), with
+the allowlists in `projections.test.ts` — the load-bearing one asserts a
+peer object's keys are exactly `["characterId"]`. Keep that test passing
+rather than loosening it._
 
 ### Starting a chat clamps to the server's roster instead of rejecting
 
@@ -2973,8 +2995,9 @@ the button read as broken; clamping produces a visible, explainable outcome,
 and the rail self-corrects from the snapshot either way. Founder-approved in
 feature-3 planning.
 
-_Planned in
-[docs/plans/feature-3-real-matching.md](docs/plans/feature-3-real-matching.md)._
+_Implemented in [matching.ts](server/src/live/matching.ts) (`createChat`
+filters through `eligibleWaiting`, then slices to
+`min(4, roster length)`)._
 
 ### Sockets connect at lobby entry and host-page load, and never on the demo
 
@@ -3506,6 +3529,59 @@ table of contents restores scannability without breaking any of that.
 
 Replaced decisions, kept for history. Don't apply these; each date line links
 to what replaced it.
+
+### The chat sections hide entirely on real activities until matching ships
+
+_2026-07-19 · Superseded by
+[Feature 3 makes matching real; messaging, ending, and pause stay placeholders](#feature-3-makes-matching-real-messaging-ending-and-pause-stay-placeholders)_
+
+**Decision:** Until matching ships, a real activity's host page renders no
+"Chats in progress" and no "Completed chats" section. The page is the header
+with the waiting count, the joining instructions, the settings panel, and
+the live "Who's joined" queue with its matching-is-coming note. The demo
+keeps both sections; they return to real pages with feature 3.
+
+**Why:** Founder call (2026-07-19, the prompt-3 session). The sections'
+empty states invite actions the page can't take yet ("Pair two students in
+the queue…" above a Pair everyone button), and two permanently empty boxes
+under a note that already says matching is coming read as broken rather
+than honest. The rejected alternative — keeping them with forward-looking
+copy — previews the eventual layout but charges every real class
+screen-space for it today.
+
+_Both sections returned to real activities on 2026-07-20 with feature 3,
+and the demo/live layout split went with them: one grid now serves both
+(`Teacher/HostActivity/index.tsx`). The sibling call for the pairing
+controls is
+[Real host pages show an honest placeholder instead of pairing controls](#real-host-pages-show-an-honest-placeholder-instead-of-pairing-controls)._
+
+### Real host pages show an honest placeholder instead of pairing controls
+
+_2026-07-19 · Superseded by
+[Feature 3 makes matching real; messaging, ending, and pause stay placeholders](#feature-3-makes-matching-real-messaging-ending-and-pause-stay-placeholders)_
+
+**Decision:** Until matching ships (feature 3), real host pages render none
+of the pairing UI — no tap-to-select on queue rows, no "Pair everyone 1:1",
+no "Start their chat", no auto-match switch, and no auto-match footer copy.
+In its place stands one short copy block: matching is coming in the next
+update, and right now this page shows who's joined, live. Queue rows on real
+activities keep exactly two affordances — the name + wait clock display and
+Remove. The demo keeps the full pairing UI.
+
+**Why:** Founder call (feature-2 planning), choosing honest placeholder over
+the two alternatives: hiding the rail leaves an unexplained hole where the
+product's core action belongs, and disabled controls in front of a live class
+invite taps that do nothing. The auto-match footer had to go with the
+controls — "students pair up on their own after waiting 20 seconds" is a
+promise the page cannot keep yet, and the switch it explains edits a setting
+nothing consumes.
+
+_The placeholder and the `pairing` prop that gated it were both deleted on
+2026-07-20 when matching shipped — the rail now renders its real controls
+on every activity
+([PairingPanel.tsx](client/src/components/Teacher/HostActivity/PairingPanel.tsx)).
+The auto-match footer's promise is one the page can finally keep, per
+[Auto-match runs on the server, and only while the teacher is connected](#auto-match-runs-on-the-server-and-only-while-the-teacher-is-connected)._
 
 ### Demo surfaces say so: a pretend-students chip on both views
 

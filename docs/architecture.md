@@ -142,14 +142,15 @@ whereas a bare `server.close()` would never finish while WebSocket
 connections stay open. Nothing is flushed — the store is in-memory by
 design and deploys wipe it.
 
-## Realtime: the live lobby
+## Realtime: the live lobby and matching
 
-Feature 2's Socket.IO layer (contract in `shared/src/socket.ts`,
-documented in [api.md → Socket events](api.md#socket-events)). The
-structural fact everything else follows from: **engine.io bypasses
-Express.** It intercepts `/socket.io/` on the `http.Server` before
-Express runs, so Express `cors()` never sees the handshake (CORS is the
-`Server` constructor's own option, fed the same `allowedOrigins()` from
+The Socket.IO layer built by feature 2 (the waiting queue) and feature 3
+(matching), contract in `shared/src/socket.ts`, documented in
+[api.md → Socket events](api.md#socket-events). The structural fact
+everything else follows from: **engine.io bypasses Express.** It
+intercepts `/socket.io/` on the `http.Server` before Express runs, so
+Express `cors()` never sees the handshake (CORS is the `Server`
+constructor's own option, fed the same `allowedOrigins()` from
 `config.ts`), `pino-http` logs nothing (the lobby logs through the same
 plain `pino` logger instance `index.ts` shares between both layers), and
 the rate limiters never fire (`MAX_STUDENTS_PER_ACTIVITY` is the socket
@@ -170,6 +171,28 @@ How the layer is put together (`server/src/live/`):
   a refresh the new socket can resume the seat before the old socket's
   disconnect fires. Each seat owns up to two timers (broadcast delay +
   grace), cleared on resume, leave, remove, and activity removal.
+  `armDisconnectTimers` takes a nullable grace — `null` arms the
+  broadcast delay alone, which is how a matched seat survives untimed.
+  A seat's `wrappingUp` flag marks the ended-screen state; `toQueueEntries`
+  skips those and takes an `exclude` set for matched seats, so seats.ts
+  itself stays chat-unaware (lobby.ts supplies the set).
+- **`matching.ts` is the same charter, one layer up** — pure, io-free,
+  unit-tested: the chat records and every rule that moves them.
+  `eligibleWaiting` is the single matchable pool (connected, unmatched,
+  not wrapping up, in join order) and every path funnels through it, so
+  "reconnecting students are unmatchable" is enforced once instead of at
+  four call sites. `createChat` filters, clamps, deals characters
+  (a local Fisher–Yates — client code is read for the rules, never
+  imported), `planPairEveryone` is the demo's `pairEveryoneIn` minus
+  rematch memory, `findAutoMatchPair` picks the two longest waiting past
+  the threshold, and `markInactive` owns the below-2 ending. The split
+  is the payoff: lobby.ts decides who may command what and who hears
+  about it; matching.ts decides what actually happens.
+- **Chats hang off the activity record** (`chats: StoredChat[]` plus
+  `leftoverStudentId`), exactly like seats — one lifetime, one owner,
+  and activity death takes everything with it. A `StoredChat` keeps
+  every member who was ever in it, with the name captured at chat start,
+  so a card outlives the seat it describes.
 - **Auth is connection-time middleware**, mirroring the REST route
   guards: pattern-check then look up (`getByHostKey` refreshes the TTL,
   `getByJoinCode` never does), `1234` rejected unconditionally, the
@@ -178,11 +201,37 @@ How the layer is put together (`server/src/live/`):
   student seating happens in the middleware too, so `full`/`removed`
   reject there.
 - **Rooms and snapshots:** teacher sockets join a per-activity room and
-  get a `queue:snapshot` immediately on join; every seat change
-  broadcasts a fresh full snapshot to the room. Snapshots over deltas —
-  at ≤60 entries the bandwidth is nothing and the sync-bug surface is
-  zero. Students get only targeted emits (`lobby:welcome`,
-  `lobby:removed`, `activity:ended`), never a snapshot.
+  get a `queue:snapshot` and a `chats:snapshot` immediately on join;
+  `broadcastState` re-sends both to the room after **every** seat or
+  chat change. Snapshots over deltas — at ≤60 entries the bandwidth is
+  nothing, the sync-bug surface is zero, and a dropped emit can't wedge
+  a card. Students get only targeted emits (`lobby:welcome`,
+  `lobby:removed`, `activity:ended`, `chat:started`, `chat:update`,
+  `chat:ended`), never a snapshot.
+- **Teacher commands live on teacher sockets only.** `chat:start`,
+  `match:pair-everyone`, `chat:remove`, `settings:update`, and
+  `queue:remove` are registered inside the teacher branch of the
+  connection handler — a student socket has no listener to reach, which
+  is a stronger boundary than a role check inside each handler. Every
+  one of them is idempotent, and the snapshot that follows repairs any
+  divergence.
+- **The auto-match timer is the one piece of scheduled server
+  behavior.** A module-level `joinCode → { timer, teacherCount, nextAt }`
+  map holds a 1-second `.unref()`ed interval, armed on an activity's 0→1
+  teacher socket and cleared when its teacher count returns to zero (and
+  in `onActivityRemoved`). **Everything else is read inside the tick** —
+  the record via `getByJoinCode` (which never refreshes the TTL, so an
+  unattended timer can't keep an activity alive), the auto-match setting,
+  the threshold, eligibility, and the 3-second gap — so settings edits,
+  seat changes, and manual pairing never have to touch the timer. The
+  teacher-gating is a product decision, not a technical one: a closed
+  laptop shouldn't keep putting kids in rooms.
+- **What is still simulated:** messages, ending, pausing, the auto-end
+  clock, and the name reveal. Chats are created and ended structurally
+  (`endReason: "teacher"` when membership drops below 2 is the only
+  reachable ending), but nothing has ever typed into one. The client's
+  `endingEnabled` engine flag is the seam that flips when they become
+  real.
 - **The teacher socket is the TTL keep-alive:** while one is connected,
   a ~5-minute `.unref()`ed interval calls `getByHostKey`, so a live
   class can't expire at the 12h TTL mid-lesson. Student sockets never

@@ -116,12 +116,14 @@ export interface ClientToServerEvents {
 }
 
 /**
- * How long a dropped student's seat survives before it's reaped. The window
- * starts at DETECTED disconnect — a dark phone sends no close frame, so
- * detection is Socket.IO's ping cycle (~45s at the default pingInterval 25s
- * + pingTimeout 20s). Note: `RECONNECT_WINDOW_SECONDS = 120` in
- * useChatDemo.ts is the same product window; when chat goes real in feature
- * 3, this shared constant becomes the one source.
+ * How long a dropped student's seat survives before it's reaped — a WAITING
+ * seat only. A matched seat is never grace-reaped (founder call); see
+ * lobby.ts's disconnect handler. The window starts at DETECTED disconnect —
+ * a dark phone sends no close frame, so detection is Socket.IO's ping cycle
+ * (~45s at the default pingInterval 25s + pingTimeout 20s). Note:
+ * `RECONNECT_WINDOW_SECONDS = 120` in useChatDemo.ts is the same product
+ * window, still simulated — the mid-chat reconnect clock only becomes real
+ * with messaging, and this shared constant becomes the one source then.
  */
 export const LOBBY_GRACE_SECONDS = 120;
 

@@ -7,10 +7,13 @@ types here mirror `shared/src/api.ts` (REST) and `shared/src/socket.ts`
 the server; if the two ever disagree, the code is right and this file has
 a bug.
 
-Implemented by `server/`: feature 1 (create & join) over REST, feature 2
-(the live lobby — the waiting queue) over Socket.IO, documented in
-[Socket events](#socket-events) below. Matching and chat are still
-client-simulated and arrive in later features.
+Implemented by `server/`: feature 1 (create & join) over REST, then two
+Socket.IO features documented in [Socket events](#socket-events) below —
+feature 2 (the live lobby, i.e. the waiting queue) and feature 3
+(matching: the server creates chats, tracks them, and ends them). **No
+chat message has ever crossed the wire.** The rooms matching creates are
+silent by design; messaging, ending, pausing, the auto-end clock, and the
+name reveal all arrive with the next feature.
 
 ## Conventions
 
@@ -136,7 +139,7 @@ capacity cases distinguishable.
 
 ## Socket events
 
-The live lobby (feature 2) speaks Socket.IO v4 on the same origin —
+The live lobby and matching speak Socket.IO v4 on the same origin —
 default namespace, path `/socket.io/`. The canonical types live in
 `shared/src/socket.ts`, same convention as the REST contract: the server
 types its io server `Server<ClientToServerEvents, ServerToClientEvents>`,
@@ -171,8 +174,9 @@ export interface StudentAuth {
 
 The client supplies the payload through an **auth callback**, so every
 reconnect attempt (including automatic ones) reads the freshest session
-token. Teacher sockets join a per-activity room and receive queue
-snapshots; a teacher connection also refreshes the activity's TTL, and
+token. Teacher sockets join a per-activity room and receive both the
+queue and chat snapshots on join; a teacher connection also refreshes the
+activity's TTL, and
 keeps refreshing it every ~5 minutes while connected — the keep-alive
 that stops a live class from expiring mid-lesson. Student connections
 never refresh the TTL, the same invariant as the REST lookups. The demo
@@ -205,6 +209,24 @@ export interface ServerToClientEvents {
   "lobby:removed": () => void;
   /** Student only: the activity died under you → the ended screen. */
   "activity:ended": () => void;
+  /** Teacher room; also emitted to a teacher socket the moment it joins. */
+  "chats:snapshot": (payload: {
+    chats: ChatSnapshot[];
+    leftoverStudentId: string | null; // pair-everyone's odd one out
+  }) => void;
+  /** Student only, targeted; re-sent on every resume while matched. */
+  "chat:started": (payload: {
+    chatId: string;
+    selfCharacterId: string;
+    peers: ChatPeer[];
+  }) => void;
+  /** Student only: remaining ACTIVE peers after a membership change; the
+   *  client diffs against what it had and renders a local notice. */
+  "chat:update": (payload: { chatId: string; peers: ChatPeer[] }) => void;
+  /** Student only, targeted; re-sent on resume while the seat is wrappingUp. */
+  "chat:ended": (payload: { reason: "teacher" }) => void;
+  /** Teacher room minus the sender — keeps a second host device coherent. */
+  "settings:changed": (payload: { settings: ActivitySettings }) => void;
 }
 
 export interface QueueEntry {
@@ -213,10 +235,40 @@ export interface QueueEntry {
   waitSeconds: number; // computed server-side at emit; client ticks between
   connection: "connected" | "reconnecting";
 }
+
+export interface ChatParticipant {
+  id: string; // studentId
+  name: string; // captured at chat start — survives seat removal
+  character: Character; // the SERVER roster's copy, id + name + emoji?
+}
+
+export interface ChatSnapshot {
+  id: string;
+  participants: ChatParticipant[]; // everyone ever in the room, seat order
+  inactiveStudentIds: string[]; // removed / left mid-chat
+  reconnectingStudentIds: string[]; // active members dropped past the 4s delay
+  elapsedSeconds: number; // computed server-side at emit; client ticks between
+  status: "active" | "ended";
+  endReason: "teacher" | null; // the only reachable reason so far
+}
+
+/** Student-facing: characterIds only — never names, never peer studentIds. */
+export interface ChatPeer {
+  characterId: string;
+}
 ```
 
-The queue always arrives as a **full snapshot**, never a delta — at ≤60
-entries, snapshots buy zero sync bugs.
+Both teacher-facing snapshots always arrive **whole**, never as deltas —
+at ≤60 seats and a classroom's worth of chats, snapshots buy zero sync
+bugs, and a dropped emit can't wedge a card. `queue:snapshot` excludes
+matched and wrapping-up seats, so the queue is exactly the pool the
+pairing rail can act on. The two clocks (`waitSeconds`, `elapsedSeconds`)
+are computed server-side at emit and ticked locally by the client between
+snapshots.
+
+`ChatParticipant.character` is the **server's** roster copy on purpose:
+character edits stay local to the teacher's page, so a locally renamed
+roster would otherwise leave a card unable to resolve its own labels.
 
 ### Client → server
 
@@ -225,16 +277,91 @@ export interface ClientToServerEvents {
   /** Teacher only; idempotent — removing an absent seat is a no-op. */
   "queue:remove": (payload: { studentId: string }) => void;
   /** Student intentional exit (back-as-reset, sign-out): immediate seat
-   *  removal, no 2-minute ghost row. Never fired on refresh/pagehide. */
+   *  removal, no 2-minute ghost row. Never fired on refresh/pagehide.
+   *  Mid-chat it drops chat membership first (the peer's emits are exactly
+   *  chat:remove's, minus the tombstone), then releases the seat. */
   "lobby:leave": () => void;
+  /** Teacher only. Filtered to eligible students, clamped to the server
+   *  roster; no-ops below 2 eligible. */
+  "chat:start": (payload: { studentIds: string[] }) => void;
+  /** Teacher only. Greedy pairs in queue order; odd count seats a trailing
+   *  trio when the roster has a 3rd character, else marks the leftover. */
+  "match:pair-everyone": () => void;
+  /** Teacher only. Quiet exit; ends the chat when <2 active would remain. */
+  "chat:remove": (payload: { chatId: string; studentId: string }) => void;
+  /** Teacher only; zod-validated, replaces the stored settings. */
+  "settings:update": (payload: { settings: ActivitySettings }) => void;
+  /** Student: the ended screen's Back-to-the-lobby tap — returns a
+   *  wrappingUp seat to waiting with a fresh clock. Otherwise a no-op. */
+  "lobby:back": () => void;
 }
 ```
 
-Two boundaries are pinned by tests: a 4-digit join code structurally
-cannot open a teacher socket, and a student socket emitting
-`queue:remove` is silently ignored. `lobby:leave` fires only on in-app
-exits; a refresh, tab close, or home button sends nothing the client can
-trust, so those ride the grace window below.
+Every teacher command is registered on **teacher sockets only** — that
+structural boundary, not a per-event role check, is what keeps a student
+from starting chats or rewriting settings. Two cases are pinned by tests:
+a 4-digit join code cannot open a teacher socket at all, and a student
+socket emitting `queue:remove`, `chat:start`, `chat:remove`, or
+`settings:update` is silently ignored.
+
+Teacher commands are also **idempotent and self-correcting**: a command
+naming a student who just dropped, a chat that just ended, or a seat that
+is already gone does nothing, and the snapshot that follows any real
+change re-syncs the rail. `queue:remove` deliberately no-ops on a matched
+seat — `chat:remove` is the only path that tombstones a chat member,
+because it also does the chat bookkeeping.
+
+`lobby:leave` fires only on in-app exits; a refresh, tab close, or home
+button sends nothing the client can trust, so those ride the grace window
+below.
+
+### Matching: the operational truths
+
+- **Who can be matched.** One pool decides every pairing: seats that are
+  connected, not already in a chat, and not sitting on the ended screen,
+  ordered by join time. A student marked `reconnecting` is therefore
+  unmatchable server-side, not merely dimmed on the teacher's screen.
+- **Characters are dealt at random from the roster's first N.** A chat of
+  N seats uses characters 1..N, shuffled — so a 2-person chat always uses
+  the first two characters, and who gets which is chance.
+- **Starting a chat clamps, it doesn't reject.** `chat:start` filters to
+  eligible students and takes at most `min(4, roster length)`; anyone who
+  doesn't fit visibly stays in the queue. Below 2 eligible it does
+  nothing.
+- **Auto-match is server-run and teacher-gated.** A 1-second interval is
+  armed on an activity's **first** connected teacher socket and cleared
+  when the **last** one disconnects, so a closed laptop holds pairing and
+  reopening resumes it. Each firing pairs the two longest-waiting
+  students who have both waited `settings.autoMatchSeconds`, then waits
+  `AUTO_MATCH_GAP_SECONDS` (3) before the next — pairs land one at a
+  time. Everything else (the record, `settings.autoMatch`, the threshold,
+  eligibility) is read fresh inside the tick, so settings edits and
+  manual pairing never touch the timer.
+- **A matched seat is never grace-reaped.** A student who drops mid-chat
+  keeps their seat until the activity dies and can resume into the same
+  chat; only their card membership dims. The one exception is
+  bookkeeping: if a chat ends underneath an already-disconnected member,
+  a fresh 120s grace starts then, so abandoned seats don't hold cap slots
+  forever.
+- **Below 2 active members ends the chat.** Whether the teacher removed
+  someone or a student left, a room that would drop under two ends with
+  `endReason: "teacher"`. The remaining peer's seat goes **wrapping up**:
+  off the queue and unmatchable until their "Back to the lobby" tap emits
+  `lobby:back`, which re-queues them with a fresh wait clock. Auto-return
+  was rejected — it would show the teacher a "waiting" student who is
+  still reading the ended screen.
+- **Settings sync; the roster doesn't.** `settings:update` is
+  zod-validated against the same schema `POST /activities` uses and
+  replaces the stored settings wholesale; the server echoes
+  `settings:changed` to the teacher's **other** devices (the room minus
+  the sender). Invalid payloads are logged and dropped. `revealNames` and
+  `autoEndChats` are stored but still act on nothing. Character,
+  scenario, and host-name edits stay local to the teacher's page —
+  they'd have to reach students' lobbies, which is a bigger feature than
+  a settings echo.
+- **Chats outlive their students.** A chat record keeps everyone who was
+  ever in it (with the name captured at chat start), so a card still
+  reads correctly after a member's seat is gone.
 
 ### Privacy rules
 
@@ -246,26 +373,46 @@ or presence, `settings`, `teacherEmail`, or the hostKey. Lobby occupancy
 stays a mystery to students by design. A `QueueEntry` never contains the
 seat token.
 
+Matching extends the same rule to chats, and this is the load-bearing
+one: **the student wire carries characterIds and nothing else.** A
+student learns their own `selfCharacterId` and their peers as bare
+`{ characterId }` objects — never a peer's real name, never a peer's
+studentId, not even at the end (there is no reveal yet). The
+who-am-I-talking-to mystery is the product, so it is pinned structurally:
+`toChatStarted`'s peers are allowlist-tested to be exactly
+`["characterId"]`. Real names live only on `ChatSnapshot`, which goes to
+the teacher's room — the same teacher-only surface as `QueueEntry`.
+
 ### Timing truths a client author needs
 
 - **Disconnect detection is not instant.** A dark phone sends no close
   frame, so detection is Socket.IO's ping cycle — roughly 45 seconds at
   the default `pingInterval` 25s + `pingTimeout` 20s. Expect the
   latency; don't tune it away (tighter timeouts flap on school wifi).
-- **Grace window.** A dropped seat survives `LOBBY_GRACE_SECONDS` (120)
-  starting at _detected_ disconnect, marked `reconnecting` in the queue.
-  Reconnecting restores the seat with its original wait clock.
+- **Grace window — for waiting seats only.** A dropped seat in the queue
+  survives `LOBBY_GRACE_SECONDS` (120) starting at _detected_ disconnect,
+  marked `reconnecting`, and reconnecting restores it with its original
+  wait clock. A dropped seat **in a chat** gets no such clock at all: it
+  survives until the activity dies (see the matching truths above).
 - **Broadcast delay.** The teacher-facing row change waits
   `LOBBY_DISCONNECT_BROADCAST_DELAY_MS` (4000) so a student's ~1–2s page
   refresh never flashes the row. The delay gates only the teacher-facing
-  state, never the grace clock.
+  state, never the grace clock. Chat cards use the same delay before
+  listing a member in `reconnectingStudentIds`.
+- **Resume re-delivers, it doesn't replay.** Whatever a seat is in the
+  middle of, the server re-states it on connect: a matched student gets
+  `chat:started` again (refresh, wifi recovery, duplicate-tab takeover
+  all land back in the same chat), and a wrapping-up seat gets
+  `chat:ended` again. Clients don't have to persist chat state.
 - **Duplicate tabs.** Two sockets presenting the same seat token: the
   newer socket takes the seat, the older one is disconnected.
 
 Constants live in `shared/src/socket.ts` (`LOBBY_GRACE_SECONDS = 120`,
 `LOBBY_DISCONNECT_BROADCAST_DELAY_MS = 4000`,
-`MAX_STUDENTS_PER_ACTIVITY = 60`); `STUDENT_NAME_MAX_CHARS = 40` sits
-with the other form caps in `shared/src/constants.ts`.
+`MAX_STUDENTS_PER_ACTIVITY = 60`, `AUTO_MATCH_GAP_SECONDS = 3`);
+`STUDENT_NAME_MAX_CHARS = 40` sits with the other form caps in
+`shared/src/constants.ts`. Matched and wrapping-up seats count toward the
+seat cap — they still hold seats; tombstones don't.
 
 ## curl smoke
 
