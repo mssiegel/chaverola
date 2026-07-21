@@ -15,10 +15,10 @@ import type { ActivitySeats } from "../live/seats";
 /*
   The whole persistence layer: two in-memory Maps on a single instance.
   Restarts and deploys wipe live classes — accepted for v1 (see
-  docs/plans/feature-1-create-and-join.md; avoid server-touching pushes
-  during school hours). Activities live 12 hours; only hostKey lookups
-  refresh the clock, so students (or a code-enumerating crawler) can't keep
-  an activity alive.
+  docs/plans/feature-1-create-and-join.md; once real classes are live,
+  avoid server-touching pushes during school hours). Activities live 12
+  hours; only hostKey lookups refresh the clock, so students (or a
+  code-enumerating crawler) can't keep an activity alive.
 */
 
 /** The internal record. Never appears in a response — see projections.ts. */

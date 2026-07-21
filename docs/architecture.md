@@ -85,7 +85,9 @@ paths (see Deploy topology).
   Every server deploy or restart wipes all live activities — and since
   feature 2 that's loud, not silent: every connected student is kicked
   to the "activity ended" screen and the teacher's page falls back to
-  not-found — so server-touching pushes are avoided during school hours.
+  not-found — so once real classes use Chaverola (launch: end of August
+  2026), server-touching pushes should avoid school hours. Pre-launch,
+  any hour is fine: there is no live class to wipe.
 - **Cloudflare** fronts `api.chaverola.com`. It proxies WebSockets on
   all plans, and its ~100s proxied idle timeout never triggers under
   Socket.IO's 25s pings (the polling fallback's long-poll cycle also

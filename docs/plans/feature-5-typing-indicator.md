@@ -22,8 +22,9 @@ lives in its own done-when.
 Same rules as feature 4: the prompt is sized for one agent session, ends
 green (typecheck + tests + its own verification, production pass included),
 gets **one commit straight to `main`**, and is safe to push on its own.
-Server-touching (`server/**` is in Render's build filter), so **push outside
-school hours**. To run it, tell the agent:
+Server-touching (`server/**` is in Render's build filter) — which is fine at
+any hour right now: Chaverola has no real classes until launch (end of
+August 2026), so a deploy wipe hits nobody. To run it, tell the agent:
 
 > Read `docs/plans/feature-5-typing-indicator.md` (all of it), read
 > `AGENTS.md`, then do Prompt 1.
@@ -104,8 +105,8 @@ Benign for this feature, in both directions — worth knowing so nobody splits
 the slice defensively. Client ahead of server: `chat:typing` is an unhandled
 event and Socket.IO drops it silently — no indicator, no error, no harm.
 Server ahead of client: nothing emits `chat:typing`, so nothing relays. The
-standing rules still apply all the same: push outside school hours, poll
-`/healthz` for the new server commit before testing, and the tip commit of
+standing rules still apply all the same: poll `/healthz` for the new
+server commit before testing, and the tip commit of
 the push must touch `client/`, `shared/`, or a root manifest — automatic
 here, since the slice touches all three workspaces in one commit, but check
 Vercel's latest production deployment is Ready for the SHA anyway.
@@ -116,7 +117,8 @@ Vercel's latest production deployment is Ready for the SHA anyway.
 
 **Goal:** a student types in a real chat and their peers see the indicator,
 on production; the teacher sees nothing; the demo is untouched.
-Server-touching — **push outside school hours**.
+Server-touching — **safe to push at any hour** (pre-launch, no real classes
+to wipe).
 
 Read first: `shared/src/socket.ts`, `server/src/live/lobby.ts`,
 `server/src/store/projections.ts`, `server/src/live/lobby.test.ts`,
@@ -299,6 +301,6 @@ dies within 5s; refresh the receiver mid-typing — absent, then back on the
 next heartbeat; the teacher's host page, open throughout, shows no typing
 artifact anywhere; `/demo/student` still does zero `/socket.io/` traffic and
 its scripted typing still plays. Any leg blocked by hardware goes into
-`docs/pending-manual-tests.md` rather than evaporating. Push outside school
-hours, poll `/healthz` for the new server commit, confirm Vercel's
+`docs/pending-manual-tests.md` rather than evaporating. Push (any hour is
+fine pre-launch), poll `/healthz` for the new server commit, confirm Vercel's
 production deployment is Ready. `pnpm format`, one commit, checkbox ticked.

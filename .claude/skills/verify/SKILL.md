@@ -204,7 +204,8 @@ trying to hurry matching along from the client.
   limiter, resume backlog, privacy shape, teacher silence) and
   `f4p2-prod-browser2.mjs` (browser: trio messaging, refresh backlog,
   everPeers after a departure, the below-2 ending, the teacher hints).
-  Both mint real activities — off-hours only against prod.
+  Both mint real activities against prod — any hour is fine until launch
+  (end of August 2026); once real classes are live, off-hours only.
 - Hero chat lines appear **twice** on the homepage — the teacher preview
   card mirrors the hero chat live — so `getByText` on a message trips
   Playwright's strict mode; use `.first()`.
@@ -254,7 +255,8 @@ The feature-1 prod pass script lives at
 `$env:TEMP\chaverola-verify\prompt7-prod.mjs` — `node prompt7-prod.mjs`
 runs the full desktop + phone sweep against chaverola.com (`--phone-only`
 skips the desktop half). It creates real activities (in-memory, 12h TTL),
-so keep it out of school hours. Its homepage check reads the `/healthz`
+so once real classes are live, keep it out of school hours (any hour is
+fine pre-launch). Its homepage check reads the `/healthz`
 warm-up response for timing and the deployed server commit. Two traps it
 already ate: assert phone-width text via `>> visible=true` (the hidden
 desktop rail duplicates lines), and never probe a bundle for a BOM with
@@ -296,7 +298,8 @@ against local dev):
   the live phone hits the ended screen, the teacher falls to not-found,
   the dark phone's reload hits the REST 404-with-token → same ended
   screen (not "recheck your code"), and a fresh create works after. This
-  is the only feature-2 prod step that deploys — off-hours only.
+  is the only feature-2 prod step that deploys — off-hours only once real
+  classes are live (any hour pre-launch).
 
 Two lessons this pass paid for:
 

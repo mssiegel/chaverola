@@ -115,7 +115,9 @@ hit wakes a sleeping instance in ~33 seconds, which the client's
 only** — every server deploy or restart wipes live classes, and since
 the live lobby that's visible: every connected student lands on an
 "activity ended" screen and the teacher's page falls back to not-found.
-Avoid server-touching pushes during school hours. Details in
+Once real classes are using Chaverola (launch: end of August 2026), avoid
+server-touching pushes during school hours; until then any hour is fine —
+there is nothing live to wipe. Details in
 [docs/architecture.md](docs/architecture.md).
 
 ## Documentation

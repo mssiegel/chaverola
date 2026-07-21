@@ -184,6 +184,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Transcripts wait: feature 1 only stores the teacher's email](#transcripts-wait-feature-1-only-stores-the-teachers-email)
   - [Considered and rejected for the backend: TanStack Query, dotenv, a hostKey stash, an npm conversion](#considered-and-rejected-for-the-backend-tanstack-query-dotenv-a-hostkey-stash-an-npm-conversion)
 - [Process & tooling](#process--tooling)
+  - [Until launch, server pushes can happen at any hour](#until-launch-server-pushes-can-happen-at-any-hour)
   - [Features ship as end-to-end slices, not layers](#features-ship-as-end-to-end-slices-not-layers)
   - [Agents read Render logs through the CLI, with the API key in `.env.local`](#agents-read-render-logs-through-the-cli-with-the-api-key-in-envlocal)
   - [The numbered doc standard is retired; technical docs live in `docs/`](#the-numbered-doc-standard-is-retired-technical-docs-live-in-docs)
@@ -3568,6 +3569,28 @@ forever.
 ---
 
 ## Process & tooling
+
+### Until launch, server pushes can happen at any hour
+
+_2026-07-21_
+
+**Decision:** The "push server-touching commits outside school hours" rule
+is suspended until Chaverola goes live with real classes — planned for the
+**end of August 2026**. Until then a server push, and the in-memory wipe
+that comes with it, is fine at any hour. The living docs now phrase the
+rule conditionally ("once real classes are using it…"), so they stay true
+at launch without another sweep.
+
+**Why:** Founder call (2026-07-21): no real students use Chaverola yet, so
+the wipe has nobody to hit, and deferring pushes to the evening was pure
+friction. Historical plan docs (features 1–4) keep their school-hours
+wording — plan history is never rewritten — so anyone reading an old
+prompt should read that caution as "protect live classes", not a standing
+curfew.
+
+_Reflected in `README.md`, `docs/architecture.md`,
+`docs/plans/feature-5-typing-indicator.md`, the verify skill, and the
+`activityStore.ts` header comment._
 
 ### Features ship as end-to-end slices, not layers
 
