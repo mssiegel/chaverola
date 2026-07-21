@@ -65,6 +65,9 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [One page serves both join routes; a wrong code never changes the URL](#one-page-serves-both-join-routes-a-wrong-code-never-changes-the-url)
   - [Student sign-in lives in the tab, and removal sends you to the name step](#student-sign-in-lives-in-the-tab-and-removal-sends-you-to-the-name-step)
 - [Chat behavior](#chat-behavior)
+  - [The teacher never sees typing](#the-teacher-never-sees-typing)
+  - [Typing is a heartbeat that dies in five seconds, never a stored fact](#typing-is-a-heartbeat-that-dies-in-five-seconds-never-a-stored-fact)
+  - [One typing slot per room, last writer wins](#one-typing-slot-per-room-last-writer-wins)
   - [The server never inspects what students write](#the-server-never-inspects-what-students-write)
   - [Leaving a live chat means leaving the activity (until messaging ships)](#leaving-a-live-chat-means-leaving-the-activity-until-messaging-ships)
   - [The live ended screen returns to the lobby only on a tap, and shows no reveal](#the-live-ended-screen-returns-to-the-lobby-only-on-a-tap-and-shows-no-reveal)
@@ -710,6 +713,71 @@ _Implemented in [studentSession.ts](client/src/lib/studentSession.ts) and
 ---
 
 ## Chat behavior
+
+### The teacher never sees typing
+
+_2026-07-21_
+
+**Decision:** The typing indicator is a student-room signal only. When a
+student types, the other students in the chat see the dots; the teacher's
+chat cards show nothing — no dots, no "is typing" hint, no typing event on
+the teacher wire at all.
+
+**Why:** Founder scope call (2026-07-21, feature-5 planning). The teacher's
+oversight surface is the transcript — what was said, under real names — not
+keystroke pressure. A typing flicker per card across a classroom of
+concurrent chats is noise, and the teacher wire stays snapshots-plus-one-
+delta (message lines) on purpose. Recorded so nobody "completes" the teacher
+side later without a founder call — the omission is the feature.
+
+_Implemented in [lobby.ts](server/src/live/lobby.ts)'s `chat:typing` relay,
+which fans out only to the chat's other students (ships with
+[feature 5](docs/plans/feature-5-typing-indicator.md))._
+
+### Typing is a heartbeat that dies in five seconds, never a stored fact
+
+_2026-07-21_
+
+**Decision:** The typing wire is a heartbeat with no stop event: the client
+re-emits `chat:typing` at most once per 2 seconds while keys flow, the
+server relays it statelessly (volatile, best-effort), and each receiver
+expires the indicator 5 seconds after the last heartbeat — or instantly, the
+moment that peer's own message lands. Nothing is stored: no store field, no
+resume-backlog entry, so a student who refreshes mid-someone-typing simply
+waits ≤2s for the next heartbeat.
+
+**Why:** An explicit stop event was rejected because every failure mode
+still needs the TTL backstop — a stop packet lost on school wifi, a socket
+that dies mid-typing, a locked phone — so start/stop would be two mechanisms
+where heartbeat-plus-TTL is one that self-heals them all. Statelessness
+means the leave, remove, and end paths owe typing nothing, and the worst
+artifact possible is an indicator lingering ≤5s after an abandoned draft.
+If undone (typing stored or snapshotted), a refresh could replay a stale
+"is typing" as fact.
+
+_Implemented in [socket.ts](shared/src/socket.ts) (`TYPING_HEARTBEAT_MS`,
+`TYPING_INDICATOR_TTL_MS`), [lobby.ts](server/src/live/lobby.ts), and
+[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)'s TTL
+timer (ships with feature 5)._
+
+### One typing slot per room, last writer wins
+
+_2026-07-21_
+
+**Decision:** A room shows at most one typist. The client keeps a single
+`typingPeerId`; when two peers type at once in a 3+-person room, the newest
+heartbeat takes the slot.
+
+**Why:** Structurally invisible: a duo has exactly one possible typist, and
+every 3+-person room already collapses the indicator to "someone is
+typing…", so per-peer slots would change nothing on screen while
+complicating the state. If group UI ever names concurrent typists, this
+reopens.
+
+_Implemented in
+[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)
+(`LiveMatch.typingPeerId`, ships with feature 5) — the group collapse ships
+already in [Conversation.tsx](client/src/components/chat/Conversation.tsx)._
 
 ### The server never inspects what students write
 
