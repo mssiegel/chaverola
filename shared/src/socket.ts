@@ -87,8 +87,14 @@ export interface StudentAuth {
 export interface ServerToClientEvents {
   /** Teacher room; also emitted to a teacher socket the moment it joins. */
   "queue:snapshot": (payload: { students: QueueEntry[] }) => void;
-  /** Student only. Persist both into the session for resume. */
-  "lobby:welcome": (payload: { studentId: string; token: string }) => void;
+  /** Student only. Persist studentId + token into the session for resume;
+   *  `paused` is the activity-wide pause at connect time (session-state
+   *  only, never persisted) so a refresh mid-pause stays frozen. */
+  "lobby:welcome": (payload: {
+    studentId: string;
+    token: string;
+    paused: boolean;
+  }) => void;
   /** Student only: the teacher removed you → name step + notice. */
   "lobby:removed": () => void;
   /** Student only: the activity died under you → the ended screen. */
@@ -97,6 +103,7 @@ export interface ServerToClientEvents {
   "chats:snapshot": (payload: {
     chats: ChatSnapshot[];
     leftoverStudentId: string | null; // pair-everyone's odd one out
+    paused: boolean; // the world-level pause — keeps a second host device coherent
   }) => void;
   /** Student only, targeted; re-sent on every resume while matched. `lines`
    *  is the transcript backlog and is authoritative on every delivery — the
@@ -136,6 +143,10 @@ export interface ServerToClientEvents {
   }) => void;
   /** Student only, targeted; re-sent on resume while the seat is wrappingUp. */
   "chat:ended": (payload: { reason: "teacher" }) => void;
+  /** Student only, targeted at every connected seat — chat members, lobby
+   *  waiters, and wrappingUp alike (the pause is activity-wide). Connect-time
+   *  state rides lobby:welcome instead; this event only carries live flips. */
+  "activity:paused": (payload: { paused: boolean }) => void;
   /** Teacher room minus the sender — keeps a second host device coherent. */
   "settings:changed": (payload: { settings: ActivitySettings }) => void;
 }
@@ -161,8 +172,17 @@ export interface ClientToServerEvents {
    *  go wrappingUp and hear chat:ended. */
   "chat:end": (payload: { chatId: string }) => void;
   /** Teacher only: the round-closer — ends every active chat at once. A
-   *  class with none active is a no-op. Plural like chats:snapshot. */
+   *  class with none active is a no-op. Plural like chats:snapshot. Also
+   *  clears an active pause: the round is over, the next starts unpaused. */
   "chats:end-all": () => void;
+  /** Teacher only; idempotent — pausing a paused class is a no-op. The
+   *  world-level pause: sends and typing refuse everywhere, auto-match and
+   *  the clocks hold; joins, manual pairing, and ending keep flowing. */
+  "chats:pause-all": () => void;
+  /** Teacher only; idempotent — resuming an unpaused class is a no-op.
+   *  Shifts the held clocks forward so nobody's wait or chat time jumps.
+   *  chat:end never clears a pause; chats:end-all does. */
+  "chats:resume-all": () => void;
   /** Teacher only; zod-validated, replaces the stored settings. */
   "settings:update": (payload: { settings: ActivitySettings }) => void;
   /** Student: the ended screen's Back-to-the-lobby tap — returns a

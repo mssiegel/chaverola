@@ -347,7 +347,6 @@ export function useHostActivityDemo(
     removeFromChat,
     // The demo world reads activity.settings directly — nothing to push.
     updateSettings: () => {},
-    pausingEnabled: true,
     // The demo classroom is client-side — the teacher's link never drops.
     connection: "connected",
     triggerJoin,

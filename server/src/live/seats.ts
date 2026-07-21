@@ -223,12 +223,15 @@ export function toQueueEntries(
   now: number,
   exclude: ReadonlySet<string>
 ): QueueEntry[] {
+  // While paused, wait clocks freeze at the anchor; connection state keeps
+  // real time (toQueueEntry's split).
+  const clockNow = activity.pausedAt ?? now;
   return [...activity.seats.byId.values()]
     .filter((seat) => !seat.wrappingUp && !exclude.has(seat.studentId))
     .sort(
       (a, b) => a.joinedAt - b.joinedAt || (a.studentId < b.studentId ? -1 : 1)
     )
-    .map((seat) => toQueueEntry(seat, now));
+    .map((seat) => toQueueEntry(seat, now, clockNow));
 }
 
 export function clearSeatTimers(seat: Seat): void {

@@ -17,6 +17,9 @@ interface LiveChatStageProps {
    *  slot, fed by chat:peer-typing and expired on a TTL. */
   typingPeerId: string | null;
   isEnded: boolean;
+  /** The teacher's activity-wide pause (activity:paused / lobby:welcome).
+   *  Chatbox freezes the room: banner, locked composer. Ended wins. */
+  isPaused: boolean;
   /** Sends a real message over the seat's socket (chat:send). */
   onSend: (text: string) => void;
   /** A keystroke happened — the hook throttles it into chat:typing
@@ -38,10 +41,11 @@ interface LiveChatStageProps {
  * engine. Deliberately a component split beside ChatStage — never a
  * conditional hook. Messaging is real: the composer sends over the socket
  * and the transcript is the wire's. Typing is real too (chat:typing →
- * chat:peer-typing, feature 5). Still quiet on the rest, on purpose: no
- * clocks, no peer-drop UI (the student wire carries no peer connection
- * state — those are their own later features). Exits are honest too:
- * walking out mid-chat leaves the whole activity, and the confirm says so.
+ * chat:peer-typing, feature 5), and so is the teacher's pause (feature 7).
+ * Still quiet on the rest, on purpose: no clocks, no peer-drop UI (the
+ * student wire carries no peer connection state — those are their own
+ * later features). Exits are honest too: walking out mid-chat leaves the
+ * whole activity, and the confirm says so.
  */
 export function LiveChatStage({
   self,
@@ -50,6 +54,7 @@ export function LiveChatStage({
   messages,
   typingPeerId,
   isEnded,
+  isPaused,
   onSend,
   onTyping,
   onLeaveActivity,
@@ -61,11 +66,12 @@ export function LiveChatStage({
   // dump a student out of a live chat — it opens the exit confirm instead.
   useBackGuard(!isEnded, () => setConfirmOpen(true));
 
-  // The room, live messages and typing included. What a demo engine would
-  // animate beyond them stays pinned to its quiet value: nobody visibly
-  // drops and no clock runs — ChatPeer is allowlist-pinned to characterId,
-  // so peer connection state has no slot on the student wire. "teacher" is
-  // the only reachable end reason this feature (the below-2 rule).
+  // The room, live messages, typing, and the teacher's pause included. What
+  // a demo engine would animate beyond them stays pinned to its quiet
+  // value: nobody visibly drops and no clock runs — ChatPeer is
+  // allowlist-pinned to characterId, so peer connection state has no slot
+  // on the student wire. "teacher" is the only reachable end reason this
+  // feature (the below-2 rule).
   const chat: ChatRoomState = {
     self,
     peers,
@@ -77,7 +83,7 @@ export function LiveChatStage({
     reconnectSecondsLeft: null,
     autoEndSecondsLeft: null,
     isEnded,
-    isPaused: false,
+    isPaused,
     endReason: isEnded ? "teacher" : null,
     endedByPeerId: null,
   };

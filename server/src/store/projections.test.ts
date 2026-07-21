@@ -37,6 +37,7 @@ const fullRecord: StoredActivity = {
   seats: createSeatState(),
   chats: [],
   leftoverStudentId: null,
+  pausedAt: null,
 };
 
 const fullSeat: Seat = {
@@ -106,9 +107,10 @@ describe("toQueueEntry (teacher queue row)", () => {
   });
 });
 
-describe("toLobbyWelcome (student resume pair)", () => {
-  it("exposes exactly studentId and token", () => {
-    expect(Object.keys(toLobbyWelcome(fullSeat)).sort()).toEqual([
+describe("toLobbyWelcome (student resume pair + pause state)", () => {
+  it("exposes exactly studentId, token, and paused", () => {
+    expect(Object.keys(toLobbyWelcome(fullSeat, fullRecord)).sort()).toEqual([
+      "paused",
       "studentId",
       "token",
     ]);

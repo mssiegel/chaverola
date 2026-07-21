@@ -65,10 +65,16 @@ expiry, and deliberately never to the teacher (see DECISIONS.md →
 **ending real**: "End chat" and "End all chats" work on live
 activities (`chat:end` / `chats:end-all` → the server ends the chat,
 every member goes wrappingUp and hears `chat:ended`, the card moves
-to Completed). What hasn't shipped: "Pause all chats", the auto-end
-clock, and the name reveal still render as honest placeholders on
-real activities (the demo still simulates every one of them). A chat
-whose active membership drops below 2 also still ends for the
+to Completed). Feature 7 made **pausing real**: "Pause all chats" /
+Resume flip the world-level pause (`chats:pause-all` /
+`chats:resume-all` → sends and typing refuse, auto-match holds, wait
+and chat clocks freeze at the anchor and shift on resume, and every
+connected student hears `activity:paused` — the frozen room, the
+lobby's paused pill). The 120s disconnect grace deliberately runs
+THROUGH a pause (founder call, 2026-07-21). What hasn't shipped: the
+auto-end clock and the name reveal still render as honest
+placeholders on real activities (the demo still simulates both). A
+chat whose active membership drops below 2 also still ends for the
 remaining peer with reason `"teacher"` — otherwise a working Remove
 would strand a student alone in a room.
 
@@ -139,12 +145,12 @@ Load-bearing flow facts (the reasoning for each is in DECISIONS.md):
     name, never a peer's studentId, in any payload, ever. Pinned by
     exact-key allowlist tests in `projections.test.ts`; keep them
     passing rather than loosening them.
-  - **`pausingEnabled` is the pausing-era seam.** "Pause all chats"
-    renders disabled on live activities through that one engine flag
-    (demo `true`, live `false`) — when pausing ships, flipping it is an
-    engine change, not a UI hunt. Ending shipped in feature 6 and
-    carries no flag (a constant-true `endingEnabled` would be dead
-    code); pausing stayed behind, on purpose, as its own later feature.
+  - **`pausedAt` is both the pause flag and the freeze anchor.** While
+    set, snapshots clock `waitSeconds`/`elapsedSeconds` against it (but
+    reconnecting state keeps real time — the grace clock runs through a
+    pause), and `resumeChats` shifts the stored timestamps forward by
+    the pause duration so nothing jumps. Don't split it into a boolean
+    plus a timestamp, and don't "fix" the grace window to freeze.
   - **Live socket timers never pass through `scaledMs`**; demo
     simulation always does.
 - The student flow renders navbar-free inside `StudentWorldLayout` (purple

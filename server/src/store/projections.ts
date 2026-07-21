@@ -60,24 +60,38 @@ function isReconnecting(seat: Seat, now: number): boolean {
   );
 }
 
-/** The teacher's queue row. NEVER the token. */
-export function toQueueEntry(seat: Seat, now: number): QueueEntry {
+/** The teacher's queue row. NEVER the token. `clockNow` is the wait
+ *  clock's now — a paused activity passes its freeze anchor so waitSeconds
+ *  holds, while `connection` keeps real time (a mid-pause drop must still
+ *  read "reconnecting": its grace clock runs through the pause). */
+export function toQueueEntry(
+  seat: Seat,
+  now: number,
+  clockNow: number = now
+): QueueEntry {
   return {
     id: seat.studentId,
     name: seat.name,
-    waitSeconds: Math.max(0, Math.floor((now - seat.joinedAt) / 1000)),
+    waitSeconds: Math.max(0, Math.floor((clockNow - seat.joinedAt) / 1000)),
     connection: isReconnecting(seat, now) ? "reconnecting" : "connected",
   };
 }
 
-/** The student's lobby:welcome payload — exactly the resume pair. */
-export function toLobbyWelcome(seat: Seat): {
+/** The student's lobby:welcome payload: the resume pair, plus the
+ *  activity-wide pause at connect time (a refresh mid-pause stays frozen —
+ *  the client keeps `paused` out of the persisted session). */
+export function toLobbyWelcome(
+  seat: Seat,
+  activity: StoredActivity
+): {
   studentId: string;
   token: string;
+  paused: boolean;
 } {
   return {
     studentId: seat.studentId,
     token: seat.token,
+    paused: activity.pausedAt !== null,
   };
 }
 
@@ -104,6 +118,9 @@ export function toChatSnapshot(
   activity: StoredActivity,
   now: number
 ): ChatSnapshot {
+  // Paused clocks freeze at the anchor; reconnecting state keeps real time
+  // (same split as toQueueEntry — the grace clock runs through a pause).
+  const clockNow = activity.pausedAt ?? now;
   return {
     id: chat.id,
     participants: chat.members.map((member) => ({
@@ -119,7 +136,7 @@ export function toChatSnapshot(
       })
       .map((member) => member.studentId),
     messages: chat.lines.map((line) => toChatTranscriptLine(chat, line)),
-    elapsedSeconds: Math.max(0, Math.floor((now - chat.startedAt) / 1000)),
+    elapsedSeconds: Math.max(0, Math.floor((clockNow - chat.startedAt) / 1000)),
     status: chat.status,
     endReason: chat.endReason,
   };

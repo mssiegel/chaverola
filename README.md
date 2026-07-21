@@ -20,9 +20,11 @@ automatically via Vercel).
 > them:** messages travel the wire in real time, attributed by character,
 > with the transcript surviving a refresh, peers see each other typing —
 > and **the teacher reads it all live**, every line under the sender's
-> real name, on the host page's chat cards, **and can end any chat (or
-> all of them) whenever the round is over**. Pausing and the
-> name reveal are honest placeholders for now. See
+> real name, on the host page's chat cards, **can end any chat (or
+> all of them) whenever the round is over, and can pause the whole
+> class** — composers lock, clocks freeze, matchmaking waits, and one
+> tap resumes. The auto-end clock and the name reveal are honest
+> placeholders for now. See
 > [Shared_Project_Context.md](Shared_Project_Context.md)
 > for the full brief and [docs/plans/](docs/plans/) for the current feature plan.
 

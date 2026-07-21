@@ -41,6 +41,10 @@ export interface StoredActivity {
   /** Pair-everyone's odd one out — lazily nulled at snapshot build once
    *  that seat stops waiting. */
   leftoverStudentId: string | null;
+  /** The teacher's world-level pause: set = paused, and the timestamp is
+   *  the freeze anchor — snapshots clock against it, and resumeChats shifts
+   *  the stored clocks forward by (now - pausedAt). */
+  pausedAt: number | null;
 }
 
 /** A validated create request, post-zod: trimmed, blanks already omitted. */
@@ -150,6 +154,7 @@ export function createActivity(
     seats: createSeatState(),
     chats: [],
     leftoverStudentId: null,
+    pausedAt: null,
   };
   if (input.scenario !== undefined) record.scenario = input.scenario;
   if (input.teacherEmail !== undefined)

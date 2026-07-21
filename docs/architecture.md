@@ -258,10 +258,18 @@ How the layer is put together (`server/src/live/`):
   (feature 6): a teacher's `chat:end` / `chats:end-all` flips the chat
   to `status: "ended"` with reason `"teacher"`, every member goes
   wrappingUp and hears `chat:ended`, and the below-2 rule still ends a
-  chat structurally when membership drops. **What is still simulated:**
-  pausing, the auto-end clock, student-facing peer-drop UI, and the
-  name reveal. The client's `pausingEnabled` engine flag is the seam
-  that flips when pausing becomes real.
+  chat structurally when membership drops. And pausing is real (feature
+  7): `chats:pause-all` stamps `StoredActivity.pausedAt` — one field,
+  both the flag and the freeze anchor. While set, `chat:send` /
+  `chat:typing` refuse, the auto-match tick stands down, and snapshots
+  clock `waitSeconds` / `elapsedSeconds` against the anchor (frozen),
+  while reconnecting state keeps real time — the 120s grace
+  deliberately runs through a pause. Every connected student hears
+  `activity:paused`, `lobby:welcome` carries the state so a mid-pause
+  refresh stays frozen, and `chats:resume-all` (or `chats:end-all`)
+  shifts the stored clocks forward by the pause duration so nothing
+  jumps. **What is still simulated:** the auto-end clock,
+  student-facing peer-drop UI, and the name reveal.
 - **The teacher socket is the TTL keep-alive:** while one is connected,
   a ~5-minute `.unref()`ed interval calls `getByHostKey`, so a live
   class can't expire at the 12h TTL mid-lesson. Student sockets never

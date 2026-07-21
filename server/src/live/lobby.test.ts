@@ -34,7 +34,10 @@ import { createChat } from "./matching";
   OTHER chat members only — never the sender, never the teacher room.
   Teacher-initiated ending pins its own invariants: chat:end/chats:end-all
   reach every member (wrappingUp, off the matchable pool), repeats emit
-  nothing, and a dropped member's resume re-delivers chat:ended.
+  nothing, and a dropped member's resume re-delivers chat:ended. Pausing
+  pins its boundaries the same way: the flip reaches every connected seat,
+  a mid-pause welcome carries it, a paused chat:send dies silently, and
+  resume lets lines flow again. The clock shift itself is matching.test.ts.
 */
 
 type ClientSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -89,8 +92,14 @@ const nextSnapshot = (socket: ClientSocket) =>
     socket.once("queue:snapshot", resolve);
   });
 const nextWelcome = (socket: ClientSocket) =>
-  new Promise<{ studentId: string; token: string }>((resolve) => {
-    socket.once("lobby:welcome", resolve);
+  new Promise<{ studentId: string; token: string; paused: boolean }>(
+    (resolve) => {
+      socket.once("lobby:welcome", resolve);
+    }
+  );
+const nextActivityPaused = (socket: ClientSocket) =>
+  new Promise<{ paused: boolean }>((resolve) => {
+    socket.once("activity:paused", resolve);
   });
 const connectError = (socket: ClientSocket) =>
   new Promise<Error>((resolve) => {
@@ -123,10 +132,10 @@ const nextChatEnded = (socket: ClientSocket) =>
  *  matters. */
 const chatsSnapshotWhere = (
   socket: ClientSocket,
-  predicate: (payload: { chats: ChatSnapshot[] }) => boolean
+  predicate: (payload: { chats: ChatSnapshot[]; paused: boolean }) => boolean
 ) =>
-  new Promise<{ chats: ChatSnapshot[] }>((resolve) => {
-    const handler = (payload: { chats: ChatSnapshot[] }) => {
+  new Promise<{ chats: ChatSnapshot[]; paused: boolean }>((resolve) => {
+    const handler = (payload: { chats: ChatSnapshot[]; paused: boolean }) => {
       if (!predicate(payload)) return;
       socket.off("chats:snapshot", handler);
       resolve(payload);
@@ -278,7 +287,7 @@ describe("the live lobby", () => {
     await emptyQueue;
   });
 
-  it("ignores chat:start, settings:update, chat:remove, chat:end, and chats:end-all from a student socket", async () => {
+  it("ignores every teacher command from a student socket — chat:start, settings:update, chat:remove, chat:end, chats:end-all, and the pause pair", async () => {
     const studentA = connect({
       role: "student",
       joinCode: activity.joinCode,
@@ -320,9 +329,12 @@ describe("the live lobby", () => {
     });
     studentA.emit("chat:end", { chatId: chat.id });
     studentA.emit("chats:end-all");
+    studentA.emit("chats:pause-all");
+    studentA.emit("chats:resume-all");
     await sleep(100);
     expect(chat.status).toBe("active");
     expect(chat.inactiveStudentIds).toEqual([]);
+    expect(activity.pausedAt).toBeNull();
   });
 
   it("chat:end puts every member on the ended screen — chat:ended to both, seats wrappingUp", async () => {
@@ -431,6 +443,84 @@ describe("the live lobby", () => {
     teacher.emit("chat:end", { chatId: first.id });
     await sleep(100);
     expect(echoes).toEqual([]);
+  });
+
+  it("chats:pause-all freezes the class for everyone, and resume lets lines flow again", async () => {
+    const teacher = connect({ role: "teacher", hostKey: activity.hostKey });
+    await nextSnapshot(teacher);
+    const studentA = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Rachel",
+      nonce: "nonce-a",
+    });
+    const studentB = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Noa",
+      nonce: "nonce-b",
+    });
+    const waiter = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Tamar",
+      nonce: "nonce-c",
+    });
+    const welcomeA = await nextWelcome(studentA);
+    const welcomeB = await nextWelcome(studentB);
+    const waiterWelcome = await nextWelcome(waiter);
+    expect(waiterWelcome.paused).toBe(false);
+    // `!` — both members are eligible; the chat just built above them.
+    const chat = createChat(
+      activity,
+      [welcomeA.studentId, welcomeB.studentId],
+      Date.now()
+    )!;
+
+    // The pause is activity-wide: chat members AND the lobby waiter hear it,
+    // and the teacher's snapshot flips.
+    const pausedFlips = Promise.all(
+      [studentA, studentB, waiter].map((s) => nextActivityPaused(s))
+    );
+    const pausedSnapshot = chatsSnapshotWhere(teacher, (p) => p.paused);
+    teacher.emit("chats:pause-all");
+    for (const flip of await pausedFlips) {
+      expect(flip).toEqual({ paused: true });
+    }
+    await pausedSnapshot;
+    expect(activity.pausedAt).not.toBeNull();
+
+    // A send into the frozen room dies silently — no line to anyone.
+    const frozenLines: unknown[] = [];
+    studentA.on("chat:line", (p) => frozenLines.push(p));
+    studentB.on("chat:line", (p) => frozenLines.push(p));
+    studentA.emit("chat:send", { text: "anyone?" });
+    await sleep(100);
+    expect(frozenLines).toEqual([]);
+    expect(chat.lines).toEqual([]);
+
+    // A mid-pause join is welcomed frozen.
+    const midPause = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Adi",
+      nonce: "nonce-d",
+    });
+    const midWelcome = await nextWelcome(midPause);
+    expect(midWelcome.paused).toBe(true);
+
+    // Resume flips everyone back and the next send lands.
+    const resumeFlips = Promise.all(
+      [studentA, studentB, waiter, midPause].map((s) => nextActivityPaused(s))
+    );
+    teacher.emit("chats:resume-all");
+    for (const flip of await resumeFlips) {
+      expect(flip).toEqual({ paused: false });
+    }
+    const lineAtB = nextChatLine(studentB);
+    studentA.emit("chat:send", { text: "moving again" });
+    expect((await lineAtB).line.text).toBe("moving again");
+    expect(activity.pausedAt).toBeNull();
   });
 
   it("ending around a dropped member arms a fresh grace, and their resume lands on the ended screen", async () => {

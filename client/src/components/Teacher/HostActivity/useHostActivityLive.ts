@@ -24,12 +24,12 @@ import type { HostedChat, WaitingStudent } from "./hostWorld";
   per-message `chat:transcript-line` deltas keeping transcripts live
   between snapshots — the matching commands (chat:start,
   match:pair-everyone, chat:remove, chat:end, chats:end-all,
-  settings:update) emit over the same socket. Ending is real: the emit is
-  bare, and the ended card arrives on the handler's own chats:snapshot —
-  no local state to reconcile. Deliberately imports nothing from
-  hostWorld.ts beyond types — tickWorld runs the SIMULATION's auto-match
-  and must never see a real student. Pausing stays inert (pausingEnabled:
-  false) until it ships.
+  chats:pause-all, chats:resume-all, settings:update) emit over the same
+  socket. Ending and pausing are real: the emits are bare, and the flipped
+  state arrives on the handler's own chats:snapshot — no local state to
+  reconcile. Deliberately imports nothing from hostWorld.ts beyond types —
+  tickWorld runs the SIMULATION's auto-match and must never see a real
+  student.
 
   The server refreshes the activity's TTL while this socket is connected
   (the teacher socket is the keep-alive), so an open host page keeps its
@@ -123,6 +123,7 @@ export function useHostActivityLive({
   );
   const [connection, setConnection] =
     useState<LobbyConnectionState>("connected");
+  const [paused, setPaused] = useState(false);
   const socketRef = useRef<LobbySocket | null>(null);
   const onActivityGoneRef = useLatestRef(onActivityGone);
   const onSettingsSyncRef = useLatestRef(onSettingsSync);
@@ -143,6 +144,9 @@ export function useHostActivityLive({
     socket.on("chats:snapshot", (payload) => {
       setChats(payload.chats.map(toHostedChat));
       setLeftoverStudentId(payload.leftoverStudentId);
+      // `=== true` tolerates the deploy window where an older server's
+      // snapshot has no paused field yet.
+      setPaused(payload.paused === true);
     });
     socket.on("chat:transcript-line", ({ chatId, line }) => {
       // The one delta on the teacher wire (message lines only — a snapshot
@@ -201,14 +205,18 @@ export function useHostActivityLive({
       setChats([]);
       setLeftoverStudentId(null);
       setConnection("connected");
+      setPaused(false);
     };
   }, [hostKey, onActivityGoneRef, onSettingsSyncRef]);
 
   // The local 1s tick between snapshots: the server stamps waitSeconds and
   // elapsedSeconds at emit time; this keeps the clocks moving so rows and
   // cards never look frozen. Never through scaledMs — real classroom time
-  // is never compressed.
+  // is never compressed. While paused it stands down entirely: the server's
+  // numbers are frozen at the pause anchor, and resume re-snapshots with
+  // the clocks shifted, so nothing jumps.
   useEffect(() => {
+    if (paused) return;
     const interval = setInterval(() => {
       setWaiting((prev) =>
         prev.length === 0
@@ -226,7 +234,7 @@ export function useHostActivityLive({
       );
     }, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [paused]);
 
   const removeFromQueue = (studentId: string) => {
     socketRef.current?.emit("queue:remove", { studentId });
@@ -245,6 +253,12 @@ export function useHostActivityLive({
   };
   const endAllChats = () => {
     socketRef.current?.emit("chats:end-all");
+  };
+  const pauseAllChats = () => {
+    socketRef.current?.emit("chats:pause-all");
+  };
+  const resumeAllChats = () => {
+    socketRef.current?.emit("chats:resume-all");
   };
   const updateSettings = (settings: ActivitySettings) => {
     socketRef.current?.emit("settings:update", { settings });
@@ -278,14 +292,12 @@ export function useHostActivityLive({
     pairEveryone,
     endChat,
     endAllChats,
-    // Pausing stays a placeholder until it ships.
-    paused: false,
-    pauseAllChats: noop,
-    resumeAllChats: noop,
+    paused,
+    pauseAllChats,
+    resumeAllChats,
     removeFromQueue,
     removeFromChat,
     updateSettings,
-    pausingEnabled: false,
     connection,
   };
 }

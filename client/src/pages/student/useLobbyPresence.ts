@@ -83,6 +83,11 @@ function buildStudentAuth(
  * (the student's own send echoes back through it too), `onChatEnded` the
  * below-2 ending — re-sent on resume while the seat is wrapping up.
  *
+ * `paused` is the activity-wide teacher pause, delivered on lobby:welcome
+ * (so a refresh mid-pause stays frozen) and flipped live by
+ * activity:paused. State, not a callback: every seated stage — lobby,
+ * chat, ended — renders it, and it must survive stage changes.
+ *
  * `returnToLobby` is the ended screen's Back tap: it asks the server to
  * return the wrapping-up seat to the queue with a fresh wait clock.
  * `sendChatMessage` emits `chat:send`; rejections are silent server-side
@@ -125,6 +130,7 @@ export function useLobbyPresence({
   onPeerTyping?: (payload: { chatId: string; characterId: string }) => void;
 }): {
   presence: LobbyPresence;
+  paused: boolean;
   retrying: boolean;
   retry: () => void;
   returnToLobby: () => void;
@@ -132,6 +138,7 @@ export function useLobbyPresence({
   sendTyping: () => void;
 } {
   const [presence, setPresence] = useState<LobbyPresence>("connected");
+  const [paused, setPaused] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const socketRef = useRef<LobbySocket | null>(null);
   const sessionRef = useLatestRef(session);
@@ -178,8 +185,17 @@ export function useLobbyPresence({
       // lobby:removed / activity:ended, and that must not read as a blip.
       setPresence((p) => (isTerminal(p) ? p : "reconnecting"));
     });
-    socket.on("lobby:welcome", (payload) => {
-      updateSessionRef.current(payload);
+    socket.on("lobby:welcome", ({ studentId, token, paused: pausedNow }) => {
+      // Destructured on purpose: only the seat credentials may reach the
+      // persisted session — `paused` is live state and must never survive
+      // in sessionStorage past the truth that minted it.
+      updateSessionRef.current({ studentId, token });
+      // `=== true` tolerates the deploy window where an older server's
+      // welcome has no paused field yet.
+      setPaused(pausedNow === true);
+    });
+    socket.on("activity:paused", (payload) => {
+      setPaused(payload.paused === true);
     });
     socket.on("lobby:removed", () => {
       setPresence("removed");
@@ -277,6 +293,7 @@ export function useLobbyPresence({
         });
       }
       setPresence("connected");
+      setPaused(false);
       setRetrying(false);
     };
   }, [
@@ -329,6 +346,7 @@ export function useLobbyPresence({
 
   return {
     presence,
+    paused,
     retrying,
     retry,
     returnToLobby,

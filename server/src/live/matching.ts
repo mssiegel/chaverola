@@ -12,8 +12,9 @@ import type { Seat } from "./seats";
   this module owns the chat records and the pairing rules. The rules mirror
   hostWorld.ts's demo simulation (read, never import) minus rematch memory —
   chats end two ways (the teacher's endChat, and markInactive's below-2
-  rule), but the server still tracks no last-partners, so pairing stays
-  greedy in queue order. Rematch memory is its own later feature.
+  rule) and the whole class pauses as one switch (pauseChats/resumeChats),
+  but the server still tracks no last-partners, so pairing stays greedy in
+  queue order. Rematch memory is its own later feature.
 */
 
 /** One stored transcript line. Deliberately lean: no characterId, no name
@@ -222,6 +223,39 @@ export function endChat(
   chat.status = "ended";
   chat.endReason = "teacher";
   return { ended: true, chat };
+}
+
+/**
+ * The teacher's world-level pause: stamp the freeze anchor. Everything else
+ * — refusing sends, holding auto-match, clocking snapshots against the
+ * anchor — reads `pausedAt` where it already works. False when already
+ * paused, the teacher-command idempotency signal.
+ */
+export function pauseChats(activity: StoredActivity, now: number): boolean {
+  if (activity.pausedAt !== null) return false;
+  activity.pausedAt = now;
+  return true;
+}
+
+/**
+ * Resume: shift the stored clocks forward by the pause duration so nobody's
+ * wait or chat time jumps, then clear the anchor. The min-clamp handles
+ * everything born mid-pause (joins, lobby:back returns, manually-paired
+ * chats): their timestamps sit past the anchor, so they land at `now` —
+ * zero accrued time — instead of in the future. False when not paused.
+ */
+export function resumeChats(activity: StoredActivity, now: number): boolean {
+  if (activity.pausedAt === null) return false;
+  const pauseMs = now - activity.pausedAt;
+  for (const seat of activity.seats.byId.values()) {
+    seat.joinedAt = Math.min(seat.joinedAt + pauseMs, now);
+  }
+  for (const chat of activity.chats) {
+    if (chat.status !== "active") continue;
+    chat.startedAt = Math.min(chat.startedAt + pauseMs, now);
+  }
+  activity.pausedAt = null;
+  return true;
 }
 
 /**

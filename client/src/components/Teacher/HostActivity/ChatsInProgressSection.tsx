@@ -15,10 +15,6 @@ interface ChatsInProgressSectionProps {
   activity: HostedActivity;
   studentsChattingCount: number;
   waitingCount: number;
-  /** False on live activities until pausing ships: Pause all renders
-   *  disabled, with a hint line saying why (honest-placeholder pattern;
-   *  founder call, 2026-07-20). Ending carries no flag. */
-  pausingEnabled: boolean;
   onEndChat: (chatId: string) => void;
   onRequestEndAll: () => void;
   /** The activity-wide pause; pausing confirms, resuming is one tap. */
@@ -43,7 +39,6 @@ export function ChatsInProgressSection({
   activity,
   studentsChattingCount,
   waitingCount,
-  pausingEnabled,
   onEndChat,
   onRequestEndAll,
   paused,
@@ -118,7 +113,6 @@ export function ChatsInProgressSection({
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={!pausingEnabled}
                   onClick={onRequestPauseAll}
                   className="border-amber-400/60 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
                 >
@@ -137,13 +131,6 @@ export function ChatsInProgressSection({
               </Button>
             </div>
           </div>
-          {/* The one still-disabled control's hint (ending shipped; the
-              shared-hint pattern stays for whenever pause needs company). */}
-          {!pausingEnabled && (
-            <p className="-mt-2 mb-4 text-xs text-muted-foreground">
-              Pausing chats comes in a later update.
-            </p>
-          )}
           {paused && (
             <div
               role="status"

@@ -19,7 +19,10 @@ whole transcript riding `ChatSnapshot.messages`). Feature 5 adds the
 **student typing indicator** (`chat:typing` → `chat:peer-typing`, an
 ephemeral heartbeat relay — students only). Feature 6 makes **ending
 real**: the teacher's `chat:end` / `chats:end-all` end chats outright.
-Pausing, the auto-end clock, and the name reveal are further out still.
+Feature 7 makes **pausing real**: `chats:pause-all` / `chats:resume-all`
+freeze and unfreeze the whole class — sends refuse, matchmaking and the
+clocks hold, and every connected student hears `activity:paused`. The
+auto-end clock and the name reveal are further out still.
 
 ## Conventions
 
@@ -214,16 +217,27 @@ lobby's full-activity screen has a Try again button for exactly this).
 export interface ServerToClientEvents {
   /** Teacher room; also emitted to a teacher socket the moment it joins. */
   "queue:snapshot": (payload: { students: QueueEntry[] }) => void;
-  /** Student only. Persist both into the session for resume. */
-  "lobby:welcome": (payload: { studentId: string; token: string }) => void;
+  /** Student only. Persist studentId + token into the session for resume;
+   *  `paused` is the activity-wide pause at connect time (live state —
+   *  never persisted), so a refresh mid-pause stays frozen. */
+  "lobby:welcome": (payload: {
+    studentId: string;
+    token: string;
+    paused: boolean;
+  }) => void;
   /** Student only: the teacher removed you → name step + notice. */
   "lobby:removed": () => void;
   /** Student only: the activity died under you → the ended screen. */
   "activity:ended": () => void;
+  /** Student only, targeted at every connected seat — chat members, lobby
+   *  waiters, and wrappingUp alike (the pause is activity-wide). Live
+   *  flips only; connect-time state rides lobby:welcome. */
+  "activity:paused": (payload: { paused: boolean }) => void;
   /** Teacher room; also emitted to a teacher socket the moment it joins. */
   "chats:snapshot": (payload: {
     chats: ChatSnapshot[];
     leftoverStudentId: string | null; // pair-everyone's odd one out
+    paused: boolean; // the world-level pause — keeps a second host device coherent
   }) => void;
   /** Student only, targeted; re-sent on every resume while matched.
    *  `lines` is the transcript backlog (authoritative on every delivery);
@@ -323,7 +337,9 @@ optimization, never the only path. `queue:snapshot` excludes
 matched and wrapping-up seats, so the queue is exactly the pool the
 pairing rail can act on. The two clocks (`waitSeconds`, `elapsedSeconds`)
 are computed server-side at emit and ticked locally by the client between
-snapshots.
+snapshots — while the class is paused they're computed against the pause
+anchor instead (frozen), the client's local tick stands down, and resume
+shifts the stored timestamps so the clocks continue without a jump.
 
 `ChatParticipant.character` is the **server's** roster copy on purpose:
 character edits stay local to the teacher's page, so a locally renamed
@@ -353,8 +369,17 @@ export interface ClientToServerEvents {
    *  go wrappingUp and hear chat:ended. */
   "chat:end": (payload: { chatId: string }) => void;
   /** Teacher only: the round-closer — ends every active chat at once. A
-   *  class with none active is a no-op. Plural like chats:snapshot. */
+   *  class with none active is a no-op. Plural like chats:snapshot. Also
+   *  clears an active pause: the round is over, the next starts unpaused. */
   "chats:end-all": () => void;
+  /** Teacher only; idempotent — pausing a paused class is a no-op. The
+   *  world-level pause: sends and typing refuse everywhere, auto-match and
+   *  the clocks hold; joins, manual pairing, and ending keep flowing. */
+  "chats:pause-all": () => void;
+  /** Teacher only; idempotent — resuming an unpaused class is a no-op.
+   *  Shifts the held clocks forward so nobody's wait or chat time jumps.
+   *  chat:end never clears a pause; chats:end-all does. */
+  "chats:resume-all": () => void;
   /** Teacher only; zod-validated, replaces the stored settings. */
   "settings:update": (payload: { settings: ActivitySettings }) => void;
   /** Student: the ended screen's Back-to-the-lobby tap — returns a
@@ -377,7 +402,8 @@ structural boundary, not a per-event role check, is what keeps a student
 from starting chats or rewriting settings. Two cases are pinned by tests:
 a 4-digit join code cannot open a teacher socket at all, and a student
 socket emitting `queue:remove`, `chat:start`, `chat:remove`, `chat:end`,
-`chats:end-all`, or `settings:update` is silently ignored.
+`chats:end-all`, `chats:pause-all`, `chats:resume-all`, or
+`settings:update` is silently ignored.
 
 Teacher commands are also **idempotent and self-correcting**: a command
 naming a student who just dropped, a chat that just ended, or a seat that
@@ -441,6 +467,21 @@ below.
   student's own `lobby:back` tap, never automatic. End-all also holds auto-match: the
   client turns the setting off in the same confirm, so nobody is
   re-paired into a round the teacher just closed.
+- **The teacher can pause the whole class.** `chats:pause-all` stamps
+  `pausedAt` — one field, both the flag and the freeze anchor. While
+  paused: `chat:send` and `chat:typing` refuse silently, the auto-match
+  tick stands down, snapshots clock `waitSeconds` / `elapsedSeconds`
+  against the anchor, and every connected seat (chatting, waiting, or
+  wrapping up) hears `activity:paused` — `lobby:welcome` carries the
+  state for anyone who connects mid-pause. Still flowing on purpose:
+  joins, `lobby:back`, `lobby:leave`, manual pairing (a chat started
+  mid-pause is born frozen — the send guard is activity-level), ending,
+  settings edits, and the **120s grace window** — a pause must not stop
+  a dead phone from being reaped and its partner freed (founder call,
+  2026-07-21). `chats:resume-all` (and `chats:end-all`) shift every
+  seat's `joinedAt` and every active chat's `startedAt` forward by the
+  pause duration, clamped to now — pre-pause time is preserved,
+  mid-pause arrivals resume at zero, and nobody's clock jumps.
 - **Settings sync; the roster doesn't.** `settings:update` is
   zod-validated against the same schema `POST /activities` uses and
   replaces the stored settings wholesale; the server echoes
@@ -548,7 +589,9 @@ hears `chat:peer-typing`, and neither does the sender's own.
   survives `LOBBY_GRACE_SECONDS` (120) starting at _detected_ disconnect,
   marked `reconnecting`, and reconnecting restores it with its original
   wait clock. At expiry a waiting seat is reaped; a seat **in a chat**
-  leaves its chat as well (see the matching truths above).
+  leaves its chat as well (see the matching truths above). A pause does
+  NOT hold this window — the grace runs through it, and the teacher's
+  "reconnecting" tags keep real time even while the wait clocks freeze.
 - **Broadcast delay.** The teacher-facing row change waits
   `LOBBY_DISCONNECT_BROADCAST_DELAY_MS` (4000) so a student's ~1–2s page
   refresh never flashes the row. The delay gates only the teacher-facing

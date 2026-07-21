@@ -12,18 +12,20 @@ import {
   createChat,
   endChat,
   markInactive,
+  pauseChats,
   planPairEveryone,
+  resumeChats,
 } from "./matching";
 import { createSeatState } from "./seats";
 import type { Seat } from "./seats";
 
 /*
   Deliberately light (see the feature-3 plan): the eligibility filter, the
-  character deal, the odd-count branch, the below-2 ending, and the
-  transcript's safety rules (membership guard, the line cap) — the pure
-  rules a browser pass can't cheaply pin. Everything else (even counts,
-  clamping, removals, timing) is covered by the feature prompts' browser
-  passes.
+  character deal, the odd-count branch, the below-2 ending, the pause's
+  clock shift, and the transcript's safety rules (membership guard, the
+  line cap) — the pure rules a browser pass can't cheaply pin. Everything
+  else (even counts, clamping, removals, timing) is covered by the feature
+  prompts' browser passes.
 */
 
 function makeActivity(characters: Character[]): StoredActivity {
@@ -38,6 +40,7 @@ function makeActivity(characters: Character[]): StoredActivity {
     seats: createSeatState(),
     chats: [],
     leftoverStudentId: null,
+    pausedAt: null,
   };
 }
 
@@ -203,6 +206,35 @@ describe("endChat", () => {
     markInactive(activity, second.id, c.studentId);
     expect(second.status).toBe("ended");
     expect(endChat(activity, second.id)).toBeUndefined();
+  });
+});
+
+describe("pauseChats / resumeChats", () => {
+  it("resume shifts held clocks; mid-pause arrivals land at zero accrued time", () => {
+    const activity = makeActivity(ROSTER);
+    const waiting = addSeat(activity, { joinedAt: 10_000 });
+    const [a, b] = [addSeat(activity), addSeat(activity)];
+    const active = createChat(activity, [a.studentId, b.studentId], 20_000)!;
+    const [c, d] = [addSeat(activity), addSeat(activity)];
+    const done = createChat(activity, [c.studentId, d.studentId], 5_000)!;
+    endChat(activity, done.id);
+
+    expect(pauseChats(activity, 30_000)).toBe(true);
+    expect(pauseChats(activity, 35_000)).toBe(false); // the anchor holds
+    expect(activity.pausedAt).toBe(30_000);
+    const midPause = addSeat(activity, { joinedAt: 40_000 });
+
+    // A 60s pause. Whatever was accrued at the anchor stays accrued.
+    expect(resumeChats(activity, 90_000)).toBe(true);
+    expect(activity.pausedAt).toBeNull();
+    expect(waiting.joinedAt).toBe(70_000); // 20s waited then, 20s waited now
+    expect(active.startedAt).toBe(80_000); // 10s of chat time kept
+    // Born mid-pause: no time accrued while the world wasn't moving.
+    expect(midPause.joinedAt).toBe(90_000);
+    // An ended chat's clock is never displayed — left alone.
+    expect(done.startedAt).toBe(5_000);
+
+    expect(resumeChats(activity, 95_000)).toBe(false); // not paused
   });
 });
 

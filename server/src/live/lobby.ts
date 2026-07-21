@@ -48,7 +48,9 @@ import {
   findAutoMatchPair,
   markInactive,
   matchedStudentIds,
+  pauseChats,
   planPairEveryone,
+  resumeChats,
 } from "./matching";
 import type { StoredChat } from "./matching";
 import {
@@ -217,6 +219,7 @@ export function attachLobby(
     return {
       chats: record.chats.map((chat) => toChatSnapshot(chat, record, now)),
       leftoverStudentId: record.leftoverStudentId,
+      paused: record.pausedAt !== null,
     };
   }
 
@@ -276,6 +279,18 @@ export function attachLobby(
     }
   }
 
+  /** The pause is activity-wide, so every connected seat hears the flip —
+   *  chat members, lobby waiters, and wrappingUp seats alike (the lobby
+   *  shows its own paused pill). Connect-time state rides lobby:welcome. */
+  function sendActivityPaused(record: StoredActivity, paused: boolean): void {
+    for (const seat of record.seats.byId.values()) {
+      if (!seat.connected) continue;
+      io.sockets.sockets
+        .get(seat.currentSocketId)
+        ?.emit("activity:paused", { paused });
+    }
+  }
+
   /** After markInactive or endChat: tell the remaining members what
    *  happened. A chat that ended puts them on the ended screen (wrappingUp
    *  — the return to the queue is THEIR tap, never automatic); one that
@@ -314,6 +329,7 @@ export function attachLobby(
     if (!state) return;
     const record = getByJoinCode(joinCode); // never refreshes the TTL
     if (!record || !record.settings.autoMatch) return;
+    if (record.pausedAt !== null) return; // matchmaking waits out a pause
     const now = Date.now();
     if (now < state.nextAt) return;
     const pair = findAutoMatchPair(
@@ -554,11 +570,34 @@ export function attachLobby(
           endedCount += 1;
           settleMembershipChange(current, result);
         }
-        if (endedCount === 0) return; // nothing active — a visible no-op
+        // The round-closer also clears a pause — the next round starts
+        // unpaused. Through resumeChats, not a bare null: the waiting
+        // students' frozen wait clocks have to shift or they'd jump.
+        const resumed = resumeChats(current, Date.now());
+        if (endedCount === 0 && !resumed) return; // a visible no-op
         log.info(
-          { joinCode: data.joinCode, chats: endedCount },
+          { joinCode: data.joinCode, chats: endedCount, resumed },
           "all chats ended by teacher"
         );
+        if (resumed) sendActivityPaused(current, false);
+        broadcastState(current);
+      });
+
+      socket.on("chats:pause-all", () => {
+        const current = getByHostKey(data.hostKey);
+        if (!current) return;
+        if (!pauseChats(current, Date.now())) return; // already paused
+        log.info({ joinCode: data.joinCode }, "chats paused by teacher");
+        sendActivityPaused(current, true);
+        broadcastState(current);
+      });
+
+      socket.on("chats:resume-all", () => {
+        const current = getByHostKey(data.hostKey);
+        if (!current) return;
+        if (!resumeChats(current, Date.now())) return; // not paused
+        log.info({ joinCode: data.joinCode }, "chats resumed by teacher");
+        sendActivityPaused(current, false);
         broadcastState(current);
       });
 
@@ -596,7 +635,7 @@ export function attachLobby(
       { joinCode: data.joinCode, studentId: data.studentId },
       "student connected"
     );
-    socket.emit("lobby:welcome", toLobbyWelcome(seat));
+    socket.emit("lobby:welcome", toLobbyWelcome(seat, record));
     // Resume-into-chat: refresh, wifi recovery, and duplicate-tab takeover
     // all land here — an active chat member gets their room back, a
     // wrappingUp seat gets its ended screen back.
@@ -614,8 +653,8 @@ export function attachLobby(
 
     // A student socket deliberately gets NO teacher handlers — a student
     // emitting queue:remove / chat:start / chat:remove / chat:end /
-    // chats:end-all / settings:update is simply ignored (the boundary test
-    // pins this).
+    // chats:end-all / chats:pause-all / chats:resume-all / settings:update
+    // is simply ignored (the boundary test pins this).
     socket.on("lobby:leave", () => {
       const current = getByJoinCode(data.joinCode);
       if (!current) return;
@@ -670,6 +709,9 @@ export function attachLobby(
       if (sendTimes.length >= CHAT_SEND_WINDOW_LIMIT) return;
       const current = getByJoinCode(data.joinCode);
       if (!current) return;
+      // Paused means paused — the server-side belt under the disabled
+      // composer. Silent like every rejection; the composer is the UX.
+      if (current.pausedAt !== null) return;
       const chat = findActiveChatOf(current, data.studentId);
       if (!chat) return;
       const result = appendLine(current, chat.id, data.studentId, text, now);
@@ -702,6 +744,7 @@ export function attachLobby(
       lastTypingRelayAt = now;
       const current = getByJoinCode(data.joinCode);
       if (!current) return;
+      if (current.pausedAt !== null) return; // no ghost dots in a frozen room
       const chat = findActiveChatOf(current, data.studentId);
       if (!chat) return;
       // No store touch, no teacher emit: typing is never a stored fact, and

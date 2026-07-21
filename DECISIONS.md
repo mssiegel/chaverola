@@ -94,6 +94,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Character rows lead with the emoji avatar](#character-rows-lead-with-the-emoji-avatar)
   - [Setup sections each carry one brand accent; settings stays the quiet one](#setup-sections-each-carry-one-brand-accent-settings-stays-the-quiet-one)
 - [Teacher live activity page](#teacher-live-activity-page)
+  - [Pausing ships end to end; the grace window keeps running through it](#pausing-ships-end-to-end-the-grace-window-keeps-running-through-it)
   - [Ending ships for real; pausing keeps the placeholder seam](#ending-ships-for-real-pausing-keeps-the-placeholder-seam)
   - [The teacher reads every chat, and that ships with messaging — not after it](#the-teacher-reads-every-chat-and-that-ships-with-messaging--not-after-it)
   - [Message lines are the one delta on the teacher wire](#message-lines-are-the-one-delta-on-the-teacher-wire)
@@ -1427,9 +1428,61 @@ _Implemented in
 
 ## Teacher live activity page
 
-### Ending ships for real; pausing keeps the placeholder seam
+### Pausing ships end to end; the grace window keeps running through it
 
 _2026-07-21_
+
+**Decision:** "Pause all chats" / Resume work on live activities, to the
+2026-07-17 spec ([Pause is one world-level switch](#pause-is-one-world-level-switch-chats-freeze-clocks-hold-matchmaking-waits))
+with one amendment: **the 120s disconnect grace window keeps running
+through a pause.** The server stores a single `pausedAt` timestamp —
+both the flag and the freeze anchor. While set: `chat:send` and
+`chat:typing` refuse silently, the auto-match tick stands down, and
+snapshots compute `waitSeconds`/`elapsedSeconds` against the anchor, so
+every clock the teacher sees is frozen — but "reconnecting" tags keep
+real time, since their grace clock is still running. Resume (and
+End-all, which still clears the pause) shifts every seat's `joinedAt`
+and every active chat's `startedAt` forward by the pause duration,
+clamped to now: pre-pause time is preserved, mid-pause arrivals resume
+at zero, and no clock jumps. Every connected student hears one
+`activity:paused` flip — chat members freeze in place (banner, locked
+composer), lobby waiters get the "Class is paused" pill — and
+`lobby:welcome` carries the state so a refresh mid-pause stays frozen.
+The `pausingEnabled` engine seam and its "comes in a later update" hint
+are deleted.
+
+**Why:** Founder calls (feature-7 planning, 2026-07-21): freeze
+everything the old spec froze EXCEPT the grace window — a pause must
+never stop a dead phone from being reaped and its partner freed; the
+teacher would discover the stuck room only at resume. And the pause
+reaches everyone, not just chat members — a lobby student watching
+auto-match do nothing deserves the why. One field instead of a boolean
+plus bookkeeping: the anchor makes the freeze a projection detail and
+the resume shift one loop, with no per-entity offset state to leak.
+Sends refused at the activity level (not per chat) mean a chat manually
+paired mid-pause is born frozen with zero extra code. The pause state
+rides `lobby:welcome` for connects and one broadcast for flips, and the
+client keeps it out of the persisted session on purpose — sessionStorage
+must never outlive the truth that minted it. Client display components
+needed no changes at all: the whole paused UI shipped back in the demo
+era and was waiting on real state.
+
+_Implemented in [matching.ts](server/src/live/matching.ts)
+(`pauseChats`/`resumeChats`), [lobby.ts](server/src/live/lobby.ts) (the
+handlers, guards, and `sendActivityPaused`),
+[projections.ts](server/src/store/projections.ts) (the clockNow split),
+[useHostActivityLive](client/src/components/Teacher/HostActivity/useHostActivityLive.ts)
+(the emitters, `paused`, and the held tick), and
+[useLobbyPresence](client/src/pages/student/useLobbyPresence.ts) (the
+student side); plan in
+[docs/plans/feature-7-pausing.md](docs/plans/feature-7-pausing.md)._
+
+### Ending ships for real; pausing keeps the placeholder seam
+
+_2026-07-21 · The pausing half is superseded by
+[Pausing ships end to end; the grace window keeps running through it](#pausing-ships-end-to-end-the-grace-window-keeps-running-through-it):
+the `pausingEnabled` seam and its hint line are gone — pause is real on
+both engines. The ending half stands as written._
 
 **Decision:** "End chat" (per card) and "End all chats" work on live
 activities. Two new teacher commands — `chat:end { chatId }` and
@@ -1713,8 +1766,11 @@ is the next slice._
 
 _Ending shipped 2026-07-21 (feature 6): `chat:end` / `chats:end-all` are
 real teacher commands, and `endingEnabled` was renamed `pausingEnabled` —
-pausing and the auto-end clock are the placeholders that remain. See
-[Ending ships for real; pausing keeps the placeholder seam](#ending-ships-for-real-pausing-keeps-the-placeholder-seam)._
+see
+[Ending ships for real; pausing keeps the placeholder seam](#ending-ships-for-real-pausing-keeps-the-placeholder-seam).
+Pausing shipped the same day (feature 7), deleting that seam — the
+auto-end clock is the placeholder that remains. See
+[Pausing ships end to end; the grace window keeps running through it](#pausing-ships-end-to-end-the-grace-window-keeps-running-through-it)._
 
 **Decision:** Real host pages get the demo's full matching experience,
 working: tap-to-select (2 up to `min(4, roster)`), "Pair everyone 1:1", the
@@ -2065,7 +2121,11 @@ Chrome insets sticky offsets by the scroll container's own padding._
 
 ### Pause is one world-level switch: chats freeze, clocks hold, matchmaking waits
 
-_2026-07-17_
+_2026-07-17 · Shipped live 2026-07-21 by
+[Pausing ships end to end; the grace window keeps running through it](#pausing-ships-end-to-end-the-grace-window-keeps-running-through-it),
+with one amendment: the "reconnect windows hold" clause below is
+superseded — on live activities the 120s disconnect grace deliberately
+runs THROUGH a pause. Everything else shipped as written._
 
 **Decision:** One **Pause all chats** button (confirm first, in the default
 color — pausing isn't destructive) sits next to End all chats; while paused

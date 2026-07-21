@@ -200,8 +200,9 @@ export function JoinActivityPage() {
   // Mirrors the chat engine's ended flag up here so the stage (and with it
   // the page title) can tell chatting from ended.
   const [chatEnded, setChatEnded] = useState(false);
-  // The teacher's activity-wide pause, mocked at page level so it survives
-  // lobby ⇄ chat ⇄ ended. A real backend pushes this later.
+  // The DEMO's activity-wide pause, mocked at page level so it survives
+  // lobby ⇄ chat ⇄ ended and the demo controls can flip it. Real activities
+  // get theirs from the presence hook (the server pushes it) instead.
   const [classPaused, setClassPaused] = useState(false);
 
   const isSignedIn =
@@ -430,6 +431,7 @@ export function JoinActivityPage() {
     baseStage === "lobby" || baseStage === "chatting" || baseStage === "ended";
   const {
     presence,
+    paused: livePaused,
     retrying,
     retry,
     returnToLobby,
@@ -700,6 +702,7 @@ export function JoinActivityPage() {
             messages={match.messages}
             typingPeerId={match.typingPeerId}
             isEnded={chatEnded}
+            isPaused={livePaused}
             onSend={sendChatMessage}
             onTyping={sendTyping}
             // Leaving a live chat means leaving the activity: landing on
@@ -731,7 +734,7 @@ export function JoinActivityPage() {
               <WaitingLobby
                 activity={activity}
                 studentName={session.name}
-                isPaused={classPaused}
+                isPaused={isRealActivity ? livePaused : classPaused}
                 connection={lobbyConnection}
               />
             </div>
