@@ -231,7 +231,19 @@ trying to hurry matching along from the client.
   WebSocket** (old Chromium limitation), so a connected lobby socket only
   notices the outage when the engine.io ping cycle misses (~45s at default
   settings) — budget waits accordingly when asserting the reconnecting
-  pill, and don't read the delay as a client bug. Restarting the dev
+  pill, and don't read the delay as a client bug.
+- **`context.close()` disconnect detection is instant on localhost but
+  nondeterministic on production.** Over Render's proxy the close frames
+  sometimes reach the server ~10s late and sometimes never (detection
+  then waits out the same ~45s ping cycle) — three consecutive f8p3 prod
+  runs got ~10s, ~10s, and ping-cycle. Consequences for grace-window
+  assertions: wait up to ~60s for a drop to surface, and never compute
+  the expected countdown from the moment you closed the context — the
+  server's clock starts at ITS detection, so your close time only bounds
+  the value from below. Internal-consistency checks (the value ticks
+  down; it continues across a reload) are the reliable ones. Also allow
+  117 as a first "dropped" reading: the 4s gate timer can fire a hair
+  early and `ceil` rounds the remaining grace up past 116. Restarting the dev
   server is the fast way to force a real disconnect. Also note the lobby
   socket resumes seats across refreshes: to observe a fresh join, use a
   new browser context (fresh sessionStorage), not a reload.
