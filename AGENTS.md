@@ -429,15 +429,21 @@ Run from the repo root:
 
 - **Cut features into end-to-end slices, not layers.** Each prompt in a plan
   doc is **one working thing** delivered all the way through — wire, server,
-  client, docs, tests, and its own production pass — demonstrable on its own
-  when it lands. Not a server prompt, then a client prompt, then a docs
-  prompt. Docs are updated **inside the prompt that changes the behavior**,
-  never deferred to a sweep at the end. A cross-cutting production hunt still
-  earns its own final prompt: per-prompt verification proves each slice
-  works, but it can't cover the seams between slices. Founder call
+  client, docs, tests, and its own verification against the local stack —
+  demonstrable on its own when it lands. Not a server prompt, then a client
+  prompt, then a docs prompt. Docs are updated **inside the prompt that
+  changes the behavior**, never deferred to a sweep at the end. Founder call
   (2026-07-20) — see DECISIONS.md → "Features ship as end-to-end slices, not
   layers", and [docs/plans/feature-4-messaging.md](docs/plans/feature-4-messaging.md)
-  for the first worked example.
+  for the first worked example. **Production is driven once per feature**,
+  in the final cross-cutting prompt: the cold-wake check as the session's
+  first prod contact, the feature's network-sensitive legs, the full
+  gauntlet, and a deployed-build smoke. Per-prompt verification proves each
+  slice works but can't cover the seams between slices — and prod's real
+  timings (ping cycles, grace windows, reconnect backoff) are worth paying
+  for once per feature, not per slice (founder call, 2026-07-21 — see
+  DECISIONS.md → "Slices verify on localhost; production driving happens
+  once per feature").
   - **The deploy race is the cost, and it has a rule.** A vertical slice
     touches `shared/` in one commit, and `shared/` is in BOTH deploy
     triggers (Vercel's Ignored Build Step and Render's build filter), so one
@@ -508,7 +514,12 @@ Run from the repo root:
   UI — and then only the surfaces the change touches, at desktop and phone
   widths, with fast timers on (`?fast=10` on a dev build; see the skill).
   A full every-surface sweep is for cross-cutting changes (layout shells,
-  design tokens, shared chat pieces), not for localized ones.
+  design tokens, shared chat pieces), not for localized ones. Every rung of
+  this ladder runs against the local stack; production driving is reserved
+  for the feature's final prompt (see the slices rule above and the verify
+  skill's Production section) — the per-push deploy checks (`/healthz` for
+  the new server commit, Vercel Ready for the expected SHA) stay on every
+  push regardless.
 - **Render free-tier spin-down is settled — never re-verify it by waiting.**
   Proven empirically 2026-07-19 (results recorded in
   [docs/plans/feature-2-live-lobby.md](docs/plans/feature-2-live-lobby.md)):

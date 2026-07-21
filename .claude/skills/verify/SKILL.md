@@ -260,6 +260,46 @@ trying to hurry matching along from the client.
 
 ## Production
 
+**Production is driven once per feature, not per slice** (founder call,
+2026-07-21 — DECISIONS.md → "Slices verify on localhost; production
+driving happens once per feature"). A slice's own verification runs
+entirely on the local stack above; the feature's final cross-cutting
+prompt carries all the prod work: the cold-wake check FIRST, the
+feature's network-sensitive legs, the full gauntlet, a deployed-build
+smoke, and the handset asks. The per-push deploy checks (`/healthz` for
+the new server commit, Vercel Ready for the expected SHA) are deploy
+discipline, not verification — they stay on every push.
+
+**What only production can prove** — compose the feature-end gauntlet
+from this list; anything not on it belongs on localhost:
+
+- Render-proxy close behavior: disconnect detection lands ~10s late or
+  waits out the ~45s ping cycle (gotcha above) — grace-window timing
+  needs a prod reading.
+- Emit-then-disconnect over a real network: loopback separates the
+  writes, real wifi coalesces them (gotcha above).
+- Cold-start wake UX, the restart story, and the deploy pipeline — they
+  only exist on Render/Vercel.
+- Prod-build behavior: `?fast` is compiled out, `VITE_API_URL` is baked
+  at build time (the BOM incident), anything bundle-level.
+- A device that genuinely goes offline — the handset legs; headless
+  Chrome on broadband never loses its connection.
+
+While a slice is in development its network-sensitive logic still has
+local stand-ins — restarting the dev server forces a real disconnect,
+and the CDP network-cut technique (`f3p5-leave-offline-repro.mjs`)
+works against localhost — they prove the logic; the feature-end prod
+run proves the timing.
+
+**Harness targets come from env.** `f3p5-lib.mjs` reads `CHAVEROLA_WEB`
+(default `http://localhost:5199`) and `CHAVEROLA_API` (default
+`http://localhost:3001`), so scripts built on it run against either
+target — local by default (start the dev server with the
+`CLIENT_ORIGINS` override above), prod when the feature-end run sets
+`https://chaverola.com` / `https://api.chaverola.com`. Write new
+scripts on the lib; older ones with hardcoded prod URLs (`f2p5-*`,
+`f4p2-*`) get migrated opportunistically next time they run.
+
 **Scripts are not the whole pass.** Both production bugs found so far lived
 where a headless browser structurally cannot go — a device that genuinely
 loses its connection. Do not treat a green scripted pass as a verified

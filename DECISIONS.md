@@ -187,6 +187,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Transcripts wait: feature 1 only stores the teacher's email](#transcripts-wait-feature-1-only-stores-the-teachers-email)
   - [Considered and rejected for the backend: TanStack Query, dotenv, a hostKey stash, an npm conversion](#considered-and-rejected-for-the-backend-tanstack-query-dotenv-a-hostkey-stash-an-npm-conversion)
 - [Process & tooling](#process--tooling)
+  - [Slices verify on localhost; production driving happens once per feature](#slices-verify-on-localhost-production-driving-happens-once-per-feature)
   - [Until launch, server pushes can happen at any hour](#until-launch-server-pushes-can-happen-at-any-hour)
   - [Features ship as end-to-end slices, not layers](#features-ship-as-end-to-end-slices-not-layers)
   - [Agents read Render logs through the CLI, with the API key in `.env.local`](#agents-read-render-logs-through-the-cli-with-the-api-key-in-envlocal)
@@ -3796,6 +3797,45 @@ forever.
 
 ## Process & tooling
 
+### Slices verify on localhost; production driving happens once per feature
+
+_2026-07-21_
+
+**Decision:** A slice's verification runs against the local stack —
+`pnpm dev:client --port 5199 --strictPort` plus `pnpm dev:server` with the
+`CLIENT_ORIGINS` override — not against chaverola.com. Production is driven
+**once per feature**, in the final cross-cutting prompt, which now carries
+everything that needs the real deployment: the cold-wake check as the
+session's FIRST prod contact, the feature's network-sensitive legs (proxy
+close detection, grace timing, emit-then-disconnect), the full gauntlet,
+and a deployed-build smoke. Two checks stay per-push because they are
+deploy discipline, not feature verification: poll `/healthz` for the new
+server commit, and confirm Vercel's latest production deployment is Ready
+for the SHA you expect. The restart story still reruns only when teardown
+code changes, and the real-handset asks are unchanged.
+
+**Why:** Founder call (2026-07-21), prompted by noticing that every
+feature-8 slice ended with a prod run. The per-slice prod pass was the
+dominant time cost of a slice — prod budgets real ping cycles (~45s),
+grace windows (120s), and reconnect backoff, while localhost verifies the
+same behavior in seconds with `?fast` timers and instant sockets. And
+every production-only bug class found so far — Render's lazy close frames,
+coalesced emit-then-disconnect over real networks, cold starts, the deploy
+pipeline, prod env baking, a handset that genuinely goes offline — is
+covered either by the feature-end pass or by the per-push deploy checks.
+The accepted risk, named out loud: a prod-only breakage introduced
+mid-feature can sit on chaverola.com until the feature-end pass catches
+it. Pre-launch, with no real classes, that risk costs nothing; it is the
+founder's accepted trade.
+
+This **revises** one clause of
+[Features ship as end-to-end slices, not layers](#features-ship-as-end-to-end-slices-not-layers)
+— "its own production pass" becomes "its own local verification" — and
+leaves the rest of that decision standing.
+
+_Reflected in AGENTS.md (the slices rule and the cheapest-gate rule) and
+the verify skill's Production section._
+
 ### Until launch, server pushes can happen at any hour
 
 _2026-07-21_
@@ -3820,7 +3860,10 @@ _Reflected in `README.md`, `docs/architecture.md`,
 
 ### Features ship as end-to-end slices, not layers
 
-_2026-07-20_
+_2026-07-20 · Revised 2026-07-21: the per-slice "production pass" clause —
+slices now verify on localhost, and production is driven once per feature;
+see
+[Slices verify on localhost; production driving happens once per feature](#slices-verify-on-localhost-production-driving-happens-once-per-feature)._
 
 **Decision:** A feature's prompts are cut **vertically**: each prompt is one
 working thing delivered all the way through — wire, server, client, docs,
