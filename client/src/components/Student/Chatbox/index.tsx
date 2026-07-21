@@ -19,6 +19,10 @@ export interface ChatboxProps {
   /** Teacher's "reveal names" setting (mocked in the demo). */
   revealNames: boolean;
   onSend: (text: string) => void;
+  /** A keystroke happened in the composer — live rooms turn it into
+   *  chat:typing heartbeats. Demo callers pass nothing, so the demo
+   *  engines never see it. */
+  onTyping?: () => void;
   onEndChat: () => void;
   onLeaveChat: () => void;
   onBackToLobby: () => void;
@@ -55,6 +59,7 @@ export function Chatbox({
   chat,
   revealNames,
   onSend,
+  onTyping,
   onEndChat,
   onLeaveChat,
   onBackToLobby,
@@ -203,6 +208,7 @@ export function Chatbox({
       ) : (
         <MessageComposer
           onSend={onSend}
+          onTyping={onTyping}
           selfCharacterLabel={characterLabel(self)}
           disabled={isPaused}
         />

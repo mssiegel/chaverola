@@ -117,6 +117,14 @@ export interface ServerToClientEvents {
   /** Student only, targeted at each connected active member (the sender's
    *  own echo included — it is the delivery receipt). */
   "chat:line": (payload: { chatId: string; line: ChatLine }) => void;
+  /** Student only, targeted at each OTHER connected active member — never
+   *  the sender, never the teacher room. characterId-only, the same pin as
+   *  ChatPeer. Ephemeral: never stored, never in a resume backlog; the
+   *  receiver expires it TYPING_INDICATOR_TTL_MS after the last heartbeat. */
+  "chat:peer-typing": (payload: {
+    chatId: string;
+    characterId: string;
+  }) => void;
   /** Teacher room: one line per chat:send, real name attached — the one
    *  delta on the teacher wire (a full snapshot per message would be far
    *  too fat). Safe because chats:snapshot also carries the transcript, so
@@ -157,6 +165,11 @@ export interface ClientToServerEvents {
    *  points, rate-limited per socket. Every rejection is a silent no-op,
    *  like every other socket event — there is no error channel today. */
   "chat:send": (payload: { text: string }) => void;
+  /** Student only. A typing heartbeat, re-emitted at most once per
+   *  TYPING_HEARTBEAT_MS while keys flow. No payload — the seat and chat
+   *  resolve server-side, so there is nothing to validate or spoof. Silent
+   *  no-op outside an active chat, like every other socket event. */
+  "chat:typing": () => void;
 }
 
 /**
@@ -185,6 +198,14 @@ export const LOBBY_GRACE_SECONDS = 120;
  * teacher-facing state change — never the grace clock.
  */
 export const LOBBY_DISCONNECT_BROADCAST_DELAY_MS = 4000;
+
+/** Client re-emit floor while keys flow: the indicator appears within ~2s
+ *  of the first keystroke, and one heartbeat per 2s is the whole cost. */
+export const TYPING_HEARTBEAT_MS = 2_000;
+/** Receiver-side expiry, measured from the LAST heartbeat: 2.5 heartbeats,
+ *  so one dropped packet never flickers the indicator, while an abandoned
+ *  draft dies within 5s. */
+export const TYPING_INDICATOR_TTL_MS = 5_000;
 
 /** Seat cap per activity (engine.io bypasses the Express rate limiters, so
  *  the cap is the socket layer's own abuse guard). Tombstones don't count;

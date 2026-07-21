@@ -31,7 +31,7 @@ August 2026), so a deploy wipe hits nobody. To run it, tell the agent:
 
 When it's done, tick the checkbox here (same commit).
 
-- [ ] Prompt 1 — Students see each other typing (end to end)
+- [x] Prompt 1 — Students see each other typing (end to end)
 
 Repo rules that apply (details in `AGENTS.md`): run `pnpm format` before
 committing; never hand-write `memo`/`useCallback`/`useMemo` in the client

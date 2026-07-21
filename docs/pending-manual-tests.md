@@ -172,3 +172,60 @@ the students' own screens have them.
 
 So the residual risk is specifically the real-radio path: a socket that
 died without a close frame resuming with the backlog intact.
+
+## 3. Typing indicator on two real devices, including a mid-typing lock
+
+**Asked:** 2026-07-21 (feature 5, Prompt 1's "Done when"). **Blocked:** the
+prompt ran in an autonomous session with no founder at hand to drive real
+devices. Same setup as entry 2 — run all three in one sitting.
+
+**Needs:** a phone on cellular (wifi off) and a laptop tab as the second
+student, plus the teacher page open somewhere.
+
+### Why it's worth doing
+
+Typing heartbeats are the repo's first **volatile** emits: they deliberately
+die instead of queueing when the transport can't write right now. Loopback
+and broadband never exercise that path — only a radio that actually degrades
+does. The mid-typing lock is the sharpest leg: a locked phone stops
+heartbeating without any goodbye, and the TTL alone has to kill the
+partner's indicator.
+
+### Steps
+
+1. Make an activity, join from the phone and a laptop tab, pair them.
+2. Type on the phone (don't send) — watch the laptop.
+3. Stop typing mid-draft — watch the laptop.
+4. Type again and send — watch the indicator and the message land.
+5. Type again, then **lock the phone mid-typing** — watch the laptop.
+6. While the laptop student types, refresh the phone's tab.
+7. Keep the teacher's host page in view throughout.
+
+### What should happen
+
+- Step 2: "«character» is typing…" appears on the laptop within ~2s of the
+  first keystroke and stays up while typing continues.
+- Step 3: it disappears within ~5s of the last keystroke.
+- Step 4: the indicator clears the moment the message lands — no overlap.
+- Step 5: the partner's indicator dies within ~5s of the lock. **This is
+  the leg that matters most.**
+- Step 6: after the reload the indicator is absent, then back within ~2s
+  (typing is never in the resume backlog — the next heartbeat restores it).
+- Throughout: the teacher's chat cards show no typing artifact anywhere —
+  the teacher wire deliberately carries no typing signal (DECISIONS.md →
+  "The teacher never sees typing").
+
+**Bug:** an indicator that survives its typist — still up a minute after
+the phone locked — or any typing hint on the teacher's page.
+
+### What covers it in the meantime
+
+- A scripted production pass ran right after the deploy (2026-07-21): a
+  raw-socket leg (relay reaches both other members and never the
+  sender/teacher, payload exactly `{chatId, characterId}`, a 100ms burst
+  eaten by the relay floor) and a browser leg (appear ≤2s, expire ≤5s,
+  clear-on-message, receiver refresh, trio "someone is typing…", teacher
+  silence, demo zero-network) — all against chaverola.com.
+- The TTL-kills-a-silent-typist logic is client-local (a timer from the
+  last heartbeat), so the lock leg's residual risk is the volatile emit
+  path on a real radio, not the expiry logic itself.

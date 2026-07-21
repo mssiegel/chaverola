@@ -28,7 +28,9 @@ import { createChat } from "./matching";
   here: the cap's UNIT — code points — because a .length regression would
   eat emoji-heavy messages invisibly in any browser pass, and the teacher
   transcript's ROOM boundary — real names ride chat:transcript-line and
-  chats:snapshot, so neither may ever reach a student socket.
+  chats:snapshot, so neither may ever reach a student socket. The typing
+  relay's boundary is pinned the same way: chat:peer-typing reaches the
+  OTHER chat members only — never the sender, never the teacher room.
 */
 
 type ClientSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -375,6 +377,58 @@ describe("the live lobby", () => {
 
     await sleep(100);
     expect(studentLeaks).toEqual([]);
+  });
+
+  it("relays chat:typing to the other members only — never the sender, never the teacher", async () => {
+    const teacher = connect({ role: "teacher", hostKey: activity.hostKey });
+    await nextSnapshot(teacher);
+    const studentA = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Rachel",
+      nonce: "nonce-a",
+    });
+    const studentB = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Noa",
+      nonce: "nonce-b",
+    });
+    const welcomeA = await nextWelcome(studentA);
+    const welcomeB = await nextWelcome(studentB);
+    // `!` — both members are eligible; the chat just built above them.
+    const chat = createChat(
+      activity,
+      [welcomeA.studentId, welcomeB.studentId],
+      Date.now()
+    )!;
+
+    // The room boundary plus the privacy pin: typing reaches the OTHER
+    // members only — never back to the sender, never the teacher room.
+    const leaks: unknown[] = [];
+    teacher.on("chat:peer-typing", (p) => leaks.push(p));
+    studentA.on("chat:peer-typing", (p) => leaks.push(p));
+
+    const typingAtB = new Promise<{ chatId: string; characterId: string }>(
+      (resolve) => {
+        studentB.once("chat:peer-typing", resolve);
+      }
+    );
+    // Once — the min-interval guard eats rapid repeats, so a burst here
+    // would deliver exactly this one relay anyway.
+    studentA.emit("chat:typing");
+
+    const payload = await typingAtB;
+    expect(Object.keys(payload).sort()).toEqual(["characterId", "chatId"]);
+    expect(payload.chatId).toBe(chat.id);
+    // `!` — the chat was just created with A as a member.
+    const memberA = chat.members.find(
+      (m) => m.studentId === welcomeA.studentId
+    )!;
+    expect(payload.characterId).toBe(memberA.characterId);
+
+    await sleep(100);
+    expect(leaks).toEqual([]);
   });
 
   it("a matched seat's drop arms a grace timer, and a resume re-delivers chat:started", async () => {

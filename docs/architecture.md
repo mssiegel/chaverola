@@ -220,7 +220,7 @@ How the layer is put together (`server/src/live/`):
   snapshot (see DECISIONS.md → "Message lines are the one delta on the
   teacher wire"). Students get only targeted emits (`lobby:welcome`,
   `lobby:removed`, `activity:ended`, `chat:started`, `chat:update`,
-  `chat:line`, `chat:ended`), never a snapshot.
+  `chat:line`, `chat:peer-typing`, `chat:ended`), never a snapshot.
 - **Teacher commands live on teacher sockets only.** `chat:start`,
   `match:pair-everyone`, `chat:remove`, `settings:update`, and
   `queue:remove` are registered inside the teacher branch of the
@@ -250,12 +250,16 @@ How the layer is put together (`server/src/live/`):
   `chat:started` carries the whole transcript for students, and
   `ChatSnapshot.messages` does the same for the teacher — each side's
   only channel that heals a blip, since the fan-out skips disconnected
-  seats. **What is still simulated:** ending, pausing, the auto-end
-  clock, typing indicators, student-facing peer-drop UI, and the name
-  reveal. Chats are created and ended structurally
-  (`endReason: "teacher"` when membership drops below 2 is the only
-  reachable ending). The client's `endingEnabled` engine flag is the
-  seam that flips when ending and pausing become real.
+  seats. Typing is real too (feature 5): a `chat:typing` heartbeat
+  relays as `chat:peer-typing` to the other active members — ephemeral
+  and stateless (nothing stored, nothing resumed), characterId-only,
+  volatile in both directions, and deliberately with no teacher emit
+  (DECISIONS.md → "The teacher never sees typing"). **What is still
+  simulated:** ending, pausing, the auto-end clock, student-facing
+  peer-drop UI, and the name reveal. Chats are created and ended
+  structurally (`endReason: "teacher"` when membership drops below 2 is
+  the only reachable ending). The client's `endingEnabled` engine flag
+  is the seam that flips when ending and pausing become real.
 - **The teacher socket is the TTL keep-alive:** while one is connected,
   a ~5-minute `.unref()`ed interval calls `getByHostKey`, so a live
   class can't expire at the 12h TTL mid-lesson. Student sockets never

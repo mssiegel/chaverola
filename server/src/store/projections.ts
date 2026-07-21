@@ -196,6 +196,20 @@ export function toChatStarted(
   };
 }
 
+/** The student typing signal: characterId-only, the same load-bearing pin
+ *  as ChatPeer. Ephemeral — never stored, never in a resume backlog. */
+export function toPeerTyping(
+  chat: StoredChat,
+  studentId: string
+): { chatId: string; characterId: string } {
+  // The relay only calls this after findActiveChatOf, so the find can't miss.
+  const typist = chat.members.find((m) => m.studentId === studentId)!;
+  return {
+    chatId: chat.id,
+    characterId: typist.characterId,
+  };
+}
+
 export function toChatUpdate(
   chat: StoredChat,
   studentId: string

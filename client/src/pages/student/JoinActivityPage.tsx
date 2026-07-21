@@ -14,6 +14,7 @@ import {
 import {
   MAX_STUDENTS_PER_ACTIVITY,
   STUDENT_NAME_MAX_CHARS,
+  TYPING_INDICATOR_TTL_MS,
   type Character,
   type ChatLine,
   type ChatPeer,
@@ -92,6 +93,11 @@ interface LiveMatch {
   /** The transcript: real lines (from chat:line and chat:started's backlog)
    *  interleaved with local membership notices ("X left the chat"). */
   messages: ChatMessage[];
+  /** The one typing slot (a characterId), last writer wins. On the match
+   *  state, not beside it, so every clearing invariant lives in the merge
+   *  points that already exist. Expired by a TTL timer from the last
+   *  heartbeat; a peer's landing message clears their own slot instantly. */
+  typingPeerId: string | null;
 }
 
 type ActiveMatch = DemoMatch | LiveMatch;
@@ -379,6 +385,11 @@ export function JoinActivityPage() {
     return {
       ...prev,
       peers: prev.peers.filter((p) => currentIds.has(p.id)),
+      // A typist who left clears with their own departure notice.
+      typingPeerId:
+        prev.typingPeerId !== null && !currentIds.has(prev.typingPeerId)
+          ? null
+          : prev.typingPeerId,
       messages: [
         ...prev.messages,
         ...gone.map((peer): ChatMessage => ({
@@ -409,97 +420,143 @@ export function JoinActivityPage() {
   //   then reconciles peers instead of resetting.
   // - onChatEnded with no match in memory is the post-refresh ended screen
   //   — nothing to show, so the seat goes straight back to the queue.
+  // The typing indicator's TTL: re-armed on every relayed heartbeat, so it
+  // runs from the LAST one. Same pattern as submitSlowTimerRef. No cleanup
+  // effect on purpose: a stray post-unmount fire is a guarded setMatch
+  // no-op.
+  const typingExpiryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const seated =
     baseStage === "lobby" || baseStage === "chatting" || baseStage === "ended";
-  const { presence, retrying, retry, returnToLobby, sendChatMessage } =
-    useLobbyPresence({
-      active: seated && isRealActivity && !activityGoneFromSocket,
-      joinCode: activity?.joinCode,
-      session,
-      updateSession,
-      onRemoved: () => {
-        signOut();
-        setName("");
-        setRemovedByTeacher(true);
-        setMatch(null);
-        setChatEnded(false);
-      },
-      onEnded: () => {
-        if (activity) setGoneCode(activity.joinCode);
-      },
-      onChatStarted: (payload) => {
-        if (!session) return;
-        setChatEnded(false);
-        setMatch((prev) => {
-          if (prev?.kind === "live" && prev.chatId === payload.chatId) {
-            // A resume re-delivery of the chat already on screen — and the
-            // ONLY channel that heals a blip: the chat:line fan-out skips
-            // disconnected seats, so whatever was said while this phone was
-            // locked exists nowhere but this backlog. Merge missed lines (by
-            // id — our own echoed sends must not double) BEFORE reconciling
-            // membership, so a "left the chat" notice discovered on the same
-            // resume lands after the lines it follows: the true order.
-            const known = new Set(prev.messages.map((m) => m.id));
-            const missed = payload.lines
-              .filter((line) => !known.has(line.id))
-              .map(toLiveMessage);
-            const caughtUp: LiveMatch = {
-              ...prev,
-              everPeers: payload.everPeers.map(toParticipant),
-              messages:
-                missed.length > 0
-                  ? [...prev.messages, ...missed]
-                  : prev.messages,
-            };
-            return shrinkToPeers(caughtUp, payload.peers);
-          }
-          return {
-            kind: "live",
-            chatId: payload.chatId,
-            self: {
-              id: payload.selfCharacterId,
-              character: resolveCharacter(payload.selfCharacterId),
-              realName: session.name,
-            },
-            peers: payload.peers.map(toParticipant),
-            everPeers: payload.everPeers.map(toParticipant),
-            // The server's order is already correct and already capped.
-            messages: payload.lines.map(toLiveMessage),
-          };
-        });
-      },
-      onChatLine: (payload) => {
-        setMatch((prev) => {
-          if (prev?.kind !== "live" || prev.chatId !== payload.chatId) {
-            return prev;
-          }
-          // A live line can race a resume backlog that already carried it —
-          // the id dedupe makes the replay harmless.
-          if (prev.messages.some((m) => m.id === payload.line.id)) return prev;
-          return {
+  const {
+    presence,
+    retrying,
+    retry,
+    returnToLobby,
+    sendChatMessage,
+    sendTyping,
+  } = useLobbyPresence({
+    active: seated && isRealActivity && !activityGoneFromSocket,
+    joinCode: activity?.joinCode,
+    session,
+    updateSession,
+    onRemoved: () => {
+      signOut();
+      setName("");
+      setRemovedByTeacher(true);
+      setMatch(null);
+      setChatEnded(false);
+    },
+    onEnded: () => {
+      if (activity) setGoneCode(activity.joinCode);
+    },
+    onChatStarted: (payload) => {
+      if (!session) return;
+      setChatEnded(false);
+      setMatch((prev) => {
+        if (prev?.kind === "live" && prev.chatId === payload.chatId) {
+          // A resume re-delivery of the chat already on screen — and the
+          // ONLY channel that heals a blip: the chat:line fan-out skips
+          // disconnected seats, so whatever was said while this phone was
+          // locked exists nowhere but this backlog. Merge missed lines (by
+          // id — our own echoed sends must not double) BEFORE reconciling
+          // membership, so a "left the chat" notice discovered on the same
+          // resume lands after the lines it follows: the true order.
+          const known = new Set(prev.messages.map((m) => m.id));
+          const missed = payload.lines
+            .filter((line) => !known.has(line.id))
+            .map(toLiveMessage);
+          // The spread keeps prev.typingPeerId on purpose: the TTL covers
+          // staleness, and after a real refresh `prev` is gone anyway, so
+          // the indicator is simply absent until the next heartbeat ≤2s
+          // later — typing is not in the backlog, by design.
+          const caughtUp: LiveMatch = {
             ...prev,
-            messages: [...prev.messages, toLiveMessage(payload.line)],
+            everPeers: payload.everPeers.map(toParticipant),
+            messages:
+              missed.length > 0 ? [...prev.messages, ...missed] : prev.messages,
           };
-        });
-      },
-      onChatUpdate: (payload) => {
+          return shrinkToPeers(caughtUp, payload.peers);
+        }
+        return {
+          kind: "live",
+          chatId: payload.chatId,
+          self: {
+            id: payload.selfCharacterId,
+            character: resolveCharacter(payload.selfCharacterId),
+            realName: session.name,
+          },
+          peers: payload.peers.map(toParticipant),
+          everPeers: payload.everPeers.map(toParticipant),
+          // The server's order is already correct and already capped.
+          messages: payload.lines.map(toLiveMessage),
+          typingPeerId: null,
+        };
+      });
+    },
+    onChatLine: (payload) => {
+      setMatch((prev) => {
+        if (prev?.kind !== "live" || prev.chatId !== payload.chatId) {
+          return prev;
+        }
+        // A live line can race a resume backlog that already carried it —
+        // the id dedupe makes the replay harmless.
+        if (prev.messages.some((m) => m.id === payload.line.id)) return prev;
+        return {
+          ...prev,
+          // The peer's message landing clears THEIR bubble, instantly —
+          // never another typist's. The pending TTL timer stays armed: a
+          // late fire can only re-null a null.
+          typingPeerId:
+            payload.line.characterId === prev.typingPeerId
+              ? null
+              : prev.typingPeerId,
+          messages: [...prev.messages, toLiveMessage(payload.line)],
+        };
+      });
+    },
+    onChatUpdate: (payload) => {
+      setMatch((prev) =>
+        prev?.kind === "live" && prev.chatId === payload.chatId
+          ? shrinkToPeers(prev, payload.peers)
+          : prev
+      );
+    },
+    onPeerTyping: (payload) => {
+      if (match?.kind !== "live" || match.chatId !== payload.chatId) return;
+      // Skip the object churn when the slot already shows this character.
+      setMatch((prev) =>
+        prev?.kind === "live" &&
+        prev.chatId === payload.chatId &&
+        prev.typingPeerId !== payload.characterId
+          ? { ...prev, typingPeerId: payload.characterId }
+          : prev
+      );
+      // ALWAYS re-arm, churn skipped or not — the TTL runs from the last
+      // heartbeat, not the first.
+      if (typingExpiryRef.current !== null) {
+        clearTimeout(typingExpiryRef.current);
+      }
+      typingExpiryRef.current = setTimeout(() => {
+        typingExpiryRef.current = null;
         setMatch((prev) =>
-          prev?.kind === "live" && prev.chatId === payload.chatId
-            ? shrinkToPeers(prev, payload.peers)
+          prev?.kind === "live" && prev.typingPeerId !== null
+            ? { ...prev, typingPeerId: null }
             : prev
         );
-      },
-      onChatEnded: () => {
-        if (match?.kind === "live") {
-          setChatEnded(true);
-        } else {
-          // Post-refresh (or post-anything that lost the match from memory):
-          // there's no chat to show an ended screen for — go straight back
-          // to the queue instead of pretending.
-          returnToLobby();
-        }
-      },
-    });
+      }, TYPING_INDICATOR_TTL_MS);
+    },
+    onChatEnded: () => {
+      if (match?.kind === "live") {
+        setChatEnded(true);
+      } else {
+        // Post-refresh (or post-anything that lost the match from memory):
+        // there's no chat to show an ended screen for — go straight back
+        // to the queue instead of pretending.
+        returnToLobby();
+      }
+    },
+  });
 
   // The demo lobby's pretend wifi blip: flips the pill to reconnecting for
   // a few seconds, then back. Pure simulation (hence scaledMs) — on real
@@ -641,8 +698,10 @@ export function JoinActivityPage() {
             peers={match.peers}
             everPeers={match.everPeers}
             messages={match.messages}
+            typingPeerId={match.typingPeerId}
             isEnded={chatEnded}
             onSend={sendChatMessage}
+            onTyping={sendTyping}
             // Leaving a live chat means leaving the activity: landing on
             // bare code entry runs the sign-out effect, and the presence
             // hook's cleanup emits lobby:leave (back-as-reset, exactly the

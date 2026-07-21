@@ -20,6 +20,9 @@ const COUNTER_VISIBLE_AT = 60;
 
 interface MessageComposerProps {
   onSend: (text: string) => void;
+  /** Fired on input that leaves a non-empty draft (typed or emoji-picked)
+   *  — clearing a draft isn't typing. Callers own any throttling. */
+  onTyping?: () => void;
   /** Used to build a playful placeholder, e.g. "Talk as Cleopatra 👑…". */
   selfCharacterLabel?: string;
   /**
@@ -43,6 +46,7 @@ interface MessageComposerProps {
  */
 export function MessageComposer({
   onSend,
+  onTyping,
   selfCharacterLabel,
   disabled = false,
   disabledPlaceholder = "Paused. Hang tight…",
@@ -70,7 +74,11 @@ export function MessageComposer({
   }, [value]);
 
   const handleChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setValue(clampChars(event.target.value, MAX_CHARS));
+    const next = clampChars(event.target.value, MAX_CHARS);
+    setValue(next);
+    // Non-empty only — clearing a draft isn't typing. A disabled textarea
+    // fires no change events, so pause-suppression comes free.
+    if (next.length > 0) onTyping?.();
   };
 
   const insertEmoji = ({ emoji }: EmojiClickData) => {
@@ -80,6 +88,7 @@ export function MessageComposer({
     const candidate = value.slice(0, start) + emoji + value.slice(end);
     if (charCount(candidate) > MAX_CHARS) return; // no room; ignore
     setValue(candidate);
+    onTyping?.(); // emoji are first-class input here
     requestAnimationFrame(() => {
       const node = textareaRef.current;
       if (!node) return;

@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { ChatLine, ChatPeer, StudentAuth } from "@chaverola/shared";
+import {
+  TYPING_HEARTBEAT_MS,
+  type ChatLine,
+  type ChatPeer,
+  type StudentAuth,
+} from "@chaverola/shared";
 
 import { createLobbySocket, type LobbySocket } from "@/lib/socket";
 import { mintNonce, type StudentSession } from "@/lib/studentSession";
@@ -81,7 +86,10 @@ function buildStudentAuth(
  * `returnToLobby` is the ended screen's Back tap: it asks the server to
  * return the wrapping-up seat to the queue with a fresh wait clock.
  * `sendChatMessage` emits `chat:send`; rejections are silent server-side
- * and the echoed `chat:line` is the delivery receipt.
+ * and the echoed `chat:line` is the delivery receipt. `sendTyping` emits
+ * the `chat:typing` heartbeat (throttled here — cadence is wire policy),
+ * and `onPeerTyping` is a peer's relayed heartbeat; the page owns the TTL
+ * that expires the indicator.
  */
 export function useLobbyPresence({
   active,
@@ -94,6 +102,7 @@ export function useLobbyPresence({
   onChatUpdate,
   onChatLine,
   onChatEnded,
+  onPeerTyping,
 }: {
   active: boolean;
   joinCode: string | undefined;
@@ -113,12 +122,14 @@ export function useLobbyPresence({
   onChatUpdate?: (payload: { chatId: string; peers: ChatPeer[] }) => void;
   onChatLine?: (payload: { chatId: string; line: ChatLine }) => void;
   onChatEnded?: (payload: { reason: "teacher" }) => void;
+  onPeerTyping?: (payload: { chatId: string; characterId: string }) => void;
 }): {
   presence: LobbyPresence;
   retrying: boolean;
   retry: () => void;
   returnToLobby: () => void;
   sendChatMessage: (text: string) => void;
+  sendTyping: () => void;
 } {
   const [presence, setPresence] = useState<LobbyPresence>("connected");
   const [retrying, setRetrying] = useState(false);
@@ -132,6 +143,7 @@ export function useLobbyPresence({
   const onChatUpdateRef = useLatestRef(onChatUpdate);
   const onChatLineRef = useLatestRef(onChatLine);
   const onChatEndedRef = useLatestRef(onChatEnded);
+  const onPeerTypingRef = useLatestRef(onPeerTyping);
 
   // Sessions from before the live lobby have no nonce — mint one before the
   // first connect so their fresh joins are idempotent too.
@@ -188,6 +200,9 @@ export function useLobbyPresence({
     });
     socket.on("chat:ended", (payload) => {
       onChatEndedRef.current?.(payload);
+    });
+    socket.on("chat:peer-typing", (payload) => {
+      onPeerTypingRef.current?.(payload);
     });
     socket.on("connect_error", (error) => {
       setRetrying(false);
@@ -276,6 +291,7 @@ export function useLobbyPresence({
     onChatUpdateRef,
     onChatLineRef,
     onChatEndedRef,
+    onPeerTypingRef,
   ]);
 
   const retry = () => {
@@ -297,5 +313,26 @@ export function useLobbyPresence({
     socketRef.current?.emit("chat:send", { text });
   };
 
-  return { presence, retrying, retry, returnToLobby, sendChatMessage };
+  // The heartbeat throttle lives here, not in the composer: cadence is wire
+  // policy and belongs at the socket layer; the composer stays
+  // presentational and demo-shared.
+  const lastTypingSentAtRef = useRef(0);
+  const sendTyping = () => {
+    const now = Date.now();
+    if (now - lastTypingSentAtRef.current < TYPING_HEARTBEAT_MS) return;
+    lastTypingSentAtRef.current = now;
+    // volatile: a heartbeat that can't go out now must die, not queue — a
+    // buffered heartbeat flushing after a blip would be a ghost indicator.
+    // Volatile also discards while disconnected, so no `connected` guard.
+    socketRef.current?.volatile.emit("chat:typing");
+  };
+
+  return {
+    presence,
+    retrying,
+    retry,
+    returnToLobby,
+    sendChatMessage,
+    sendTyping,
+  };
 }

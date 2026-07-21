@@ -57,10 +57,14 @@ real names attached** — each `chat:send` also emits
 `chat:transcript-line` to the teacher room (the one delta on the
 teacher wire; `chats:snapshot` carries the whole transcript in
 `ChatSnapshot.messages`, so a dropped delta heals and a refresh
-restores every card). What hasn't shipped: "End chat", "End all
-chats", "Pause all chats", the auto-end clock, and the name reveal
-still render as honest placeholders on real activities (the demo still
-simulates every one of them). The single structural exception: a chat
+restores every card). Feature 5 made the **typing indicator real**:
+a student's `chat:typing` heartbeat relays as `chat:peer-typing` to
+their peers — ephemeral, characterId-only, volatile both ways, TTL
+expiry, and deliberately never to the teacher (see DECISIONS.md →
+"Chat behavior", the three 2026-07-21 entries). What hasn't shipped:
+"End chat", "End all chats", "Pause all chats", the auto-end clock,
+and the name reveal still render as honest placeholders on real
+activities (the demo still simulates every one of them). The single structural exception: a chat
 whose active membership drops below 2 ends for the remaining peer with
 reason `"teacher"` — otherwise a working Remove would strand a student
 alone in a room.
@@ -159,9 +163,11 @@ Load-bearing flow facts (the reasoning for each is in DECISIONS.md):
   shipped without them, on purpose: `ChatPeer` is allowlist-pinned to
   `characterId` alone, so peer connection state has no slot on the
   student wire, and no auto-end clock runs server-side; each is its own
-  later slice, not a leftover. `Student/LiveChatStage.tsx` builds that
-  quiet-except-messages state beside the demo's `ChatStage.tsx` — a
-  component split, never a conditional hook.
+  later slice, not a leftover. `typingPeerId` is the exception since
+  feature 5: real rooms feed it from the `chat:peer-typing` wire (the
+  page owns the slot and its TTL expiry). `Student/LiveChatStage.tsx`
+  builds that quiet-except-messages-and-typing state beside the demo's
+  `ChatStage.tsx` — a component split, never a conditional hook.
 - The setup form and the host page's live settings panel share their field
   components and validation; live edits propagate on a 1-second pause,
   last-valid-wins, with stable character ids (`lib/hostActivity.ts`).
@@ -218,8 +224,10 @@ Run from the repo root:
   rule that would silently strand real students — a matched seat's drop
   arming the grace timer, with a resume re-delivering `chat:started`
   (`live/lobby.test.ts` — which also pins the message cap's code-point
-  unit and the teacher transcript's room boundary: real names never
-  reach a student socket). `live/matching.test.ts` covers the pure
+  unit, the teacher transcript's room boundary: real names never
+  reach a student socket, and the typing relay's boundary:
+  `chat:peer-typing` reaches the other chat members only, never the
+  sender or the teacher). `live/matching.test.ts` covers the pure
   pairing and transcript rules a browser pass can't cheaply pin). Both
   suites are deliberately
   small; see DECISIONS.md → "Testing stays small" entries before adding

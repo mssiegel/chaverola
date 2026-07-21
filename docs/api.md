@@ -15,7 +15,9 @@ messaging slices: **students in a chat send real messages to each other**
 (`chat:send` → targeted `chat:line`, with a capped in-memory transcript
 re-delivered on resume) and **the teacher reads every chat live with real
 names attached** (`chat:transcript-line` to the teacher room, with the
-whole transcript riding `ChatSnapshot.messages`). Ending, pausing, the
+whole transcript riding `ChatSnapshot.messages`). Feature 5 adds the
+**student typing indicator** (`chat:typing` → `chat:peer-typing`, an
+ephemeral heartbeat relay — students only). Ending, pausing, the
 auto-end clock, and the name reveal are further out still.
 
 ## Conventions
@@ -154,10 +156,11 @@ runs**, so none of the REST conventions above apply here: Express's rate
 limiters never see socket traffic, there is no 16kb body cap and no
 `Cache-Control` header, and CORS comes from the `Server` constructor's
 own option, not the Express middleware. The socket layer carries its own
-three abuse guards instead: the seat cap
+four abuse guards instead: the seat cap
 (`MAX_STUDENTS_PER_ACTIVITY`), the per-socket `chat:send` rate limit
-(10 messages per sliding 10 seconds), and the per-message character cap
-(`CHAT_MESSAGE_MAX_CHARS`, counted in code points).
+(10 messages per sliding 10 seconds), the per-message character cap
+(`CHAT_MESSAGE_MAX_CHARS`, counted in code points), and the per-socket
+`chat:typing` relay floor (at most one relay per second).
 
 ### Connecting
 
@@ -237,6 +240,14 @@ export interface ServerToClientEvents {
   /** Student only, targeted at each connected active member of the chat —
    *  the sender's own echo included (it is the delivery receipt). */
   "chat:line": (payload: { chatId: string; line: ChatLine }) => void;
+  /** Student only, targeted at each OTHER connected active member — never
+   *  the sender, never the teacher room. characterId-only, the same pin as
+   *  ChatPeer. Ephemeral: never stored, never in a resume backlog; the
+   *  receiver expires it TYPING_INDICATOR_TTL_MS after the last heartbeat. */
+  "chat:peer-typing": (payload: {
+    chatId: string;
+    characterId: string;
+  }) => void;
   /** Teacher room: one line per chat:send, real name attached — the one
    *  delta on the teacher wire; chats:snapshot also carries the transcript,
    *  so a dropped delta heals instead of wedging a card. */
@@ -345,6 +356,11 @@ export interface ClientToServerEvents {
    *  points, rate-limited per socket. Every rejection is a silent no-op,
    *  like every other socket event — there is no error channel today. */
   "chat:send": (payload: { text: string }) => void;
+  /** Student only. A typing heartbeat, re-emitted at most once per
+   *  TYPING_HEARTBEAT_MS while keys flow. No payload — the seat and chat
+   *  resolve server-side, so there is nothing to validate or spoof. Silent
+   *  no-op outside an active chat, like every other socket event. */
+  "chat:typing": () => void;
 }
 ```
 
@@ -456,6 +472,18 @@ below.
   transcript rides `ChatSnapshot.messages` too, so a teacher refresh or a
   second host device rebuilds every card's transcript from the on-join
   snapshot alone.
+- **Typing is a heartbeat, never a stored fact.** While keys flow, the
+  client re-emits `chat:typing` at most once per `TYPING_HEARTBEAT_MS`
+  (2s); the server relays it as `chat:peer-typing` to each OTHER
+  connected active member and stores nothing. There is no stop event —
+  the receiver expires the indicator `TYPING_INDICATOR_TTL_MS` (5s) after
+  the last heartbeat, and the typist's own message landing clears it
+  instantly. Both directions are **volatile** emits, best-effort by
+  design: a heartbeat that can't go out now dies instead of queueing, so
+  a buffered one can never flush late and ghost the indicator. Typing is
+  never in a resume backlog — a refreshed receiver simply waits for the
+  next heartbeat — and the teacher never hears it (see the privacy
+  rules).
 
 ### Privacy rules
 
@@ -481,6 +509,15 @@ lines). Real names live only on `ChatSnapshot` and `ChatTranscriptLine`,
 which go to the teacher's **room** and nowhere else — the same
 teacher-only surface as `QueueEntry`, and pinned by a socket test: a
 student socket hears neither `chats:snapshot` nor `chat:transcript-line`.
+
+The boundary runs the other way too, for the first time with typing:
+`chat:peer-typing` is a **student-only** signal the teacher deliberately
+does not get. The teacher's oversight surface is the transcript — what
+was said, with real names — and the teacher wire stays
+snapshots-plus-one-delta on purpose; a typing flicker per card across a
+classroom of chats is noise (DECISIONS.md → "The teacher never sees
+typing"). Pinned by the same socket test style: the teacher socket never
+hears `chat:peer-typing`, and neither does the sender's own.
 
 ### Timing truths a client author needs
 
@@ -510,14 +547,17 @@ student socket hears neither `chats:snapshot` nor `chat:transcript-line`.
 
 Constants live in `shared/src/socket.ts` (`LOBBY_GRACE_SECONDS = 120`,
 `LOBBY_DISCONNECT_BROADCAST_DELAY_MS = 4000`,
+`TYPING_HEARTBEAT_MS = 2000`, `TYPING_INDICATOR_TTL_MS = 5000` — the TTL
+must outlast the heartbeat, which is why both are shared,
 `MAX_STUDENTS_PER_ACTIVITY = 60`, `AUTO_MATCH_GAP_SECONDS = 3`);
 `STUDENT_NAME_MAX_CHARS = 40`, `CHAT_MESSAGE_MAX_CHARS = 75`, and
 `CHAT_TRANSCRIPT_MAX_LINES = 200` sit with the other shared caps in
 `shared/src/constants.ts` (the message cap is the composer's limit too —
 one constant, so the form can't accept what the server rejects). The
-send rate limit (10 per 10s) is server-internal, in `lobby.ts`. Matched
-and wrapping-up seats count toward the seat cap — they still hold seats;
-tombstones don't.
+send rate limit (10 per 10s) and the typing relay floor
+(`TYPING_RELAY_MIN_INTERVAL_MS`, half the heartbeat) are
+server-internal, in `lobby.ts`. Matched and wrapping-up seats count
+toward the seat cap — they still hold seats; tombstones don't.
 
 ## curl smoke
 

@@ -12,6 +12,7 @@ import {
   toChatStarted,
   toHostedActivity,
   toLobbyWelcome,
+  toPeerTyping,
   toQueueEntry,
 } from "./projections";
 
@@ -198,5 +199,13 @@ describe("toChatStarted (the student wire)", () => {
     }
     // `!` — length pinned to 1 just above.
     expect(started.lines[0]!.characterId).toBe("caesar");
+  });
+});
+
+describe("toPeerTyping (the student typing signal)", () => {
+  it("exposes exactly chatId and the typist's characterId", () => {
+    const typing = toPeerTyping(fullChat, "student-1");
+    expect(Object.keys(typing).sort()).toEqual(["characterId", "chatId"]);
+    expect(typing.characterId).toBe("brutus");
   });
 });

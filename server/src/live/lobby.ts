@@ -13,6 +13,7 @@ import {
   LOBBY_DISCONNECT_BROADCAST_DELAY_MS,
   LOBBY_GRACE_SECONDS,
   STUDENT_NAME_MAX_CHARS,
+  TYPING_HEARTBEAT_MS,
 } from "@chaverola/shared";
 import type {
   ClientToServerEvents,
@@ -37,6 +38,7 @@ import {
   toChatTranscriptLine,
   toChatUpdate,
   toLobbyWelcome,
+  toPeerTyping,
 } from "../store/projections";
 import {
   activeMembers,
@@ -70,7 +72,8 @@ import type { Seat } from "./seats";
   logs nothing (we log through the shared pino logger), and Express's rate
   limiters never see socket traffic — the socket layer carries its own
   abuse guards: the seat cap (MAX_STUDENTS_PER_ACTIVITY), the per-socket
-  chat:send rate limit, and the per-message character cap.
+  chat:send rate limit, the per-message character cap, and the per-socket
+  chat:typing relay floor.
 
   Auth lives in the middleware — including student seating, so every
   rejection ("activity_gone" / "removed" / "full" / "invalid") rides
@@ -91,6 +94,12 @@ const TEACHER_KEEPALIVE_MS = 5 * 60 * 1000;
  *  the system; Express's limiters provably don't reach sockets. */
 const CHAT_SEND_WINDOW_MS = 10_000;
 const CHAT_SEND_WINDOW_LIMIT = 10;
+
+/** chat:typing's floor between relays: half the client's heartbeat, so
+ *  timer jitter can never drop a legitimate heartbeat, while a hostile
+ *  emit-loop relays (and looks up) at most once a second. A sliding window
+ *  would be machinery for nothing — heartbeats are ~1 per 2s by design. */
+const TYPING_RELAY_MIN_INTERVAL_MS = TYPING_HEARTBEAT_MS / 2;
 
 interface TeacherSocketData {
   role: "teacher";
@@ -608,6 +617,8 @@ export function attachLobby(
     // it dies with the socket, so there is no map to clean up and no way to
     // leak one student's budget into another's.
     const sendTimes: number[] = [];
+    // Same rationale for the typing relay's floor.
+    let lastTypingRelayAt = 0;
 
     socket.on("chat:send", (payload) => {
       if (typeof payload?.text !== "string") return;
@@ -644,6 +655,32 @@ export function attachLobby(
         chatId: result.chat.id,
         line: toChatTranscriptLine(result.chat, result.line),
       });
+    });
+
+    socket.on("chat:typing", () => {
+      // Consume the floor BEFORE the lookups: a hostile emit-loop is capped
+      // at one store lookup per interval, not one per packet.
+      const now = Date.now();
+      if (now - lastTypingRelayAt < TYPING_RELAY_MIN_INTERVAL_MS) return;
+      lastTypingRelayAt = now;
+      const current = getByJoinCode(data.joinCode);
+      if (!current) return;
+      const chat = findActiveChatOf(current, data.studentId);
+      if (!chat) return;
+      // No store touch, no teacher emit: typing is never a stored fact, and
+      // the teacher deliberately never sees it (DECISIONS.md).
+      const payload = toPeerTyping(chat, data.studentId);
+      for (const member of activeMembers(chat)) {
+        if (member.studentId === data.studentId) continue; // never the sender
+        const seat = current.seats.byId.get(member.studentId);
+        if (!seat?.connected) continue;
+        // volatile: a heartbeat that can't go out now must die, not queue —
+        // a buffered heartbeat flushing after a blip is the one way a ghost
+        // indicator could outlive its moment.
+        io.sockets.sockets
+          .get(seat.currentSocketId)
+          ?.volatile.emit("chat:peer-typing", payload);
+      }
     });
 
     socket.on("disconnect", (reason) => {

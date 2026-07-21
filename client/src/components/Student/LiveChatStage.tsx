@@ -13,9 +13,15 @@ interface LiveChatStageProps {
   everPeers: Participant[];
   /** The transcript: real lines plus local notices ("X left the chat"). */
   messages: ChatMessage[];
+  /** The peer typing right now (a characterId), or null — the page's one
+   *  slot, fed by chat:peer-typing and expired on a TTL. */
+  typingPeerId: string | null;
   isEnded: boolean;
   /** Sends a real message over the seat's socket (chat:send). */
   onSend: (text: string) => void;
+  /** A keystroke happened — the hook throttles it into chat:typing
+   *  heartbeats. */
+  onTyping: () => void;
   /**
    * The confirmed mid-chat exit. Leaving a live chat means leaving the
    * activity (back-as-reset → lobby:leave); a duo partner's chat ends.
@@ -31,19 +37,21 @@ interface LiveChatStageProps {
  * (chat:started / chat:line / chat:update / chat:ended) instead of a demo
  * engine. Deliberately a component split beside ChatStage — never a
  * conditional hook. Messaging is real: the composer sends over the socket
- * and the transcript is the wire's. Still quiet on purpose: no typing
- * indicator, no clocks, no peer-drop UI (the student wire carries no peer
- * connection state — those are their own later features). Exits are honest
- * too: walking out mid-chat leaves the whole activity, and the confirm says
- * so.
+ * and the transcript is the wire's. Typing is real too (chat:typing →
+ * chat:peer-typing, feature 5). Still quiet on the rest, on purpose: no
+ * clocks, no peer-drop UI (the student wire carries no peer connection
+ * state — those are their own later features). Exits are honest too:
+ * walking out mid-chat leaves the whole activity, and the confirm says so.
  */
 export function LiveChatStage({
   self,
   peers,
   everPeers,
   messages,
+  typingPeerId,
   isEnded,
   onSend,
+  onTyping,
   onLeaveActivity,
   onBackToLobby,
 }: LiveChatStageProps) {
@@ -53,16 +61,17 @@ export function LiveChatStage({
   // dump a student out of a live chat — it opens the exit confirm instead.
   useBackGuard(!isEnded, () => setConfirmOpen(true));
 
-  // The room, live messages included. What a demo engine would animate
-  // beyond them is pinned to its quiet value: nobody visibly types, nobody
-  // visibly drops, and no clock runs. "teacher" is the only reachable end
-  // reason this feature (the below-2 rule).
+  // The room, live messages and typing included. What a demo engine would
+  // animate beyond them stays pinned to its quiet value: nobody visibly
+  // drops and no clock runs — ChatPeer is allowlist-pinned to characterId,
+  // so peer connection state has no slot on the student wire. "teacher" is
+  // the only reachable end reason this feature (the below-2 rule).
   const chat: ChatRoomState = {
     self,
     peers,
     participants: [self, ...everPeers],
     messages,
-    typingPeerId: null,
+    typingPeerId,
     peerState: "connected",
     offlinePeerId: null,
     reconnectSecondsLeft: null,
@@ -79,6 +88,7 @@ export function LiveChatStage({
         chat={chat}
         revealNames={false}
         onSend={onSend}
+        onTyping={onTyping}
         onEndChat={onLeaveActivity}
         onLeaveChat={onLeaveActivity}
         onBackToLobby={onBackToLobby}
