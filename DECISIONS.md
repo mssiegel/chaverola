@@ -190,6 +190,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Transcripts wait: feature 1 only stores the teacher's email](#transcripts-wait-feature-1-only-stores-the-teachers-email)
   - [Considered and rejected for the backend: TanStack Query, dotenv, a hostKey stash, an npm conversion](#considered-and-rejected-for-the-backend-tanstack-query-dotenv-a-hostkey-stash-an-npm-conversion)
 - [Process & tooling](#process--tooling)
+  - [The verify harness is repo code; one-shot drivers live and die in scratch](#the-verify-harness-is-repo-code-one-shot-drivers-live-and-die-in-scratch)
   - [Slices verify on localhost; production driving happens once per feature](#slices-verify-on-localhost-production-driving-happens-once-per-feature)
   - [Until launch, server pushes can happen at any hour](#until-launch-server-pushes-can-happen-at-any-hour)
   - [Features ship as end-to-end slices, not layers](#features-ship-as-end-to-end-slices-not-layers)
@@ -3881,6 +3882,33 @@ forever.
 ---
 
 ## Process & tooling
+
+### The verify harness is repo code; one-shot drivers live and die in scratch
+
+_2026-07-22_
+
+**Decision:** The browser verification harness lives in the repo at
+`tools/verify/` (a pnpm workspace package with `playwright-core` as a real
+dependency), not in `$env:TEMP`. Only the everyday drivers are committed:
+`lib.mjs` (shared helpers), `up.mjs` (the stack launcher behind
+`pnpm verify:up`), `smoke.mjs` (the end-to-end activity smoke behind
+`pnpm verify:smoke`), and `coldwake.mjs` (the prod cold-start check). Everything
+else — per-feature gauntlets, occasional regression drivers — is written fresh
+in the gitignored `tools/verify/scratch/` when its trigger fires, imports
+`../lib.mjs`, and is never committed. The harness stays plain `.mjs` with no
+TypeScript, so `pnpm -r typecheck`/`lint` don't see it.
+
+**Why:** Founder call (2026-07-21, speedup plan). The temp-dir harness was
+uncommitted, drifting, one Windows cleanup away from gone, and reinstalled
+`playwright-core` on the fly; every session also repeated a launch ritual
+(CORS env override, stale-port-3001 checks) that `up.mjs` now encodes once.
+Committing _all_ drivers was rejected because era-specific gauntlets rot —
+they assert stale UI copy, and two dead assertions were already on record
+when the call was made. The scratch rule keeps the lessons (in `lib.mjs`
+helpers and `tools/verify/README.md`) without keeping the rot.
+
+_Implemented in [tools/verify/](tools/verify/); the launch story is in
+[tools/verify/README.md](tools/verify/README.md)._
 
 ### Slices verify on localhost; production driving happens once per feature
 

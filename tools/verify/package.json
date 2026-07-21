@@ -1,0 +1,11 @@
+{
+  "name": "@chaverola/verify",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Browser verification harness — launcher, smoke, coldwake. Plain .mjs on purpose: no build, no typecheck, no lint.",
+  "type": "module",
+  "dependencies": {
+    "playwright-core": "^1.61.1",
+    "socket.io-client": "^4.8.3"
+  }
+}
