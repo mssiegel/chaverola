@@ -33,7 +33,8 @@ the next reader has the conversation you had.
 ## 1. Confirm the offline-leave fix on a real handset
 
 **Asked:** 2026-07-20. **Blocked:** no cellular service where the founder
-was.
+was. **Blocked again** 2026-07-21 (the feature-4 Prompt 4 sweep — no phone at
+hand this session).
 
 **Needs:** a phone with a working cellular connection, and a laptop for the
 teacher page plus one browser tab as the second student.
@@ -97,7 +98,10 @@ the pass record in
 **Asked:** 2026-07-20 (feature 4, Prompt 2's "Done when"); extended
 2026-07-21 with Prompt 3's teacher-side checks — same setup, so run both
 in one sitting. **Blocked:** both prompts ran in autonomous sessions with
-no founder at hand to drive a phone.
+no founder at hand to drive a phone. **Blocked again** 2026-07-21 (the
+Prompt 4 sweep — same reason); the sweep's scripted prod legs cover the
+server side (cold-start opportunistic; restart-with-messages 7/7), leaving
+only the real-radio resume across a socket that died without a close frame.
 
 **Needs:** a phone on cellular (wifi off), a laptop for the teacher page,
 and one browser tab as the second student.

@@ -46,7 +46,7 @@ When a prompt is done, tick its checkbox here (same commit).
 - [x] Prompt 1 — The handset fix's leftovers (cleanup; no behavior change)
 - [x] Prompt 2 — Students send each other messages (end to end)
 - [x] Prompt 3 — The teacher reads them (end to end)
-- [ ] Prompt 4 — The cross-cutting production sweep
+- [x] Prompt 4 — The cross-cutting production sweep
 
 Repo rules that apply to every prompt (details in `AGENTS.md`): run
 `pnpm format` before committing; run every piece of new user-facing copy
@@ -599,3 +599,79 @@ back into that file rather than evaporating.
 **Done when:** the sweep is run, a `### Pass record — YYYY-MM-DD` section is
 appended to this document with what was actually exercised and what it found,
 and the checkbox is ticked.
+
+### Pass record — 2026-07-21
+
+The cross-cutting sweep, run after Prompts 1–3 and framed as a hunt for what
+only shows up in combination — the seams between the three slices, not the
+slices themselves (each had its own pass). Nothing new broke. The one result
+that first looked like a failure was a wrong expectation in the test harness,
+not the product (the grace+transcript note below).
+
+**Code seam hunt (clean).** Seven independent adversarial reviewers, one per
+seam, each finding re-checked by a skeptic told to refute it: the
+send↔teacher-read projection (the find-off-`chat.members` "can't miss" claim
+after a sender goes inactive; no name or studentId on the student wire), the
+student resume-backlog merge (id-dedupe, ordering, `everPeers` refreshed on
+both branches), the 200-line cap rotation across resume and the teacher delta,
+the rate limit under concurrency, the grace × transcript × below-2-ending
+interaction, demo isolation, and the render seam (colors and labels from
+`everPeers`, ended and completed transcripts). **Zero defects across all
+seven** — corroborating a hand read of the same seams.
+
+**Class-sized load + abuse hammer (local, 21/21 — `f4p4-load-hammer.mjs`).**
+60 students (MAX_STUDENTS_PER_ACTIVITY) across 29 concurrent chats: one
+4-person chat driven to 240 delivered lines, 28 duos sending alongside it.
+
+- the 200-line cap held under concurrency, oldest dropped, verified
+  order-independently by set match — on the student resume backlog (200 of 240) and on the teacher's richer projection of the same rotation (240
+  deltas seen, fresh snapshot capped at 200).
+- the per-socket rate limit landed exactly 10 of 14 under load.
+- per-chat isolation held: no line crossed into another chat; no hammer member
+  saw a duo line, no duo member saw a hammer line.
+- the privacy pin held under load: every student line was characterId-only, and
+  the teacher never received a single `chat:line`. Teacher transcript lines
+  carried the real name and studentId.
+- the code-point cap held (trim, 76 drops, 75 emoji lands).
+
+**Demo zero-socket sweep (local browser, 14/14 — `f4p4-demo-sweep.mjs`).**
+`/demo`, `/demo/teacher`, `/demo/student`, the host demo, and the student demo
+chat each did ZERO `/socket.io/` traffic (polling handshake or ws upgrade). The
+student demo still auto-pairs into a scripted chat and its composer still
+simulates a sent message. The messaging slices did not leak into the demo
+engines.
+
+**120s grace backstop with a transcript in flight (local, 7/7 —
+`f4p4-grace-transcript.mjs`).** Ann and Ben built a real transcript (both
+directions), Ann vanished with no goodbye, and the feature-3 backstop freed Ben
+at exactly 120.0s. The transcript survived the reaping: the ended chat still
+carried all three lines, and Ann's departed line still resolved to her real
+name on the teacher's snapshot (find-off-members holds after she's inactive).
+The two fixes don't collide. (A first run flagged a "both directions delivered"
+check; that was the harness expecting 2 lines where the sender's own echo makes
+it 3 — a script fix, not a product bug.)
+
+**Prod cold-start (opportunistic — server warm, `f4p4-coldwake.mjs`).** Run as
+the session's first prod contact: the create landed in ~1s with no patience
+copy, so the server was already warm and the cold-start UX path wasn't
+exercisable this session (acceptable — we never manufacture a spin-down). It
+confirmed prod healthy on commit `b7f373e`, real host grid, real teacher
+socket.
+
+**Prod restart mid-chat with messages in flight (7/7 —
+`f4p4-prod-restart-msgs.mjs`).** A raw-socket teacher and two students on prod
+paired and exchanged four messages (transcript live, teacher saw all four),
+then a `render restart` wiped the instance. ~42s later all three clients landed
+on `activity_gone`; the wiped activity now 404s — the transcript died with the
+store, no persistence surprise and no stale transcript resurfacing — and a
+fresh create worked immediately. Commit unchanged (a restart, not a redeploy).
+
+**Deferred to a real handset (queued, not run).** The two legs that need a
+phone on cellular stay in [docs/pending-manual-tests.md](../pending-manual-tests.md),
+blocked again 2026-07-21 (no phone at hand this session): the offline-leave
+confirmation, and messaging's own handset pass (lock-screen resume, emoji, the
+paste-over-75 and burst). This is the standing gap a headless browser
+structurally can't close — the real-radio path where both of this project's
+production bugs actually lived. The scripted prod legs above cover the server
+side of both; only the resume across a socket that died without a close frame
+remains unproven.
