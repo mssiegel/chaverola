@@ -229,3 +229,61 @@ the phone locked — or any typing hint on the teacher's page.
 - The TTL-kills-a-silent-typist logic is client-local (a timer from the
   last heartbeat), so the lock leg's residual risk is the volatile emit
   path on a real radio, not the expiry logic itself.
+
+## 4. The peer-drop banner against a phone that really loses its radio
+
+**Asked:** 2026-07-21 (feature 8, Prompt 1's "Done when"). **Blocked:** the
+prompt ran in an autonomous session with no founder at hand to drive a
+phone. Same setup as entries 1–3 — run all four in one sitting.
+
+**Needs:** a phone on cellular (wifi off), a laptop tab as the second
+student, and the teacher page open somewhere.
+
+### Why it's worth doing
+
+The banner exists precisely for devices that vanish without a goodbye, and
+that path is untestable from a headless browser: every scripted drop closes
+the socket cleanly, so detection is instant-to-fast. A locked phone sends no
+close frame — detection is the ~45s ping cycle — and that's the version of
+the story real classrooms will see.
+
+### Steps
+
+1. Make an activity, join from the phone and a laptop tab, pair them from
+   the teacher page.
+2. **Airplane mode on** (or lock the phone) — watch the laptop student.
+3. Wait for the laptop's banner, then **airplane mode off** within the
+   window — watch the laptop.
+4. Once settled, put the phone in a pocket for two or three seconds of
+   screen-off and back — watch the laptop.
+5. Keep the teacher's host page in view throughout.
+
+### What should happen
+
+- Step 2: the laptop shows "«character» lost connection… ~1:56 to come
+  back" — allow up to ~50s for it (ping-cycle detection plus the 4s gate),
+  at the same moment the teacher's card tags the member. The countdown
+  ticks once a second.
+- Step 3: the banner flips to "«character» is back! 🎉" for ~2.5s, then
+  clears; the phone lands back in the chat with the missed lines.
+- Step 4: nothing shows on the laptop at all (a sub-4s blip is invisible).
+- Throughout: the banner names the character, never the real name, and the
+  teacher's own page shows no `chat:peer-connection` artifact (it has its
+  own reconnecting tag).
+
+**Bug:** a banner that never appears while the teacher's tag does; a
+countdown frozen or wildly off ~1:56; a "back!" flash with no partner
+actually back; any real name in the banner.
+
+### What covers it in the meantime
+
+- The full scripted pass ran twice on 2026-07-21 — locally (11/11) and
+  against chaverola.com (11/11): gate timing, the ~1:56 seed, ticking
+  (including through a pause), the return flash and clear, resume, the
+  invisible quick refresh, and the character-name privacy pin. The prod
+  drop took ~14s to surface (transport detection + the gate), so the
+  slow-detection shape is partially exercised — but via a page navigation,
+  which still closes the transport, not a dead radio.
+- The server test pins the wire: the drop lands past the 4s gate with a
+  plausible `secondsLeft`, the resume announces the return, and neither
+  the affected seat nor the teacher room ever hears the event.
