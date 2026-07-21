@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
+import { LOBBY_GRACE_SECONDS } from "@chaverola/shared";
+
 import { characterLabel } from "@/lib/characterLabel";
 import { scaledMs } from "@/lib/demoTime";
 import { nextId, randomFrom } from "@/lib/random";
@@ -46,17 +48,12 @@ export interface ChatDemoOptions {
   /**
    * The teacher's activity-wide pause, owned by the page (a real backend
    * pushes it; the demo drives it from the demo controls). While true the
-   * room freezes: no messages in or out, typing clears, and both countdowns
-   * hold their remaining time.
+   * room freezes: no messages in or out, typing clears, and the auto-end
+   * clock holds its remaining time. A dropped peer's reconnect countdown
+   * keeps ticking — the server's grace runs through a pause.
    */
   isPaused?: boolean;
 }
-
-/**
- * How long a disconnected peer has to come back before the room moves on:
- * a 1:1 chat ends, a group drops them and keeps going (see DECISIONS.md).
- */
-export const RECONNECT_WINDOW_SECONDS = 120;
 
 /** Where "skip the wait" jumps the countdown to, so the timeout is testable. */
 const SKIP_WAIT_SECONDS = 3;
@@ -114,13 +111,15 @@ export function useChatDemo(
     if (isPaused) setTypingPeerId(null);
   }
 
-  // The reconnect window's clock. At zero the room moves on — a 1:1 chat
-  // ends (nobody is left to talk to), a group chat drops the peer with a
-  // notice and keeps going. Dropping is NOT ending: see DECISIONS.md →
-  // "A group chat drops a timed-out peer instead of ending".
+  // The reconnect window's clock. It ticks through a pause — the server's
+  // grace does, so a frozen display would lie while the peer can actually
+  // time out. At zero the room moves on — a 1:1 chat ends (nobody is left
+  // to talk to), a group chat drops the peer with a notice and keeps
+  // going. Dropping is NOT ending: see DECISIONS.md → "A group chat drops
+  // a timed-out peer instead of ending".
   const [reconnectSecondsLeft, setReconnectSecondsLeft] = useSecondCountdown(
     null,
-    status === "active" && !isPaused,
+    status === "active",
     () => {
       const offline = scenario.peers.find((p) => p.id === offlinePeerId);
       const remaining = scenario.peers.filter(
@@ -311,20 +310,19 @@ export function useChatDemo(
       typingTimer.current = null;
     }
     // Their reconnect window starts now.
-    setReconnectSecondsLeft(RECONNECT_WINDOW_SECONDS);
+    setReconnectSecondsLeft(LOBBY_GRACE_SECONDS);
   };
 
   const reconnectPeer = () => {
-    // Made it back in time — the countdown clears right away.
+    // Made it back in time — the countdown clears and the 🎉 flash shows
+    // right away. No "reconnecting" phase: a real socket never observes
+    // one, just gone → back.
     setReconnectSecondsLeft(null);
-    setPeerState("reconnecting");
+    setPeerState("reconnected");
     later(() => {
-      setPeerState("reconnected");
-      later(() => {
-        setPeerState((s) => (s === "reconnected" ? "connected" : s));
-        setOfflinePeerId(null);
-      }, 2200);
-    }, 1600);
+      setPeerState((s) => (s === "reconnected" ? "connected" : s));
+      setOfflinePeerId(null);
+    }, 2500);
   };
 
   /** Dev-only: fast-forward the reconnect window to its last few seconds. */

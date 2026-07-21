@@ -69,11 +69,11 @@ export type ChatEndReason =
 export type SeedMessage = Omit<ChatMessage, "id">;
 
 /**
- * Peer link state, driven by mock events in the demo.
- * `reconnected` is a brief success flash before returning to `connected`.
+ * Peer link state. Gone or back is all a socket can observe, so there is no
+ * "reconnecting" phase — `reconnected` is the brief "X is back! 🎉" flash
+ * before returning to `connected`.
  */
-export type PeerConnectionState =
-  "connected" | "disconnected" | "reconnecting" | "reconnected";
+export type PeerConnectionState = "connected" | "disconnected" | "reconnected";
 
 /**
  * Everything a chat view needs to render a live room. This is the contract
@@ -103,9 +103,11 @@ export interface ChatRoomState {
   /**
    * True while the teacher has the whole activity paused. The room freezes:
    * send() is a no-op, no peer messages arrive, typing indicators clear, and
-   * the auto-end clock and any reconnect window hold their remaining time.
-   * Pause is activity-wide, never per chat (see DECISIONS.md) — a real
-   * backend broadcasts one world-level event. isEnded wins over isPaused.
+   * the auto-end clock holds its remaining time. A reconnect window does NOT
+   * hold — the server's grace runs through a pause, so the countdown keeps
+   * ticking (see DECISIONS.md). Pause is activity-wide, never per chat — a
+   * real backend broadcasts one world-level event. isEnded wins over
+   * isPaused.
    */
   isPaused: boolean;
   /** Why the chat ended; drives the wrap-up copy. Null while it's going. */

@@ -62,7 +62,7 @@ until end of August 2026).
 - [x] Prompt 1 — Students see the drop and the return (end to end)
 - [x] Prompt 2 — Expiry tells the truth (end to end)
 - [x] Prompt 3 — A blip can't hide a drop (end to end)
-- [ ] Prompt 4 — The demo matches reality (end to end)
+- [x] Prompt 4 — The demo matches reality (end to end)
 
 Repo rules that apply (details in `AGENTS.md`): run `pnpm format` before
 committing; record newly-made decisions in `DECISIONS.md`; verify at the

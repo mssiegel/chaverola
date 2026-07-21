@@ -87,11 +87,13 @@ off the offline map, no reason on the wire. Its third slice made **a
 blip unable to hide a drop**: `chat:started` carries the offline peers
 (`reconnectingPeers`, authoritative on every delivery like `lines`),
 so a wifi blip that downs both students can't hide the partner's
-countdown from the first one back. What hasn't shipped: the
-auto-end clock and the name reveal still render as honest placeholders
-on real activities (the demo still simulates both), and the demo's own
-peer-drop simulation still plays the retired spinner until feature 8's
-prompt 4.
+countdown from the first one back. Its last slice aligned the demo:
+the `1234` peer-drop simulation now plays the wire's story — no
+spinner phase, the countdown ticks through a pause, and the window is
+the shared `LOBBY_GRACE_SECONDS` (the demo's own mirror is gone).
+What hasn't shipped: the auto-end clock and the name reveal still
+render as honest placeholders on real activities (the demo still
+simulates both).
 
 The demo flows are a **permanent product surface** — the homepage links to
 them and the founder pitches with them — not scaffolding; see the working

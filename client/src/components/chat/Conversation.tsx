@@ -72,7 +72,8 @@ export function Conversation({
     >
       {(isPaused || peerState !== "connected") && (
         <div className="sticky top-0 z-10 -mx-3 mb-2 flex flex-col items-center gap-1.5 px-3 sm:-mx-4 sm:px-4">
-          {/* Pause on top of a frozen reconnect countdown: both can apply. */}
+          {/* Pause on top of a still-ticking reconnect countdown: both can
+              apply — the grace runs through a pause. */}
           {isPaused && <ChatPausedBanner />}
           <PeerReconnectBanner
             peerState={peerState}

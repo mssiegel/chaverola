@@ -239,10 +239,9 @@ export interface ClientToServerEvents {
  * frame, so detection is Socket.IO's ping cycle (~45s at the default
  * pingInterval 25s + pingTimeout 20s). Since feature 8 this constant is
  * also the source of the student-facing reconnect countdown: the
- * chat:peer-connection "dropped" emit seeds secondsLeft from it, and the
- * client falls back to it when the field is null. (The demo's
- * `RECONNECT_WINDOW_SECONDS` in useChatDemo.ts is still a mirrored copy —
- * feature 8's prompt 4 folds it into this one.)
+ * chat:peer-connection "dropped" emit seeds secondsLeft from it, the
+ * client falls back to it when the field is null, and the demo engine and
+ * the banner's sr-only copy read it too — no separate demo window remains.
  */
 export const LOBBY_GRACE_SECONDS = 120;
 
@@ -268,7 +267,7 @@ export const MAX_STUDENTS_PER_ACTIVITY = 60;
 
 /**
  * Breather between server-side auto-matches so pairs land one at a time.
- * hostWorld.ts keeps the demo's own copy — same precedent as
- * LOBBY_GRACE_SECONDS vs RECONNECT_WINDOW_SECONDS.
+ * hostWorld.ts keeps the demo's own copy (the simulation stays
+ * self-contained; the live engine imports nothing from it beyond types).
  */
 export const AUTO_MATCH_GAP_SECONDS = 3;

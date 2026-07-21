@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { Loader2, Wifi, WifiOff } from "lucide-react";
+import { Wifi, WifiOff } from "lucide-react";
 
-import { RECONNECT_WINDOW_SECONDS } from "@/components/chat/useChatDemo";
+import { LOBBY_GRACE_SECONDS } from "@chaverola/shared";
+
 import { formatSecondsAsClock } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import type { PeerConnectionState } from "@/types/chat";
@@ -18,9 +19,9 @@ interface PeerReconnectBannerProps {
 }
 
 /**
- * A slide-in banner that surfaces peer connection changes (disconnect →
- * reconnecting → back). While a peer is out it counts down their reconnect
- * window live. Hidden while everyone is connected.
+ * A slide-in banner that surfaces peer connection changes: while a peer is
+ * out it counts down their reconnect window live, and their return gets a
+ * brief green flash. Hidden while everyone is connected.
  */
 export function PeerReconnectBanner({
   peerState,
@@ -52,15 +53,10 @@ export function PeerReconnectBanner({
               {" to come back"}
             </span>
             <span className="sr-only">
-              they have {RECONNECT_WINDOW_SECONDS / 60} minutes to come back
+              they have {LOBBY_GRACE_SECONDS / 60} minutes to come back
             </span>
           </>
         ),
-      className: "bg-amber-50 text-amber-700 border-amber-200",
-    },
-    reconnecting: {
-      icon: <Loader2 className="size-4 animate-spin" />,
-      text: "Reconnecting…",
       className: "bg-amber-50 text-amber-700 border-amber-200",
     },
     reconnected: {
