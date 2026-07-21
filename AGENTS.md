@@ -71,12 +71,20 @@ Resume flip the world-level pause (`chats:pause-all` /
 and chat clocks freeze at the anchor and shift on resume, and every
 connected student hears `activity:paused` — the frozen room, the
 lobby's paused pill). The 120s disconnect grace deliberately runs
-THROUGH a pause (founder call, 2026-07-21). What hasn't shipped: the
-auto-end clock and the name reveal still render as honest
-placeholders on real activities (the demo still simulates both). A
-chat whose active membership drops below 2 also still ends for the
-remaining peer with reason `"teacher"` — otherwise a working Remove
-would strand a student alone in a room.
+THROUGH a pause (founder call, 2026-07-21). Feature 8's first slice
+made the **peer-drop banner real**
+([docs/plans/feature-8-peer-drop.md](docs/plans/feature-8-peer-drop.md)):
+a chat partner's drop reaches the other members as
+`chat:peer-connection` on the teacher's own 4s gate, the banner counts
+down the remaining grace (ticking through a pause — the grace does),
+and a resume flashes "is back! 🎉" — no spinner phase, ever. What
+hasn't shipped: the auto-end clock and the name reveal still render as
+honest placeholders on real activities (the demo still simulates
+both), and the demo's own peer-drop simulation still plays the retired
+spinner until feature 8's prompt 4. A chat whose active membership
+drops below 2 also still ends for the remaining peer with reason
+`"teacher"` — even when the real cause was a partner's expired grace;
+feature 8's prompt 2 makes that reason honest.
 
 The demo flows are a **permanent product surface** — the homepage links to
 them and the founder pitches with them — not scaffolding; see the working
@@ -166,17 +174,17 @@ Load-bearing flow facts (the reasoning for each is in DECISIONS.md):
   2-minute peer-reconnect window and the per-chat auto-end clock (reason
   `"timer"` at zero, rendered by `chat/AutoEndCountdown.tsx` in the student
   header and on teacher chat cards). A 1:1 reconnect timeout ends the chat;
-  a group timeout drops the peer with a notice instead. **Both are demo
-  behavior only.** A real room fills the same contract with
-  `peerState: "connected"` and `autoEndSecondsLeft: null` — messaging
-  shipped without them, on purpose: `ChatPeer` is allowlist-pinned to
-  `characterId` alone, so peer connection state has no slot on the
-  student wire, and no auto-end clock runs server-side; each is its own
-  later slice, not a leftover. `typingPeerId` is the exception since
-  feature 5: real rooms feed it from the `chat:peer-typing` wire (the
-  page owns the slot and its TTL expiry). `Student/LiveChatStage.tsx`
-  builds that quiet-except-messages-and-typing state beside the demo's
-  `ChatStage.tsx` — a component split, never a conditional hook.
+  a group timeout drops the peer with a notice instead. The
+  **peer-reconnect window is real since feature 8**: the page feeds an
+  offline map from the `chat:peer-connection` wire and
+  `Student/LiveChatStage.tsx` derives `peerState` / `offlinePeerId` /
+  `reconnectSecondsLeft` from it, ticking on plain real time (never
+  `scaledMs`). The **auto-end clock stays demo behavior only** —
+  `autoEndSecondsLeft: null` on real rooms, because no clock runs
+  server-side; its own later slice, not a leftover. `typingPeerId` has
+  been real since feature 5 (`chat:peer-typing`, the page owns the slot
+  and its TTL expiry). `LiveChatStage` stays a component split beside the
+  demo's `ChatStage.tsx` — never a conditional hook.
 - The setup form and the host page's live settings panel share their field
   components and validation; live edits propagate on a 1-second pause,
   last-valid-wins, with stable character ids (`lib/hostActivity.ts`).

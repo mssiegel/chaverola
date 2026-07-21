@@ -132,6 +132,21 @@ export interface ServerToClientEvents {
     chatId: string;
     characterId: string;
   }) => void;
+  /** Student only, targeted at each OTHER connected active member — never
+   *  the affected seat, never the teacher room (its card already carries
+   *  reconnectingStudentIds). characterId-only, the same pin as ChatPeer.
+   *  "dropped" fires past the same 4s gate as the teacher's reconnecting
+   *  tag, with the remaining grace computed at emit (the client ticks
+   *  between events). "returned" fires on EVERY resume into an active chat
+   *  — the server can't know whether the drop was ever announced (resume
+   *  already cleared disconnectedAt), so receivers ignore a return for a
+   *  peer they don't have marked offline. */
+  "chat:peer-connection": (payload: {
+    chatId: string;
+    characterId: string;
+    state: "dropped" | "returned";
+    secondsLeft: number | null; // remaining grace on "dropped"; null on "returned"
+  }) => void;
   /** Teacher room: one line per chat:send, real name attached — the one
    *  delta on the teacher wire (a full snapshot per message would be far
    *  too fat). Safe because chats:snapshot also carries the transcript, so
@@ -210,12 +225,12 @@ export interface ClientToServerEvents {
  *
  * The window starts at DETECTED disconnect — a dark phone sends no close
  * frame, so detection is Socket.IO's ping cycle (~45s at the default
- * pingInterval 25s + pingTimeout 20s). Note: `RECONNECT_WINDOW_SECONDS = 120`
- * in useChatDemo.ts simulates the same product window for the demo's
- * peer-drop UI. Messaging shipped without that UI on real rooms, on
- * purpose: ChatPeer is allowlist-pinned to characterId alone, so peer
- * connection state has no slot on the student wire — giving students the
- * countdown is its own feature, and this constant becomes its one source.
+ * pingInterval 25s + pingTimeout 20s). Since feature 8 this constant is
+ * also the source of the student-facing reconnect countdown: the
+ * chat:peer-connection "dropped" emit seeds secondsLeft from it, and the
+ * client falls back to it when the field is null. (The demo's
+ * `RECONNECT_WINDOW_SECONDS` in useChatDemo.ts is still a mirrored copy —
+ * feature 8's prompt 4 folds it into this one.)
  */
 export const LOBBY_GRACE_SECONDS = 120;
 

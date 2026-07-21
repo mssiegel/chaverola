@@ -94,7 +94,9 @@ function buildStudentAuth(
  * and the echoed `chat:line` is the delivery receipt. `sendTyping` emits
  * the `chat:typing` heartbeat (throttled here — cadence is wire policy),
  * and `onPeerTyping` is a peer's relayed heartbeat; the page owns the TTL
- * that expires the indicator.
+ * that expires the indicator. `onPeerConnection` is a chat partner's drop
+ * (past the server's 4s gate, with the remaining grace) or return — the
+ * page owns the offline map and the countdown derived from it.
  */
 export function useLobbyPresence({
   active,
@@ -108,6 +110,7 @@ export function useLobbyPresence({
   onChatLine,
   onChatEnded,
   onPeerTyping,
+  onPeerConnection,
 }: {
   active: boolean;
   joinCode: string | undefined;
@@ -128,6 +131,12 @@ export function useLobbyPresence({
   onChatLine?: (payload: { chatId: string; line: ChatLine }) => void;
   onChatEnded?: (payload: { reason: "teacher" }) => void;
   onPeerTyping?: (payload: { chatId: string; characterId: string }) => void;
+  onPeerConnection?: (payload: {
+    chatId: string;
+    characterId: string;
+    state: "dropped" | "returned";
+    secondsLeft: number | null;
+  }) => void;
 }): {
   presence: LobbyPresence;
   paused: boolean;
@@ -151,6 +160,7 @@ export function useLobbyPresence({
   const onChatLineRef = useLatestRef(onChatLine);
   const onChatEndedRef = useLatestRef(onChatEnded);
   const onPeerTypingRef = useLatestRef(onPeerTyping);
+  const onPeerConnectionRef = useLatestRef(onPeerConnection);
 
   // Sessions from before the live lobby have no nonce — mint one before the
   // first connect so their fresh joins are idempotent too.
@@ -219,6 +229,9 @@ export function useLobbyPresence({
     });
     socket.on("chat:peer-typing", (payload) => {
       onPeerTypingRef.current?.(payload);
+    });
+    socket.on("chat:peer-connection", (payload) => {
+      onPeerConnectionRef.current?.(payload);
     });
     socket.on("connect_error", (error) => {
       setRetrying(false);
@@ -309,6 +322,7 @@ export function useLobbyPresence({
     onChatLineRef,
     onChatEndedRef,
     onPeerTypingRef,
+    onPeerConnectionRef,
   ]);
 
   const retry = () => {

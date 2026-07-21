@@ -31,6 +31,7 @@ import {
 } from "../store/activityStore";
 import type { StoredActivity } from "../store/activityStore";
 import {
+  graceSecondsLeft,
   toChatEnded,
   toChatLine,
   toChatSnapshot,
@@ -38,6 +39,7 @@ import {
   toChatTranscriptLine,
   toChatUpdate,
   toLobbyWelcome,
+  toPeerConnection,
   toPeerTyping,
 } from "../store/projections";
 import {
@@ -237,15 +239,55 @@ export function attachLobby(
     );
   }
 
+  /** A member's connection change, fanned to the OTHER connected active
+   *  members — never the affected seat, never the teacher room (its card
+   *  already carries reconnectingStudentIds on the same gate). */
+  function sendPeerConnection(
+    record: StoredActivity,
+    chat: StoredChat,
+    studentId: string,
+    state: "dropped" | "returned",
+    secondsLeft: number | null
+  ): void {
+    const payload = toPeerConnection(chat, studentId, state, secondsLeft);
+    for (const member of activeMembers(chat)) {
+      if (member.studentId === studentId) continue; // never the affected seat
+      const seat = record.seats.byId.get(member.studentId);
+      if (!seat?.connected) continue;
+      io.sockets.sockets
+        .get(seat.currentSocketId)
+        ?.emit("chat:peer-connection", payload);
+    }
+  }
+
   function armSeatTimers(
     record: StoredActivity,
     seat: Seat,
     graceMs: number
   ): void {
     armDisconnectTimers(seat, graceMs, LOBBY_DISCONNECT_BROADCAST_DELAY_MS, {
-      // The delay gates only the teacher-facing state; the room learns of
-      // the drop 4s in (a refresh reconnects faster).
-      onBroadcastDelay: () => broadcastState(record),
+      // The delay gates every "lost connection" surface at once — the
+      // teacher's reconnecting tag and, since feature 8, the partner's
+      // banner flip together (a refresh reconnects faster and shows
+      // neither).
+      onBroadcastDelay: () => {
+        broadcastState(record);
+        // findActiveChatOf does double duty: it keeps the wrappingUp
+        // re-arm path (settleMembershipChange) quiet — an ended chat's
+        // members must not hear a ghost drop — and it guarantees
+        // graceSecondsLeft is only computed for the seat whose own
+        // disconnect armed this timer. Don't optimize it away.
+        const chat = findActiveChatOf(record, seat.studentId);
+        if (chat) {
+          sendPeerConnection(
+            record,
+            chat,
+            seat.studentId,
+            "dropped",
+            graceSecondsLeft(seat, Date.now())
+          );
+        }
+      },
       onGraceExpiry: () => {
         log.info(
           { joinCode: record.joinCode, studentId: seat.studentId },
@@ -642,6 +684,12 @@ export function attachLobby(
     const activeChat = findActiveChatOf(record, data.studentId);
     if (activeChat) {
       socket.emit("chat:started", toChatStarted(activeChat, data.studentId));
+      // EVERY resume announces the return — by now the middleware's resume
+      // has cleared disconnectedAt, so the server can't know whether the
+      // 4s drop notice ever fired. Receivers ignore a return for a peer
+      // they don't have marked offline, which keeps sub-4s blips,
+      // duplicate-tab takeovers, and StrictMode double-mounts invisible.
+      sendPeerConnection(record, activeChat, data.studentId, "returned", null);
     } else if (seat.wrappingUp) {
       const endedChat = findEndedChatOf(record, data.studentId);
       socket.emit(

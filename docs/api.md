@@ -21,8 +21,11 @@ ephemeral heartbeat relay — students only). Feature 6 makes **ending
 real**: the teacher's `chat:end` / `chats:end-all` end chats outright.
 Feature 7 makes **pausing real**: `chats:pause-all` / `chats:resume-all`
 freeze and unfreeze the whole class — sends refuse, matchmaking and the
-clocks hold, and every connected student hears `activity:paused`. The
-auto-end clock and the name reveal are further out still.
+clocks hold, and every connected student hears `activity:paused`. Feature
+8 gives students the **peer-drop banner**: a chat partner's drop (past
+the teacher's own 4s gate) and return ride `chat:peer-connection`, with
+the reconnect countdown seeded server-side. The auto-end clock and the
+name reveal are further out still.
 
 ## Conventions
 
@@ -262,6 +265,20 @@ export interface ServerToClientEvents {
   "chat:peer-typing": (payload: {
     chatId: string;
     characterId: string;
+  }) => void;
+  /** Student only, targeted at each OTHER connected active member — never
+   *  the affected seat, never the teacher room (its card already carries
+   *  reconnectingStudentIds). characterId-only, the same pin as ChatPeer.
+   *  "dropped" fires past the same 4s gate as the teacher's reconnecting
+   *  tag, with the remaining grace computed at emit (the client ticks
+   *  between events); "returned" fires on EVERY resume into an active
+   *  chat, and receivers ignore a return for a peer they don't have
+   *  marked offline. */
+  "chat:peer-connection": (payload: {
+    chatId: string;
+    characterId: string;
+    state: "dropped" | "returned";
+    secondsLeft: number | null; // remaining grace on "dropped"; null on "returned"
   }) => void;
   /** Teacher room: one line per chat:send, real name attached — the one
    *  delta on the teacher wire; chats:snapshot also carries the transcript,
@@ -592,11 +609,13 @@ hears `chat:peer-typing`, and neither does the sender's own.
   leaves its chat as well (see the matching truths above). A pause does
   NOT hold this window — the grace runs through it, and the teacher's
   "reconnecting" tags keep real time even while the wait clocks freeze.
-- **Broadcast delay.** The teacher-facing row change waits
+- **Broadcast delay.** Every "lost connection" surface waits
   `LOBBY_DISCONNECT_BROADCAST_DELAY_MS` (4000) so a student's ~1–2s page
-  refresh never flashes the row. The delay gates only the teacher-facing
-  state, never the grace clock. Chat cards use the same delay before
-  listing a member in `reconnectingStudentIds`.
+  refresh never flashes anything: the teacher's queue row, the chat
+  card's `reconnectingStudentIds`, and (since feature 8) the partners'
+  `chat:peer-connection` "dropped" all flip on the same gate. The delay
+  gates only what's shown, never the grace clock — which is why the
+  "dropped" payload's `secondsLeft` arrives at ~116, not 120.
 - **Resume re-delivers, it doesn't replay.** Whatever a seat is in the
   middle of, the server re-states it on connect: a matched student gets
   `chat:started` again — now carrying the whole capped transcript in

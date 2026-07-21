@@ -129,9 +129,16 @@ Useful, stable handles:
   **gated on a connected teacher socket** — with no host page open,
   students past the threshold correctly never pair; expect one pair per
   ~3s (`AUTO_MATCH_GAP_SECONDS`) once a teacher connects. A matched
-  student's phone shows the room by its disabled composer
-  (`getByPlaceholder(/No messages yet/)`) — the handiest "did they get
-  seated" probe. Create activities with a 2-character roster to force the
+  student's phone shows the room by its composer,
+  `getByPlaceholder(/Talk as/)` — the handiest "did they get seated"
+  probe. (It was `/No messages yet/` in the feature-3 era of disabled
+  composers — a stale probe that cost a run on 2026-07-21.) Since
+  feature 8 a partner's drop also shows on the OTHER student's phone: a
+  `role="status"` banner ("X lost connection… 1:56 to come back") past
+  the same ~4s gate as the teacher's tag (the first value can read 1:57
+  — Windows timers can fire the 4s gate a hair early), a "X is back! 🎉"
+  flash on resume, and nothing at all for a sub-4s refresh. Create
+  activities with a 2-character roster to force the
   leftover branch ("first in line" tag) and 3+ to get trios.
 - Student join (`/activity/join`): code input accepts Enter; the code
   screen carries no demo hint (the old "Demo code 1234 always works" pill

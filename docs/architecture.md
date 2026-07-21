@@ -268,8 +268,12 @@ How the layer is put together (`server/src/live/`):
   `activity:paused`, `lobby:welcome` carries the state so a mid-pause
   refresh stays frozen, and `chats:resume-all` (or `chats:end-all`)
   shifts the stored clocks forward by the pause duration so nothing
-  jumps. **What is still simulated:** the auto-end clock,
-  student-facing peer-drop UI, and the name reveal.
+  jumps. And the peer-drop UI is real (feature 8): a chat member's drop
+  fans out as `chat:peer-connection` to the room's other members on the
+  same 4s gate as the teacher's reconnecting tag, seeded with the
+  remaining grace, and every resume announces the return (receivers
+  ignore a return for a peer they never saw drop). **What is still
+  simulated:** the auto-end clock and the name reveal.
 - **The teacher socket is the TTL keep-alive:** while one is connected,
   a ~5-minute `.unref()`ed interval calls `getByHostKey`, so a live
   class can't expire at the 12h TTL mid-lesson. Student sockets never

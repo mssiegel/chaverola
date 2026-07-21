@@ -65,6 +65,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [One page serves both join routes; a wrong code never changes the URL](#one-page-serves-both-join-routes-a-wrong-code-never-changes-the-url)
   - [Student sign-in lives in the tab, and removal sends you to the name step](#student-sign-in-lives-in-the-tab-and-removal-sends-you-to-the-name-step)
 - [Chat behavior](#chat-behavior)
+  - [Students see a partner's drop and return, on the teacher's own 4s gate](#students-see-a-partners-drop-and-return-on-the-teachers-own-4s-gate)
   - [The teacher never sees typing](#the-teacher-never-sees-typing)
   - [Typing is a heartbeat that dies in five seconds, never a stored fact](#typing-is-a-heartbeat-that-dies-in-five-seconds-never-a-stored-fact)
   - [One typing slot per room, last writer wins](#one-typing-slot-per-room-last-writer-wins)
@@ -717,6 +718,56 @@ _Implemented in [studentSession.ts](client/src/lib/studentSession.ts) and
 
 ## Chat behavior
 
+### Students see a partner's drop and return, on the teacher's own 4s gate
+
+_2026-07-21_
+
+**Decision:** The peer-drop UI is real on live activities (feature 8): when
+a chat partner's connection drops, the other members see the banner and its
+live countdown ("Brutus 🔪 lost connection… 1:56 to come back"). Four rules,
+all founder calls (2026-07-21):
+
+- The banner appears past the **same 4-second gate** that flips the
+  teacher's "lost connection" tag — never sooner. A partner who reconnects
+  inside the gate (a quick refresh) shows nothing to anyone.
+- The return is **only** a "X is back! 🎉" green flash (~2.5s). The demo's
+  old "Reconnecting…" spinner phase is retired everywhere — a real socket
+  never observes a "reconnecting" phase, just gone → back, and the UI
+  doesn't invent one. (The demo engine sheds it in feature 8's prompt 4.)
+- In a trio with **both** partners out, the banner shows the
+  soonest-to-expire peer — the first-dropped clock is the urgent one — and
+  switches to the other when the first resolves.
+- The countdown **keeps ticking through a class-wide pause**, because the
+  grace itself does (see
+  [Pausing ships end to end; the grace window keeps running through it](#pausing-ships-end-to-end-the-grace-window-keeps-running-through-it)).
+  A frozen clock would lie: the partner can time out and vanish mid-pause.
+
+The wire mechanics that make this safe: `chat:peer-connection` is
+characterId-only (the same privacy pin as every student payload), the
+"dropped" emit carries the server-computed seconds left so client clocks
+can't drift the product window, and EVERY resume announces a "returned" —
+the server can't know whether the drop was ever shown — with clients
+ignoring a return for a peer they don't have marked offline, which is what
+keeps sub-4s blips, duplicate-tab takeovers, and StrictMode double-mounts
+invisible.
+
+**Why:** A silent two minutes reads as "the app froze" and the student
+bails (the gap called out as **Still owed** in
+[A matched seat gets the same 2 minutes as any other, and leaves its chat when they run out](#a-matched-seat-gets-the-same-2-minutes-as-any-other-and-leaves-its-chat-when-they-run-out)).
+Sharing the teacher's gate keeps the two surfaces telling one story and
+reuses the delay that already exists to absorb refreshes; an immediate
+banner would flash "lost connection" at children on every partner refresh.
+The spinner cut and the pause-ticking rule are both the same principle: the
+banner shows what is actually true on the wire, not theater.
+
+_Implemented in [lobby.ts](server/src/live/lobby.ts) (`sendPeerConnection`,
+fanned from the 4s broadcast timer and the resume handler),
+[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx) (the
+offline map + 🎉 flash state), and
+[LiveChatStage](client/src/components/Student/LiveChatStage.tsx) (the
+real-time countdown derivation). Ships with
+[feature 8](docs/plans/feature-8-peer-drop.md), prompt 1._
+
 ### The teacher never sees typing
 
 _2026-07-21_
@@ -1011,6 +1062,11 @@ standing around for two minutes.
 superseded — every end reason now has its own wrap-up copy, including the
 student's own missed window. See
 [Every chat end explains itself](#every-chat-end-explains-itself).
+
+**Update (2026-07-21):** The window is real on live activities now (feature
+8), and the return flow lost its "Reconnecting…" phase — the "is back! 🎉"
+flash is the whole return. See
+[Students see a partner's drop and return, on the teacher's own 4s gate](#students-see-a-partners-drop-and-return-on-the-teachers-own-4s-gate).
 
 **Why:** Classroom devices drop constantly (the same reality behind
 refresh-keeps-the-lobby), so a vanished partner needs a grace period rather
@@ -1712,6 +1768,11 @@ connection" tag is teacher-only. A silent two minutes is confusing where
 (peer connection state on `ChatPeer`, which today is allowlist-pinned to
 `characterId` alone) and new copy, so it is its own piece of work rather than
 a rider on a safety fix.
+
+**Update (2026-07-21):** Paid — feature 8's `chat:peer-connection` event
+gives students the banner and live countdown (`ChatPeer` itself stays
+pinned to `characterId`; the connection state rides its own event). See
+[Students see a partner's drop and return, on the teacher's own 4s gate](#students-see-a-partners-drop-and-return-on-the-teachers-own-4s-gate).
 
 _Implemented in [lobby.ts](server/src/live/lobby.ts) (`armSeatTimers`'s grace
 expiry now settles chat membership before reaping; the disconnect handler

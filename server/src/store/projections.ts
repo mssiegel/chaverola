@@ -1,4 +1,7 @@
-import { LOBBY_DISCONNECT_BROADCAST_DELAY_MS } from "@chaverola/shared";
+import {
+  LOBBY_DISCONNECT_BROADCAST_DELAY_MS,
+  LOBBY_GRACE_SECONDS,
+} from "@chaverola/shared";
 import type {
   Activity,
   Character,
@@ -58,6 +61,15 @@ function isReconnecting(seat: Seat, now: number): boolean {
     seat.disconnectedAt !== undefined &&
     now - seat.disconnectedAt >= LOBBY_DISCONNECT_BROADCAST_DELAY_MS
   );
+}
+
+/** Seconds left in a dropped seat's reconnect window — the student
+ *  countdown's seed, computed at emit; the client ticks between events.
+ *  Callers only ask about the seat whose own broadcast timer just fired,
+ *  so disconnectedAt is set (the fallback keeps the helper total). */
+export function graceSecondsLeft(seat: Seat, now: number): number {
+  const deadline = (seat.disconnectedAt ?? now) + LOBBY_GRACE_SECONDS * 1000;
+  return Math.max(0, Math.ceil((deadline - now) / 1000));
 }
 
 /** The teacher's queue row. NEVER the token. `clockNow` is the wait
@@ -224,6 +236,29 @@ export function toPeerTyping(
   return {
     chatId: chat.id,
     characterId: typist.characterId,
+  };
+}
+
+/** The student peer-connection signal: characterId-only, the same
+ *  load-bearing pin as ChatPeer and toPeerTyping. */
+export function toPeerConnection(
+  chat: StoredChat,
+  studentId: string,
+  state: "dropped" | "returned",
+  secondsLeft: number | null
+): {
+  chatId: string;
+  characterId: string;
+  state: "dropped" | "returned";
+  secondsLeft: number | null;
+} {
+  // Callers resolve the chat via findActiveChatOf, so the find can't miss.
+  const member = chat.members.find((m) => m.studentId === studentId)!;
+  return {
+    chatId: chat.id,
+    characterId: member.characterId,
+    state,
+    secondsLeft,
   };
 }
 

@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+import { LOBBY_GRACE_SECONDS } from "@chaverola/shared";
 
 import { Chatbox } from "@/components/Student/Chatbox";
 import { useBackGuard } from "@/lib/useBackGuard";
@@ -16,6 +18,13 @@ interface LiveChatStageProps {
   /** The peer typing right now (a characterId), or null — the page's one
    *  slot, fed by chat:peer-typing and expired on a TTL. */
   typingPeerId: string | null;
+  /** Peers currently dropped (characterId → reconnect-window deadline,
+   *  epoch ms), fed by chat:peer-connection. The stage derives the banner
+   *  and ticks the countdown off real time. */
+  offlinePeers: Record<string, number>;
+  /** The peer whose "X is back! 🎉" flash is showing, or null. The flash
+   *  takes the banner slot; any remaining countdown resumes after. */
+  returnedFlashId: string | null;
   isEnded: boolean;
   /** The teacher's activity-wide pause (activity:paused / lobby:welcome).
    *  Chatbox freezes the room: banner, locked composer. Ended wins. */
@@ -41,11 +50,12 @@ interface LiveChatStageProps {
  * engine. Deliberately a component split beside ChatStage — never a
  * conditional hook. Messaging is real: the composer sends over the socket
  * and the transcript is the wire's. Typing is real too (chat:typing →
- * chat:peer-typing, feature 5), and so is the teacher's pause (feature 7).
- * Still quiet on the rest, on purpose: no clocks, no peer-drop UI (the
- * student wire carries no peer connection state — those are their own
- * later features). Exits are honest too: walking out mid-chat leaves the
- * whole activity, and the confirm says so.
+ * chat:peer-typing, feature 5), the teacher's pause is real (feature 7),
+ * and so is the peer-drop banner (chat:peer-connection, feature 8): the
+ * page hands this stage the offline map and the stage ticks the countdown.
+ * Still quiet on the rest, on purpose: no auto-end clock and no name
+ * reveal (their own later features). Exits are honest too: walking out
+ * mid-chat leaves the whole activity, and the confirm says so.
  */
 export function LiveChatStage({
   self,
@@ -53,6 +63,8 @@ export function LiveChatStage({
   everPeers,
   messages,
   typingPeerId,
+  offlinePeers,
+  returnedFlashId,
   isEnded,
   isPaused,
   onSend,
@@ -66,21 +78,64 @@ export function LiveChatStage({
   // dump a student out of a live chat — it opens the exit confirm instead.
   useBackGuard(!isEnded, () => setConfirmOpen(true));
 
-  // The room, live messages, typing, and the teacher's pause included. What
-  // a demo engine would animate beyond them stays pinned to its quiet
-  // value: nobody visibly drops and no clock runs — ChatPeer is
-  // allowlist-pinned to characterId, so peer connection state has no slot
-  // on the student wire. "teacher" is the only reachable end reason this
-  // feature (the below-2 rule).
+  // The countdown's clock: plain real time, once a second, for the whole
+  // live room (gating it on an open window would leave `now` minutes stale
+  // at the moment a drop lands, and neither render nor an effect body may
+  // call Date.now() under the compiler lints). NEVER
+  // useSecondCountdown/scaledMs — live wire timing is never compressed.
+  // Re-deriving from the stored deadline (rather than counting down)
+  // self-corrects after background-tab throttling, the same trick as the
+  // teacher's wait clocks.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (isEnded) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [isEnded]);
+
+  // The banner slot: a return's 🎉 flash wins it briefly; otherwise the
+  // soonest-to-expire offline peer's countdown (founder call — the
+  // first-dropped clock is the urgent one; when they resolve, the banner
+  // switches to the other).
+  let offlinePeerId: string | null = null;
+  let minDeadline = Infinity;
+  for (const [id, deadline] of Object.entries(offlinePeers)) {
+    if (deadline < minDeadline) {
+      minDeadline = deadline;
+      offlinePeerId = id;
+    }
+  }
+  // Clamped to the window: `now` can lag behind real time in a throttled
+  // background tab, and at the low end the display holds at 0:00 until the
+  // server's chat:update / chat:ended resolves it — the client never acts
+  // on a local zero.
+  const reconnectSecondsLeft =
+    returnedFlashId === null && offlinePeerId !== null
+      ? Math.min(
+          LOBBY_GRACE_SECONDS,
+          Math.max(0, Math.ceil((minDeadline - now) / 1000))
+        )
+      : null;
+
+  // The room, live messages, typing, the teacher's pause, and the peer-drop
+  // banner included. What a demo engine would animate beyond them stays
+  // pinned to its quiet value: no auto-end clock runs server-side, and
+  // "teacher" is the only end reason on the wire (the honest peer-timeout
+  // reason is feature 8's prompt 2).
   const chat: ChatRoomState = {
     self,
     peers,
     participants: [self, ...everPeers],
     messages,
     typingPeerId,
-    peerState: "connected",
-    offlinePeerId: null,
-    reconnectSecondsLeft: null,
+    peerState:
+      returnedFlashId !== null
+        ? "reconnected"
+        : offlinePeerId !== null
+          ? "disconnected"
+          : "connected",
+    offlinePeerId: returnedFlashId ?? offlinePeerId,
+    reconnectSecondsLeft,
     autoEndSecondsLeft: null,
     isEnded,
     isPaused,

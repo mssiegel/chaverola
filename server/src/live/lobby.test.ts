@@ -38,6 +38,11 @@ import { createChat } from "./matching";
   pins its boundaries the same way: the flip reaches every connected seat,
   a mid-pause welcome carries it, a paused chat:send dies silently, and
   resume lets lines flow again. The clock shift itself is matching.test.ts.
+  The peer-drop relay (feature 8) gets the same treatment:
+  chat:peer-connection reaches the OTHER chat members only — never the
+  affected seat, never the teacher room — with the drop landing past the
+  4s gate and a resume announcing the return. (That one test waits out the
+  real 4s delay; grace TIMING itself stays out, per the charter above.)
 */
 
 type ClientSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -127,6 +132,15 @@ const nextTranscriptLine = (socket: ClientSocket) =>
 const nextChatEnded = (socket: ClientSocket) =>
   new Promise<{ reason: "teacher" }>((resolve) => {
     socket.once("chat:ended", resolve);
+  });
+const nextPeerConnection = (socket: ClientSocket) =>
+  new Promise<{
+    chatId: string;
+    characterId: string;
+    state: "dropped" | "returned";
+    secondsLeft: number | null;
+  }>((resolve) => {
+    socket.once("chat:peer-connection", resolve);
   });
 /** Chats snapshots fire on every seat change too — wait for the one that
  *  matters. */
@@ -752,4 +766,77 @@ describe("the live lobby", () => {
     expect(welcome.studentId).toBe(welcomeA.studentId);
     expect(startedAgain.chatId).toBe(chat.id);
   });
+
+  it("a partner's drop past the 4s gate reaches the room, and their resume flips it back", async () => {
+    const teacher = connect({ role: "teacher", hostKey: activity.hostKey });
+    const studentA = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Rachel",
+      nonce: "nonce-a",
+    });
+    const studentB = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Noa",
+      nonce: "nonce-b",
+    });
+    const welcomeA = await nextWelcome(studentA);
+    const welcomeB = await nextWelcome(studentB);
+    // `!` — both members are eligible; the chat just built above them.
+    const chat = createChat(
+      activity,
+      [welcomeA.studentId, welcomeB.studentId],
+      Date.now()
+    )!;
+
+    // The boundary: the affected seat and the teacher room never hear it
+    // (the teacher's card already carries reconnectingStudentIds).
+    const leaks: unknown[] = [];
+    teacher.on("chat:peer-connection", (p) => leaks.push(p));
+    studentA.on("chat:peer-connection", (p) => leaks.push(p));
+
+    const droppedAtB = nextPeerConnection(studentB);
+    studentA.disconnect();
+    // Lands past the real 4s broadcast-delay gate — the one wait this
+    // file's charter allows, since the gate IS the invariant here.
+    const dropped = await droppedAtB;
+    expect(Object.keys(dropped).sort()).toEqual([
+      "characterId",
+      "chatId",
+      "secondsLeft",
+      "state",
+    ]);
+    expect(dropped.state).toBe("dropped");
+    expect(dropped.chatId).toBe(chat.id);
+    // `!` — the chat was just created with A as a member.
+    const memberA = chat.members.find(
+      (m) => m.studentId === welcomeA.studentId
+    )!;
+    expect(dropped.characterId).toBe(memberA.characterId);
+    // 120 minus the 4s gate. Slack on both sides: a slow event loop fires
+    // the timer late (secondsLeft dips), and Windows timer resolution can
+    // fire it a hair EARLY (ceil then lands on 117 — observed in the
+    // feature's browser pass).
+    expect(dropped.secondsLeft).toBeGreaterThan(110);
+    expect(dropped.secondsLeft).toBeLessThan(120);
+
+    const returnedAtB = nextPeerConnection(studentB);
+    const resumed = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      studentId: welcomeA.studentId,
+      token: welcomeA.token,
+    });
+    // The returning student must not hear their own return either.
+    resumed.on("chat:peer-connection", (p) => leaks.push(p));
+    const returned = await returnedAtB;
+    expect(returned.state).toBe("returned");
+    expect(returned.chatId).toBe(chat.id);
+    expect(returned.characterId).toBe(memberA.characterId);
+    expect(returned.secondsLeft).toBeNull();
+
+    await sleep(100);
+    expect(leaks).toEqual([]);
+  }, 15_000);
 });

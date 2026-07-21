@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import {
+  LOBBY_GRACE_SECONDS,
   MAX_STUDENTS_PER_ACTIVITY,
   STUDENT_NAME_MAX_CHARS,
   TYPING_INDICATOR_TTL_MS,
@@ -98,6 +99,15 @@ interface LiveMatch {
    *  points that already exist. Expired by a TTL timer from the last
    *  heartbeat; a peer's landing message clears their own slot instantly. */
   typingPeerId: string | null;
+  /** Peers currently dropped (chat:peer-connection), characterId → the
+   *  epoch-ms deadline of their reconnect window. Deadlines, not counters:
+   *  the stage re-derives seconds from real time, so background-tab
+   *  throttling self-corrects. On the match state for the same reason as
+   *  typingPeerId — shrinkToPeers strips leavers structurally. */
+  offlinePeers: Record<string, number>;
+  /** The peer whose "X is back! 🎉" flash is showing (a characterId), or
+   *  null. Cleared by a real-time timer ~2.5s after the return. */
+  returnedFlashId: string | null;
 }
 
 type ActiveMatch = DemoMatch | LiveMatch;
@@ -108,6 +118,11 @@ type ActiveMatch = DemoMatch | LiveMatch;
  * the wire). The room still works; only the label is a mystery.
  */
 const FALLBACK_CHARACTER_NAME = "Mystery guest";
+
+/** How long "X is back! 🎉" shows before the banner clears (or hands back
+ *  to another offline peer's countdown). Real time, never scaled — live
+ *  wire timing is never compressed. */
+const RETURNED_FLASH_MS = 2500;
 
 /** A wire line as a renderable message. The sender IS the characterId —
  *  participant ids in a live room are characterIds. No timestamp: the
@@ -383,9 +398,18 @@ export function JoinActivityPage() {
     const currentIds = new Set(current.map((p) => p.characterId));
     const gone = prev.peers.filter((p) => !currentIds.has(p.id));
     if (gone.length === 0) return prev;
+    // A leaver's countdown (and a just-left peer's 🎉 flash) dies with
+    // their membership — the banner must never outlive the roster.
+    const offlinePeers = { ...prev.offlinePeers };
+    for (const peer of gone) delete offlinePeers[peer.id];
     return {
       ...prev,
       peers: prev.peers.filter((p) => currentIds.has(p.id)),
+      offlinePeers,
+      returnedFlashId:
+        prev.returnedFlashId !== null && !currentIds.has(prev.returnedFlashId)
+          ? null
+          : prev.returnedFlashId,
       // A typist who left clears with their own departure notice.
       typingPeerId:
         prev.typingPeerId !== null && !currentIds.has(prev.typingPeerId)
@@ -426,6 +450,9 @@ export function JoinActivityPage() {
   // effect on purpose: a stray post-unmount fire is a guarded setMatch
   // no-op.
   const typingExpiryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The 🎉 flash's clear timer — same no-cleanup pattern: a stray
+  // post-unmount fire is a guarded setMatch no-op.
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const seated =
     baseStage === "lobby" || baseStage === "chatting" || baseStage === "ended";
@@ -478,7 +505,13 @@ export function JoinActivityPage() {
             messages:
               missed.length > 0 ? [...prev.messages, ...missed] : prev.messages,
           };
-          return shrinkToPeers(caughtUp, payload.peers);
+          const shrunk = shrinkToPeers(caughtUp, payload.peers);
+          // Our own blip may have swallowed a peer's drop OR return, so the
+          // carried-over offline map can't be trusted after a resume. Until
+          // chat:started carries the authoritative offline list (feature
+          // 8's prompt 3), clear it — a missing banner beats a phantom one
+          // counting down over a partner who's actually back.
+          return { ...shrunk, offlinePeers: {} };
         }
         return {
           kind: "live",
@@ -493,6 +526,8 @@ export function JoinActivityPage() {
           // The server's order is already correct and already capped.
           messages: payload.lines.map(toLiveMessage),
           typingPeerId: null,
+          offlinePeers: {},
+          returnedFlashId: null,
         };
       });
     },
@@ -547,6 +582,68 @@ export function JoinActivityPage() {
             : prev
         );
       }, TYPING_INDICATOR_TTL_MS);
+    },
+    onPeerConnection: (payload) => {
+      if (payload.state === "dropped") {
+        setMatch((prev) => {
+          if (
+            prev?.kind !== "live" ||
+            prev.chatId !== payload.chatId ||
+            !prev.peers.some((p) => p.id === payload.characterId)
+          ) {
+            return prev;
+          }
+          return {
+            ...prev,
+            offlinePeers: {
+              ...prev.offlinePeers,
+              [payload.characterId]:
+                Date.now() +
+                (payload.secondsLeft ?? LOBBY_GRACE_SECONDS) * 1000,
+            },
+            // A dropped peer types nothing — their bubble dies with the
+            // drop (the TTL timer's late fire can only re-null a null).
+            typingPeerId:
+              prev.typingPeerId === payload.characterId
+                ? null
+                : prev.typingPeerId,
+          };
+        });
+        return;
+      }
+      // "returned" — EVERY resume announces itself (the server can't know
+      // whether the drop was ever broadcast), so this guard is what keeps
+      // sub-4s blips, duplicate-tab takeovers, and StrictMode double-mounts
+      // invisible: no offline entry, no flash, no state change.
+      setMatch((prev) => {
+        if (
+          prev?.kind !== "live" ||
+          prev.chatId !== payload.chatId ||
+          prev.offlinePeers[payload.characterId] === undefined
+        ) {
+          return prev;
+        }
+        const offlinePeers = { ...prev.offlinePeers };
+        delete offlinePeers[payload.characterId];
+        return {
+          ...prev,
+          offlinePeers,
+          returnedFlashId: payload.characterId,
+        };
+      });
+      // Re-armed on every return (a no-op fire can only re-null a null) —
+      // the flash runs RETURNED_FLASH_MS from the LAST return.
+      if (flashTimerRef.current !== null) {
+        clearTimeout(flashTimerRef.current);
+      }
+      flashTimerRef.current = setTimeout(() => {
+        flashTimerRef.current = null;
+        setMatch((prev) =>
+          prev?.kind === "live" && prev.returnedFlashId !== null
+            ? { ...prev, returnedFlashId: null }
+            : prev
+        );
+      }, RETURNED_FLASH_MS);
     },
     onChatEnded: () => {
       if (match?.kind === "live") {
@@ -701,6 +798,8 @@ export function JoinActivityPage() {
             everPeers={match.everPeers}
             messages={match.messages}
             typingPeerId={match.typingPeerId}
+            offlinePeers={match.offlinePeers}
+            returnedFlashId={match.returnedFlashId}
             isEnded={chatEnded}
             isPaused={livePaused}
             onSend={sendChatMessage}
