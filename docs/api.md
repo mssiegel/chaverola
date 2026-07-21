@@ -24,7 +24,9 @@ freeze and unfreeze the whole class — sends refuse, matchmaking and the
 clocks hold, and every connected student hears `activity:paused`. Feature
 8 gives students the **peer-drop banner**: a chat partner's drop (past
 the teacher's own 4s gate) and return ride `chat:peer-connection`, with
-the reconnect countdown seeded server-side. The auto-end clock and the
+the reconnect countdown seeded server-side — and makes the expiry
+honest: a 1:1 ended by a partner's expired grace says so
+(`chat:ended` reason `"peer-timeout"`). The auto-end clock and the
 name reveal are further out still.
 
 ## Conventions
@@ -287,8 +289,13 @@ export interface ServerToClientEvents {
     chatId: string;
     line: ChatTranscriptLine;
   }) => void;
-  /** Student only, targeted; re-sent on resume while the seat is wrappingUp. */
-  "chat:ended": (payload: { reason: "teacher" }) => void;
+  /** Student only, targeted; re-sent on resume while the seat is wrappingUp
+   *  (the re-delivery carries the stored reason, so a survivor whose own
+   *  socket blipped around the ending still learns the honest one).
+   *  "peer-timeout" is a 1:1 partner's expired grace; every teacher-caused
+   *  ending — chat:end, chats:end-all, chat:remove, and a below-2 ending
+   *  from lobby:leave — stays "teacher". */
+  "chat:ended": (payload: { reason: "teacher" | "peer-timeout" }) => void;
   /** Teacher room minus the sender — keeps a second host device coherent. */
   "settings:changed": (payload: { settings: ActivitySettings }) => void;
 }
@@ -314,7 +321,8 @@ export interface ChatSnapshot {
   messages: ChatTranscriptLine[]; // the whole capped transcript, oldest first
   elapsedSeconds: number; // computed server-side at emit; client ticks between
   status: "active" | "ended";
-  endReason: "teacher" | null; // the only reachable reason so far
+  // "peer-timeout": a below-2 ending caused by a partner's expired grace.
+  endReason: "teacher" | "peer-timeout" | null;
 }
 
 /** Student-facing: characterIds only — never names, never peer studentIds. */
@@ -460,15 +468,19 @@ below.
   for two minutes; their card membership dims meanwhile. When the grace
   runs out, a matched seat leaves its **chat** as well as its seat — the
   membership goes inactive, and if that drops the room under two active
-  members the chat ends for the peer exactly as a removal would. Matched
+  members the chat ends for the peer as a removal would, recorded with
+  the honest reason `"peer-timeout"` (see the below-2 bullet). Matched
   seats used to arm no timer at all so a resume always worked; that made
   a student whose `lobby:leave` died in transit indistinguishable from
   one mid-blip and stranded their partner until the activity expired
   (found on a real handset, 2026-07-20). The grace is the backstop:
   whatever the client fails to say, the silence eventually frees the peer.
 - **Below 2 active members ends the chat.** Whether the teacher removed
-  someone or a student left, a room that would drop under two ends with
-  `endReason: "teacher"`. The remaining peer's seat goes **wrapping up**:
+  someone, a student left, or a dropped member's grace ran out, a room
+  that would drop under two ends — with `endReason: "peer-timeout"` when
+  the cause was the expired grace (the survivor's 🔌 "Your partner lost
+  connection" wrap-up), `"teacher"` for everything else. The remaining
+  peer's seat goes **wrapping up**:
   off the queue and unmatchable until their "Back to the lobby" tap emits
   `lobby:back`, which re-queues them with a fresh wait clock. Auto-return
   was rejected — it would show the teacher a "waiting" student who is

@@ -42,7 +42,8 @@ export interface ChatSnapshot {
   messages: ChatTranscriptLine[]; // the whole capped transcript, oldest first
   elapsedSeconds: number; // computed server-side at emit; client ticks between
   status: "active" | "ended";
-  endReason: "teacher" | null; // the only reachable reason this feature
+  // "peer-timeout": a below-2 ending caused by a partner's expired grace.
+  endReason: "teacher" | "peer-timeout" | null;
 }
 
 /** Student-facing: characterIds only — never names, never peer studentIds. */
@@ -156,8 +157,13 @@ export interface ServerToClientEvents {
     chatId: string;
     line: ChatTranscriptLine;
   }) => void;
-  /** Student only, targeted; re-sent on resume while the seat is wrappingUp. */
-  "chat:ended": (payload: { reason: "teacher" }) => void;
+  /** Student only, targeted; re-sent on resume while the seat is wrappingUp
+   *  (the resume re-delivery carries the stored reason, so a survivor whose
+   *  own socket blipped around the ending still learns the honest one).
+   *  "peer-timeout" is a 1:1 partner's expired grace; every teacher-caused
+   *  ending — chat:end, chats:end-all, chat:remove, and a below-2 ending
+   *  from lobby:leave — stays "teacher". */
+  "chat:ended": (payload: { reason: "teacher" | "peer-timeout" }) => void;
   /** Student only, targeted at every connected seat — chat members, lobby
    *  waiters, and wrappingUp alike (the pause is activity-wide). Connect-time
    *  state rides lobby:welcome instead; this event only carries live flips. */

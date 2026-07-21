@@ -272,10 +272,13 @@ export function toChatUpdate(
   };
 }
 
-export function toChatEnded(chat: StoredChat): { reason: "teacher" } {
+export function toChatEnded(chat: StoredChat): {
+  reason: "teacher" | "peer-timeout";
+} {
   return {
-    // "teacher" is the only reachable reason this feature; the fallback
-    // keeps the projector total if it's ever called on a not-yet-ended chat.
+    // The stored reason is the truth — which is also what makes the
+    // wrappingUp resume re-delivery honest for free. The fallback keeps
+    // the projector total if it's ever called on a not-yet-ended chat.
     reason: chat.endReason ?? "teacher",
   };
 }

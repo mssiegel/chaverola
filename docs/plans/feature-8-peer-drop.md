@@ -60,7 +60,7 @@ its own. Server-touching — fine at any hour pre-launch (no real classes
 until end of August 2026).
 
 - [x] Prompt 1 — Students see the drop and the return (end to end)
-- [ ] Prompt 2 — Expiry tells the truth (end to end)
+- [x] Prompt 2 — Expiry tells the truth (end to end)
 - [ ] Prompt 3 — A blip can't hide a drop (end to end)
 - [ ] Prompt 4 — The demo matches reality (end to end)
 

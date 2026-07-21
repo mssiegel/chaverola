@@ -163,15 +163,27 @@ describe("planPairEveryone (the odd-count branch)", () => {
 });
 
 describe("markInactive", () => {
-  it('ends the chat with reason "teacher" when active membership drops below 2', () => {
+  it('ends the chat with the default reason "teacher" when active membership drops below 2', () => {
     const activity = makeActivity(ROSTER);
     const [a, b] = [addSeat(activity), addSeat(activity)];
     const chat = createChat(activity, [a.studentId, b.studentId], 10_000)!;
 
+    // No reason passed — chat:remove's and lobby:leave's call shape.
     const result = markInactive(activity, chat.id, a.studentId);
     expect(result).toEqual({ ended: true, chat });
     expect(chat.status).toBe("ended");
     expect(chat.endReason).toBe("teacher");
+  });
+
+  it('records a passed "peer-timeout" — the grace-expiry ending says so', () => {
+    const activity = makeActivity(ROSTER);
+    const [a, b] = [addSeat(activity), addSeat(activity)];
+    const chat = createChat(activity, [a.studentId, b.studentId], 10_000)!;
+
+    const result = markInactive(activity, chat.id, a.studentId, "peer-timeout");
+    expect(result).toEqual({ ended: true, chat });
+    expect(chat.status).toBe("ended");
+    expect(chat.endReason).toBe("peer-timeout");
   });
 });
 

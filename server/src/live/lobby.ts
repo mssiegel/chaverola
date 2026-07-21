@@ -300,7 +300,14 @@ export function attachLobby(
         // eventually frees the peer.
         const chat = findActiveChatOf(record, seat.studentId);
         if (chat) {
-          const result = markInactive(record, chat.id, seat.studentId);
+          // The one "peer-timeout" call site: only an expired grace may
+          // pin the honest reason on a below-2 ending.
+          const result = markInactive(
+            record,
+            chat.id,
+            seat.studentId,
+            "peer-timeout"
+          );
           if (result) settleMembershipChange(record, result);
         }
         reapSeat(record, seat);

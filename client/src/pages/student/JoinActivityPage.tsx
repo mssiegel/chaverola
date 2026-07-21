@@ -215,6 +215,13 @@ export function JoinActivityPage() {
   // Mirrors the chat engine's ended flag up here so the stage (and with it
   // the page title) can tell chatting from ended.
   const [chatEnded, setChatEnded] = useState(false);
+  // Why the live chat ended, from chat:ended's payload — "peer-timeout" is
+  // a 1:1 partner's expired grace (the 🔌 wrap-up), "teacher" everything
+  // else. Beside chatEnded rather than on the match state: it describes
+  // the ending, and it resets on the same edges.
+  const [liveEndReason, setLiveEndReason] = useState<
+    "teacher" | "peer-timeout" | null
+  >(null);
   // The DEMO's activity-wide pause, mocked at page level so it survives
   // lobby ⇄ chat ⇄ ended and the demo controls can flip it. Real activities
   // get theirs from the presence hook (the server pushes it) instead.
@@ -327,6 +334,7 @@ export function JoinActivityPage() {
   const backToLobby = () => {
     setMatch(null);
     setChatEnded(false);
+    setLiveEndReason(null);
   };
 
   // The demo lobby's fallback: after a short wait the pretend teacher pairs
@@ -392,8 +400,11 @@ export function JoinActivityPage() {
   });
 
   // Reconcile a live match with the wire's current peer list: whoever
-  // disappeared gets a local "left the chat" notice and drops out of
-  // `peers`; `everPeers` keeps them so colors and lines stay stable.
+  // disappeared gets a local notice and drops out of `peers`; `everPeers`
+  // keeps them so colors and lines stay stable. The notice copy is a
+  // client heuristic — no reason rides the wire (see DECISIONS.md): a peer
+  // who vanished while marked offline never came back, so they get the
+  // timeout copy; everyone else "left the chat".
   const shrinkToPeers = (prev: LiveMatch, current: ChatPeer[]): LiveMatch => {
     const currentIds = new Set(current.map((p) => p.characterId));
     const gone = prev.peers.filter((p) => !currentIds.has(p.id));
@@ -421,7 +432,14 @@ export function JoinActivityPage() {
           id: nextId("m"),
           senderId: NOTICE_SENDER_ID,
           kind: "notice",
-          text: `${characterLabel(peer)} left the chat`,
+          // Checked against PREV's offline map — the strip above already
+          // cleared this peer. Accepted imprecision: a teacher removing an
+          // already-dropped student mid-window reads as the timeout too —
+          // from inside the room, the peer was gone and never came back.
+          text:
+            prev.offlinePeers[peer.id] !== undefined
+              ? `${characterLabel(peer)} couldn't get back in and left the chat`
+              : `${characterLabel(peer)} left the chat`,
         })),
       ],
     };
@@ -482,6 +500,9 @@ export function JoinActivityPage() {
     onChatStarted: (payload) => {
       if (!session) return;
       setChatEnded(false);
+      // A chat:started only ever arrives for an active chat (a wrappingUp
+      // resume gets chat:ended instead), so any held reason is stale.
+      setLiveEndReason(null);
       setMatch((prev) => {
         if (prev?.kind === "live" && prev.chatId === payload.chatId) {
           // A resume re-delivery of the chat already on screen — and the
@@ -645,9 +666,10 @@ export function JoinActivityPage() {
         );
       }, RETURNED_FLASH_MS);
     },
-    onChatEnded: () => {
+    onChatEnded: (payload) => {
       if (match?.kind === "live") {
         setChatEnded(true);
+        setLiveEndReason(payload.reason);
       } else {
         // Post-refresh (or post-anything that lost the match from memory):
         // there's no chat to show an ended screen for — go straight back
@@ -801,6 +823,7 @@ export function JoinActivityPage() {
             offlinePeers={match.offlinePeers}
             returnedFlashId={match.returnedFlashId}
             isEnded={chatEnded}
+            endReason={liveEndReason}
             isPaused={livePaused}
             onSend={sendChatMessage}
             onTyping={sendTyping}

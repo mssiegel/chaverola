@@ -77,14 +77,17 @@ made the **peer-drop banner real**
 a chat partner's drop reaches the other members as
 `chat:peer-connection` on the teacher's own 4s gate, the banner counts
 down the remaining grace (ticking through a pause — the grace does),
-and a resume flashes "is back! 🎉" — no spinner phase, ever. What
-hasn't shipped: the auto-end clock and the name reveal still render as
-honest placeholders on real activities (the demo still simulates
-both), and the demo's own peer-drop simulation still plays the retired
-spinner until feature 8's prompt 4. A chat whose active membership
-drops below 2 also still ends for the remaining peer with reason
-`"teacher"` — even when the real cause was a partner's expired grace;
-feature 8's prompt 2 makes that reason honest.
+and a resume flashes "is back! 🎉" — no spinner phase, ever. Its
+second slice made **expiry honest**: a 1:1 ended by a partner's
+expired grace says so on the wire (`chat:ended` reason
+`"peer-timeout"` → the survivor's 🔌 "Your partner lost connection"
+wrap-up, riding the resume re-delivery too), and a group's survivors
+read "X couldn't get back in and left the chat" — a client heuristic
+off the offline map, no reason on the wire. What hasn't shipped: the
+auto-end clock and the name reveal still render as honest placeholders
+on real activities (the demo still simulates both), and the demo's own
+peer-drop simulation still plays the retired spinner until feature 8's
+prompt 4.
 
 The demo flows are a **permanent product surface** — the homepage links to
 them and the founder pitches with them — not scaffolding; see the working

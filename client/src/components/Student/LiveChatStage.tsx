@@ -26,6 +26,10 @@ interface LiveChatStageProps {
    *  takes the banner slot; any remaining countdown resumes after. */
   returnedFlashId: string | null;
   isEnded: boolean;
+  /** Why the chat ended (chat:ended's payload): "peer-timeout" is a 1:1
+   *  partner's expired grace — the 🔌 wrap-up — "teacher" everything else.
+   *  Null while the chat is going. */
+  endReason: "teacher" | "peer-timeout" | null;
   /** The teacher's activity-wide pause (activity:paused / lobby:welcome).
    *  Chatbox freezes the room: banner, locked composer. Ended wins. */
   isPaused: boolean;
@@ -53,9 +57,11 @@ interface LiveChatStageProps {
  * chat:peer-typing, feature 5), the teacher's pause is real (feature 7),
  * and so is the peer-drop banner (chat:peer-connection, feature 8): the
  * page hands this stage the offline map and the stage ticks the countdown.
- * Still quiet on the rest, on purpose: no auto-end clock and no name
- * reveal (their own later features). Exits are honest too: walking out
- * mid-chat leaves the whole activity, and the confirm says so.
+ * The ending tells the truth as well — chat:ended's reason renders the 🔌
+ * wrap-up when a 1:1 partner's grace ran out, not the teacher's 🎓. Still
+ * quiet on the rest, on purpose: no auto-end clock and no name reveal
+ * (their own later features). Exits are honest too: walking out mid-chat
+ * leaves the whole activity, and the confirm says so.
  */
 export function LiveChatStage({
   self,
@@ -66,6 +72,7 @@ export function LiveChatStage({
   offlinePeers,
   returnedFlashId,
   isEnded,
+  endReason,
   isPaused,
   onSend,
   onTyping,
@@ -117,11 +124,11 @@ export function LiveChatStage({
         )
       : null;
 
-  // The room, live messages, typing, the teacher's pause, and the peer-drop
-  // banner included. What a demo engine would animate beyond them stays
-  // pinned to its quiet value: no auto-end clock runs server-side, and
-  // "teacher" is the only end reason on the wire (the honest peer-timeout
-  // reason is feature 8's prompt 2).
+  // The room, live messages, typing, the teacher's pause, the peer-drop
+  // banner, and the honest end reason included. What a demo engine would
+  // animate beyond them stays pinned to its quiet value: no auto-end clock
+  // runs server-side. The "teacher" fallback keeps the derivation total if
+  // the ended flag ever lands without a reason.
   const chat: ChatRoomState = {
     self,
     peers,
@@ -139,7 +146,7 @@ export function LiveChatStage({
     autoEndSecondsLeft: null,
     isEnded,
     isPaused,
-    endReason: isEnded ? "teacher" : null,
+    endReason: isEnded ? (endReason ?? "teacher") : null,
     endedByPeerId: null,
   };
 

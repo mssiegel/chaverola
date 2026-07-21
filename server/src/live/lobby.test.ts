@@ -130,7 +130,7 @@ const nextTranscriptLine = (socket: ClientSocket) =>
     socket.once("chat:transcript-line", resolve);
   });
 const nextChatEnded = (socket: ClientSocket) =>
-  new Promise<{ reason: "teacher" }>((resolve) => {
+  new Promise<{ reason: "teacher" | "peer-timeout" }>((resolve) => {
     socket.once("chat:ended", resolve);
   });
 const nextPeerConnection = (socket: ClientSocket) =>

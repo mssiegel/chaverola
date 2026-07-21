@@ -768,6 +768,52 @@ offline map + 🎉 flash state), and
 real-time countdown derivation). Ships with
 [feature 8](docs/plans/feature-8-peer-drop.md), prompt 1._
 
+### A grace expiry ends a 1:1 as "peer-timeout"; the group notice is a client heuristic
+
+_2026-07-21_
+
+**Decision:** Three founder calls (2026-07-21, feature-8 prompt 2):
+
+- A 1:1 chat ended by a partner's expired grace carries the wire reason
+  `"peer-timeout"` (`chat:ended` and `ChatSnapshot.endReason` widen to
+  `"teacher" | "peer-timeout"`), so the survivor lands on the 🔌 "Your
+  partner lost connection… Not your fault!" wrap-up instead of the wrong
+  🎓 teacher copy. Every teacher-caused ending keeps `"teacher"`:
+  `chat:end`, `chats:end-all`, `chat:remove`, and a below-2 ending from
+  `lobby:leave`.
+- A group's drop notice is a **client heuristic**: a peer vanishing from
+  `chat:update` while marked offline reads "X couldn't get back in and
+  left the chat"; otherwise "X left the chat". No reason rides the wire.
+  Accepted imprecision: a teacher removing an already-disconnected
+  student mid-window also gets the timeout copy — from the survivors'
+  view the peer was gone and never came back.
+- The self-timeout screen ("You lost connection 📶", for the student who
+  ran out the window themselves) is **deferred** to its own later
+  feature. Direction recorded: the server will remember reaped seats for
+  at most 30 minutes, so a late returner can learn what happened instead
+  of silently landing back in the lobby.
+
+**Why:** The wrong copy was worse than no copy: telling a child "Your
+teacher ended the chat" when a partner's phone died points the blame at
+the teacher and hides the one thing the student could act on (this wasn't
+anyone's doing — go get re-paired). The 1:1 reason must ride the wire
+because only the server knows why the room dropped below two; the group
+notice needs no wire change because the survivors already watched the
+countdown run out — the offline map is the evidence — and a reason
+channel for one string would be machinery for nothing. Storing the reason
+on the chat (rather than picking it at emit time) also makes the
+wrappingUp resume re-delivery honest for free: a survivor whose own
+socket blipped around the ending still gets the 🔌 screen.
+
+_Implemented in [matching.ts](server/src/live/matching.ts)
+(`markInactive`'s reason parameter — the grace-expiry path in
+[lobby.ts](server/src/live/lobby.ts) is the only `"peer-timeout"` call
+site), [projections.ts](server/src/store/projections.ts) (`toChatEnded`
+projects the stored reason), and
+[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx)
+(`liveEndReason` + the `shrinkToPeers` notice heuristic). Ships with
+[feature 8](docs/plans/feature-8-peer-drop.md), prompt 2._
+
 ### The teacher never sees typing
 
 _2026-07-21_

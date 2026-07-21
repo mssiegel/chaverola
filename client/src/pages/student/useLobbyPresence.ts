@@ -81,7 +81,9 @@ function buildStudentAuth(
  * resume into it (refresh, wifi recovery, duplicate-tab takeover),
  * `onChatUpdate` is a membership change, `onChatLine` an incoming message
  * (the student's own send echoes back through it too), `onChatEnded` the
- * below-2 ending — re-sent on resume while the seat is wrapping up.
+ * chat's ending with its honest reason ("teacher", or "peer-timeout" when
+ * a 1:1 partner's grace ran out) — re-sent on resume while the seat is
+ * wrapping up.
  *
  * `paused` is the activity-wide teacher pause, delivered on lobby:welcome
  * (so a refresh mid-pause stays frozen) and flipped live by
@@ -129,7 +131,7 @@ export function useLobbyPresence({
   }) => void;
   onChatUpdate?: (payload: { chatId: string; peers: ChatPeer[] }) => void;
   onChatLine?: (payload: { chatId: string; line: ChatLine }) => void;
-  onChatEnded?: (payload: { reason: "teacher" }) => void;
+  onChatEnded?: (payload: { reason: "teacher" | "peer-timeout" }) => void;
   onPeerTyping?: (payload: { chatId: string; characterId: string }) => void;
   onPeerConnection?: (payload: {
     chatId: string;
