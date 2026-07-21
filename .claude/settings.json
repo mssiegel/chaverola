@@ -1,5 +1,23 @@
 {
   "permissions": {
-    "allow": ["Edit(.claude/skills/**)", "Write(.claude/skills/**)"]
+    "allow": ["Edit", "Write", "NotebookEdit", "Bash", "PowerShell"],
+    "ask": [
+      "Bash(rm -rf *)",
+      "Bash(rm -fr *)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean *)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(shutdown *)",
+      "Bash(npm publish*)",
+      "PowerShell(git reset --hard*)",
+      "PowerShell(git clean *)",
+      "PowerShell(git push --force*)",
+      "PowerShell(git push -f*)",
+      "PowerShell(shutdown *)",
+      "PowerShell(Stop-Computer*)",
+      "PowerShell(Restart-Computer*)",
+      "PowerShell(npm publish*)"
+    ]
   }
 }
