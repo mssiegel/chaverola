@@ -65,8 +65,9 @@ function isReconnecting(seat: Seat, now: number): boolean {
 
 /** Seconds left in a dropped seat's reconnect window — the student
  *  countdown's seed, computed at emit; the client ticks between events.
- *  Callers only ask about the seat whose own broadcast timer just fired,
- *  so disconnectedAt is set (the fallback keeps the helper total). */
+ *  Callers only ask about seats that are actually mid-drop (the broadcast
+ *  timer's own seat, or one isReconnecting just passed), so disconnectedAt
+ *  is set (the fallback keeps the helper total). */
 export function graceSecondsLeft(seat: Seat, now: number): number {
   const deadline = (seat.disconnectedAt ?? now) + LOBBY_GRACE_SECONDS * 1000;
   return Math.max(0, Math.ceil((deadline - now) / 1000));
@@ -206,13 +207,16 @@ export function toChatLine(chat: StoredChat, line: StoredChatLine): ChatLine {
 
 export function toChatStarted(
   chat: StoredChat,
-  studentId: string
+  activity: StoredActivity,
+  studentId: string,
+  now: number
 ): {
   chatId: string;
   selfCharacterId: string;
   peers: ChatPeer[];
   everPeers: ChatPeer[];
   lines: ChatLine[];
+  reconnectingPeers: { characterId: string; secondsLeft: number }[];
 } {
   // Callers only project a chat for its own members — the find can't miss.
   const self = chat.members.find((m) => m.studentId === studentId)!;
@@ -222,6 +226,21 @@ export function toChatStarted(
     peers: toChatPeers(chat, studentId),
     everPeers: toChatEverPeers(chat, studentId),
     lines: chat.lines.map((line) => toChatLine(chat, line)),
+    // The offline backlog: peers mid-grace at delivery, on the same 4s
+    // gate as chat:peer-connection (a fresh drop reads connected until its
+    // own broadcast timer fires). characterId + seconds only — never the
+    // seat (the entry pin in projections.test.ts).
+    reconnectingPeers: activeMembers(chat).flatMap((member) => {
+      if (member.studentId === studentId) return [];
+      const seat = activity.seats.byId.get(member.studentId);
+      if (!seat || !isReconnecting(seat, now)) return [];
+      return [
+        {
+          characterId: member.characterId,
+          secondsLeft: graceSecondsLeft(seat, now),
+        },
+      ];
+    }),
   };
 }
 

@@ -317,14 +317,20 @@ export function attachLobby(
   }
 
   /** Targeted chat:started to every seated member (all connected at
-   *  creation — eligibility requires it — but guard anyway). */
+   *  creation — eligibility requires it — but guard anyway, which is also
+   *  why the reconnectingPeers backlog is empty here: nobody in a
+   *  just-created chat is mid-drop). */
   function sendChatStarted(record: StoredActivity, chat: StoredChat): void {
+    const now = Date.now();
     for (const member of activeMembers(chat)) {
       const seat = record.seats.byId.get(member.studentId);
       if (!seat?.connected) continue;
       io.sockets.sockets
         .get(seat.currentSocketId)
-        ?.emit("chat:started", toChatStarted(chat, member.studentId));
+        ?.emit(
+          "chat:started",
+          toChatStarted(chat, record, member.studentId, now)
+        );
     }
   }
 
@@ -690,7 +696,13 @@ export function attachLobby(
     // wrappingUp seat gets its ended screen back.
     const activeChat = findActiveChatOf(record, data.studentId);
     if (activeChat) {
-      socket.emit("chat:started", toChatStarted(activeChat, data.studentId));
+      // The re-delivery carries both healing backlogs: the transcript AND
+      // the offline peers — this resumer may have missed a partner's
+      // "dropped" emit entirely (fan-outs skip disconnected seats).
+      socket.emit(
+        "chat:started",
+        toChatStarted(activeChat, record, data.studentId, Date.now())
+      );
       // EVERY resume announces the return — by now the middleware's resume
       // has cleared disconnectedAt, so the server can't know whether the
       // 4s drop notice ever fired. Receivers ignore a return for a peer

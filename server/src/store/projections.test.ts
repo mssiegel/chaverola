@@ -167,13 +167,31 @@ describe("toChatSnapshot (teacher chat card)", () => {
 });
 
 describe("toChatStarted (the student wire)", () => {
+  // Noa (student-2, the one active peer) is mid-drop at now = 30_000:
+  // disconnected 10s ago — past the 4s broadcast gate, 110s from reaping —
+  // so the reconnectingPeers backlog below is non-empty and its entry pin
+  // does real work. A full Seat (token included) hangs off the record; the
+  // projection must leak none of it.
+  const droppedSeat: Seat = {
+    ...fullSeat,
+    studentId: "student-2",
+    token: "SECRET_SEAT_TOKEN_BBBBBB",
+    name: "Noa",
+    connected: false,
+    currentSocketId: "socket-2",
+    disconnectedAt: 20_000,
+  };
+  const record: StoredActivity = { ...fullRecord, seats: createSeatState() };
+  record.seats.byId.set(droppedSeat.studentId, droppedSeat);
+
   it("carries characterIds only — no names, no studentIds", () => {
-    const started = toChatStarted(fullChat, "student-1");
+    const started = toChatStarted(fullChat, record, "student-1", 30_000);
     expect(Object.keys(started).sort()).toEqual([
       "chatId",
       "everPeers",
       "lines",
       "peers",
+      "reconnectingPeers",
       "selfCharacterId",
     ]);
     // peers is the ACTIVE roster (the inactive third member is out);
@@ -187,7 +205,7 @@ describe("toChatStarted (the student wire)", () => {
   });
 
   it("projects lines as characterId-only — no studentId, no name", () => {
-    const started = toChatStarted(fullChat, "student-1");
+    const started = toChatStarted(fullChat, record, "student-1", 30_000);
     // Guard the loop below against a fixture regression to lines: [] —
     // an empty array would pass the key pin while proving nothing.
     expect(started.lines).toHaveLength(1);
@@ -201,6 +219,22 @@ describe("toChatStarted (the student wire)", () => {
     }
     // `!` — length pinned to 1 just above.
     expect(started.lines[0]!.characterId).toBe("caesar");
+  });
+
+  it("projects the offline backlog as characterId + seconds — never the seat", () => {
+    const started = toChatStarted(fullChat, record, "student-1", 30_000);
+    // Guard the loop below, same as the lines pin: an empty backlog would
+    // pass the key pin while proving nothing.
+    expect(started.reconnectingPeers).toHaveLength(1);
+    for (const peer of started.reconnectingPeers) {
+      expect(Object.keys(peer).sort()).toEqual(["characterId", "secondsLeft"]);
+    }
+    // `!` — length pinned to 1 just above. 110 = 120s grace minus the 10s
+    // already spent dark.
+    expect(started.reconnectingPeers[0]!).toEqual({
+      characterId: "caesar",
+      secondsLeft: 110,
+    });
   });
 });
 

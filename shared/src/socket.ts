@@ -111,13 +111,19 @@ export interface ServerToClientEvents {
    *  chat:line fan-out skips disconnected seats, so this payload is the only
    *  channel that heals a blip. `everPeers` is everyone ever in the room
    *  minus self (peers still shrinks on chat:update), so a departed member's
-   *  lines keep resolving after a refresh. */
+   *  lines keep resolving after a refresh. `reconnectingPeers` is the
+   *  offline backlog — active peers mid-grace, past the same 4s gate as
+   *  chat:peer-connection, seconds computed at emit — and is authoritative
+   *  on every delivery for the same reason as `lines`: the "dropped"
+   *  fan-out skips disconnected seats too, so a resumer who was dark when
+   *  a partner dropped learns it only here. */
   "chat:started": (payload: {
     chatId: string;
     selfCharacterId: string;
     peers: ChatPeer[];
     everPeers: ChatPeer[];
     lines: ChatLine[];
+    reconnectingPeers: { characterId: string; secondsLeft: number }[];
   }) => void;
   /** Student only: remaining ACTIVE peers after a membership change; the
    *  client diffs against what it had and renders a local notice. */

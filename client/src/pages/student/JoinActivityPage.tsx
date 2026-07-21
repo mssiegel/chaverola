@@ -99,11 +99,14 @@ interface LiveMatch {
    *  points that already exist. Expired by a TTL timer from the last
    *  heartbeat; a peer's landing message clears their own slot instantly. */
   typingPeerId: string | null;
-  /** Peers currently dropped (chat:peer-connection), characterId → the
-   *  epoch-ms deadline of their reconnect window. Deadlines, not counters:
-   *  the stage re-derives seconds from real time, so background-tab
-   *  throttling self-corrects. On the match state for the same reason as
-   *  typingPeerId — shrinkToPeers strips leavers structurally. */
+  /** Peers currently dropped, characterId → the epoch-ms deadline of their
+   *  reconnect window. Fed live by chat:peer-connection and rebuilt
+   *  wholesale from chat:started's reconnectingPeers backlog on every
+   *  delivery (the authoritative copy — this client's own blip may have
+   *  swallowed a drop or a return). Deadlines, not counters: the stage
+   *  re-derives seconds from real time, so background-tab throttling
+   *  self-corrects. On the match state for the same reason as typingPeerId
+   *  — shrinkToPeers strips leavers structurally. */
   offlinePeers: Record<string, number>;
   /** The peer whose "X is back! 🎉" flash is showing (a characterId), or
    *  null. Cleared by a real-time timer ~2.5s after the return. */
@@ -129,6 +132,21 @@ const RETURNED_FLASH_MS = 2500;
  *  server's array order is the order, and merges preserve it. */
 function toLiveMessage(line: ChatLine): ChatMessage {
   return { id: line.id, senderId: line.characterId, text: line.text };
+}
+
+/** chat:started's offline backlog as the match's offline map: wire seconds
+ *  → epoch-ms deadlines (the same derivation the live "dropped" handler
+ *  uses). `?? []` tolerates the deploy window where an older server sends
+ *  no backlog — absence reads as nobody offline, today's behavior. */
+function toOfflinePeers(
+  reconnectingPeers: { characterId: string; secondsLeft: number }[] | undefined
+): Record<string, number> {
+  const now = Date.now();
+  const offlinePeers: Record<string, number> = {};
+  for (const peer of reconnectingPeers ?? []) {
+    offlinePeers[peer.characterId] = now + peer.secondsLeft * 1000;
+  }
+  return offlinePeers;
 }
 
 const PAGE_TITLES: Record<StudentStage, string> = {
@@ -460,7 +478,8 @@ export function JoinActivityPage() {
   //   the activity-gone screen.
   // - onChatStarted is both the match and every resume into it; a re-send
   //   for a chat already in memory merges the missed transcript backlog,
-  //   then reconciles peers instead of resetting.
+  //   then reconciles peers instead of resetting, then rebuilds the
+  //   offline map from the payload's reconnectingPeers backlog.
   // - onChatEnded with no match in memory is the post-refresh ended screen
   //   — nothing to show, so the seat goes straight back to the queue.
   // The typing indicator's TTL: re-armed on every relayed heartbeat, so it
@@ -526,13 +545,26 @@ export function JoinActivityPage() {
             messages:
               missed.length > 0 ? [...prev.messages, ...missed] : prev.messages,
           };
+          // Membership reconciles against the OLD offline map on purpose:
+          // a peer who timed out while this phone was dark still earns the
+          // honest "couldn't get back in" notice from local memory. Only
+          // THEN is the map overwritten wholesale from the payload — our
+          // own blip may have swallowed a peer's drop OR return, so the
+          // carried-over entries can't be trusted, and the backlog is
+          // authoritative on every delivery, same philosophy as `lines`.
           const shrunk = shrinkToPeers(caughtUp, payload.peers);
-          // Our own blip may have swallowed a peer's drop OR return, so the
-          // carried-over offline map can't be trusted after a resume. Until
-          // chat:started carries the authoritative offline list (feature
-          // 8's prompt 3), clear it — a missing banner beats a phantom one
-          // counting down over a partner who's actually back.
-          return { ...shrunk, offlinePeers: {} };
+          const offlinePeers = toOfflinePeers(payload.reconnectingPeers);
+          return {
+            ...shrunk,
+            offlinePeers,
+            // A peer the backlog marks offline types nothing — the same
+            // rule as the live "dropped" handler.
+            typingPeerId:
+              shrunk.typingPeerId !== null &&
+              offlinePeers[shrunk.typingPeerId] !== undefined
+                ? null
+                : shrunk.typingPeerId,
+          };
         }
         return {
           kind: "live",
@@ -547,7 +579,10 @@ export function JoinActivityPage() {
           // The server's order is already correct and already capped.
           messages: payload.lines.map(toLiveMessage),
           typingPeerId: null,
-          offlinePeers: {},
+          // Fresh in memory ≠ fresh in the world: a mid-chat refresh lands
+          // here too, and a partner may already be mid-drop — the backlog
+          // is the only place this client can learn that.
+          offlinePeers: toOfflinePeers(payload.reconnectingPeers),
           returnedFlashId: null,
         };
       });

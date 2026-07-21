@@ -83,7 +83,11 @@ expired grace says so on the wire (`chat:ended` reason
 `"peer-timeout"` → the survivor's 🔌 "Your partner lost connection"
 wrap-up, riding the resume re-delivery too), and a group's survivors
 read "X couldn't get back in and left the chat" — a client heuristic
-off the offline map, no reason on the wire. What hasn't shipped: the
+off the offline map, no reason on the wire. Its third slice made **a
+blip unable to hide a drop**: `chat:started` carries the offline peers
+(`reconnectingPeers`, authoritative on every delivery like `lines`),
+so a wifi blip that downs both students can't hide the partner's
+countdown from the first one back. What hasn't shipped: the
 auto-end clock and the name reveal still render as honest placeholders
 on real activities (the demo still simulates both), and the demo's own
 peer-drop simulation still plays the retired spinner until feature 8's
@@ -179,7 +183,8 @@ Load-bearing flow facts (the reasoning for each is in DECISIONS.md):
   header and on teacher chat cards). A 1:1 reconnect timeout ends the chat;
   a group timeout drops the peer with a notice instead. The
   **peer-reconnect window is real since feature 8**: the page feeds an
-  offline map from the `chat:peer-connection` wire and
+  offline map from the `chat:peer-connection` wire (rebuilt wholesale
+  from `chat:started`'s `reconnectingPeers` backlog on every resume) and
   `Student/LiveChatStage.tsx` derives `peerState` / `offlinePeerId` /
   `reconnectSecondsLeft` from it, ticking on plain real time (never
   `scaledMs`). The **auto-end clock stays demo behavior only** —

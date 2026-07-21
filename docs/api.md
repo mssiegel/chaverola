@@ -246,13 +246,19 @@ export interface ServerToClientEvents {
   }) => void;
   /** Student only, targeted; re-sent on every resume while matched.
    *  `lines` is the transcript backlog (authoritative on every delivery);
-   *  `everPeers` is everyone ever in the room minus self. */
+   *  `everPeers` is everyone ever in the room minus self;
+   *  `reconnectingPeers` is the offline backlog — active peers mid-grace,
+   *  past the same 4s gate as chat:peer-connection, seconds computed at
+   *  emit — authoritative on every delivery like `lines`: the "dropped"
+   *  fan-out skips disconnected seats, so a resumer who was dark when a
+   *  partner dropped learns it only here. */
   "chat:started": (payload: {
     chatId: string;
     selfCharacterId: string;
     peers: ChatPeer[];
     everPeers: ChatPeer[];
     lines: ChatLine[];
+    reconnectingPeers: { characterId: string; secondsLeft: number }[];
   }) => void;
   /** Student only: remaining ACTIVE peers after a membership change; the
    *  client diffs against what it had and renders a local notice. */
@@ -544,12 +550,15 @@ below.
 - **The transcript is capped and ephemeral.** `CHAT_TRANSCRIPT_MAX_LINES`
   (200) per chat, oldest dropped, in memory, wiped by every deploy like
   everything else.
-- **`chat:started`'s `lines` are the only healing channel.** The
-  `chat:line` fan-out skips disconnected seats and there is no
-  `connectionStateRecovery`, so a student who blinked gets the missed
-  messages exclusively from the resume payload. Clients must treat
-  `lines` as authoritative on **every** `chat:started`, not only the
-  first — the server re-emits it on every reconnect.
+- **`chat:started`'s backlogs are the only healing channel.** Every
+  fan-out (`chat:line`, `chat:peer-connection`) skips disconnected seats
+  and there is no `connectionStateRecovery`, so a student who blinked
+  gets the missed messages exclusively from `lines` — and a missed
+  partner drop exclusively from `reconnectingPeers` (the classroom blip
+  that downs BOTH students: the first one back never heard the other's
+  "dropped"). Clients must treat both as authoritative on **every**
+  `chat:started`, not only the first — the server re-emits it on every
+  reconnect.
 - **`everPeers` is the roster lines resolve against.** `peers` is the
   live roster and shrinks on `chat:update`; `everPeers` is everyone ever
   in the room minus self, so a departed member's backlog lines (and their
@@ -630,8 +639,9 @@ hears `chat:peer-typing`, and neither does the sender's own.
   "dropped" payload's `secondsLeft` arrives at ~116, not 120.
 - **Resume re-delivers, it doesn't replay.** Whatever a seat is in the
   middle of, the server re-states it on connect: a matched student gets
-  `chat:started` again — now carrying the whole capped transcript in
-  `lines`, which is how a blip's missed messages arrive (refresh, wifi
+  `chat:started` again — carrying the whole capped transcript in `lines`
+  and the current offline peers in `reconnectingPeers`, which is how a
+  blip's missed messages and a missed partner drop arrive (refresh, wifi
   recovery, duplicate-tab takeover all land back in the same chat) — and
   a wrapping-up seat gets `chat:ended` again. Clients don't have to
   persist chat state.

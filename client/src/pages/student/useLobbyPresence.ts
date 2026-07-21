@@ -78,7 +78,9 @@ function buildStudentAuth(
  * activity_gone rejection) — the page reacts there, where reacting with
  * setState is the subscription pattern the hooks lint asks for. The chat
  * callbacks work the same way: `onChatStarted` is both the match and every
- * resume into it (refresh, wifi recovery, duplicate-tab takeover),
+ * resume into it (refresh, wifi recovery, duplicate-tab takeover) — its
+ * transcript and offline-peer backlogs are authoritative on every
+ * delivery, since every other fan-out skips disconnected seats —
  * `onChatUpdate` is a membership change, `onChatLine` an incoming message
  * (the student's own send echoes back through it too), `onChatEnded` the
  * chat's ending with its honest reason ("teacher", or "peer-timeout" when
@@ -128,6 +130,9 @@ export function useLobbyPresence({
     peers: ChatPeer[];
     everPeers: ChatPeer[];
     lines: ChatLine[];
+    /** Optional for the deploy window — an older server omits it, and the
+     *  page treats absence as an empty backlog. */
+    reconnectingPeers?: { characterId: string; secondsLeft: number }[];
   }) => void;
   onChatUpdate?: (payload: { chatId: string; peers: ChatPeer[] }) => void;
   onChatLine?: (payload: { chatId: string; line: ChatLine }) => void;

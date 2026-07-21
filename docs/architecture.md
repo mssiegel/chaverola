@@ -272,8 +272,15 @@ How the layer is put together (`server/src/live/`):
   fans out as `chat:peer-connection` to the room's other members on the
   same 4s gate as the teacher's reconnecting tag, seeded with the
   remaining grace, and every resume announces the return (receivers
-  ignore a return for a peer they never saw drop). **What is still
-  simulated:** the auto-end clock and the name reveal.
+  ignore a return for a peer they never saw drop). The `chat:started`
+  resume payload carries the offline peers too (`reconnectingPeers`,
+  authoritative on every delivery like `lines`), so a blip that downs
+  both students can't hide the survivor's countdown from the first one
+  back. **What is still simulated:** the auto-end clock and the name
+  reveal. (Deferred to its own feature: the reaped student's own
+  self-timeout screen — the direction on record is that the server will
+  remember reaped seats for at most 30 minutes so a late returner learns
+  what happened instead of silently landing back in the lobby.)
 - **The teacher socket is the TTL keep-alive:** while one is connected,
   a ~5-minute `.unref()`ed interval calls `getByHostKey`, so a live
   class can't expire at the 12h TTL mid-lesson. Student sockets never
