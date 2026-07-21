@@ -17,8 +17,9 @@ re-delivered on resume) and **the teacher reads every chat live with real
 names attached** (`chat:transcript-line` to the teacher room, with the
 whole transcript riding `ChatSnapshot.messages`). Feature 5 adds the
 **student typing indicator** (`chat:typing` → `chat:peer-typing`, an
-ephemeral heartbeat relay — students only). Ending, pausing, the
-auto-end clock, and the name reveal are further out still.
+ephemeral heartbeat relay — students only). Feature 6 makes **ending
+real**: the teacher's `chat:end` / `chats:end-all` end chats outright.
+Pausing, the auto-end clock, and the name reveal are further out still.
 
 ## Conventions
 
@@ -347,6 +348,13 @@ export interface ClientToServerEvents {
   "match:pair-everyone": () => void;
   /** Teacher only. Quiet exit; ends the chat when <2 active would remain. */
   "chat:remove": (payload: { chatId: string; studentId: string }) => void;
+  /** Teacher only; idempotent — an already-ended or unknown chat is a
+   *  no-op. Every member is still active when this fires, so all of them
+   *  go wrappingUp and hear chat:ended. */
+  "chat:end": (payload: { chatId: string }) => void;
+  /** Teacher only: the round-closer — ends every active chat at once. A
+   *  class with none active is a no-op. Plural like chats:snapshot. */
+  "chats:end-all": () => void;
   /** Teacher only; zod-validated, replaces the stored settings. */
   "settings:update": (payload: { settings: ActivitySettings }) => void;
   /** Student: the ended screen's Back-to-the-lobby tap — returns a
@@ -368,8 +376,8 @@ Every teacher command is registered on **teacher sockets only** — that
 structural boundary, not a per-event role check, is what keeps a student
 from starting chats or rewriting settings. Two cases are pinned by tests:
 a 4-digit join code cannot open a teacher socket at all, and a student
-socket emitting `queue:remove`, `chat:start`, `chat:remove`, or
-`settings:update` is silently ignored.
+socket emitting `queue:remove`, `chat:start`, `chat:remove`, `chat:end`,
+`chats:end-all`, or `settings:update` is silently ignored.
 
 Teacher commands are also **idempotent and self-correcting**: a command
 naming a student who just dropped, a chat that just ended, or a seat that
@@ -422,6 +430,17 @@ below.
   `lobby:back`, which re-queues them with a fresh wait clock. Auto-return
   was rejected — it would show the teacher a "waiting" student who is
   still reading the ended screen.
+- **The teacher can end a chat outright.** `chat:end` (one card's End
+  chat) and `chats:end-all` (the round-closer) flip the chat to
+  `status: "ended"` with reason `"teacher"` while membership stays
+  intact — nobody is marked inactive. Every member's seat goes wrapping
+  up with the same semantics as a below-2 end: `chat:ended` to connected
+  members (a dropped member gets a fresh 120s grace and hears it on
+  resume; a cold resume then returns to the lobby via the existing
+  post-refresh path), and the return to the queue is otherwise each
+  student's own `lobby:back` tap, never automatic. End-all also holds auto-match: the
+  client turns the setting off in the same confirm, so nobody is
+  re-paired into a round the teacher just closed.
 - **Settings sync; the roster doesn't.** `settings:update` is
   zod-validated against the same schema `POST /activities` uses and
   replaces the stored settings wholesale; the server echoes

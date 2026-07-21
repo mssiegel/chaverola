@@ -15,10 +15,10 @@ interface ChatsInProgressSectionProps {
   activity: HostedActivity;
   studentsChattingCount: number;
   waitingCount: number;
-  /** False on live activities until ending ships: End chat / End all /
-   *  Pause all render disabled, with one shared hint line saying why
-   *  (honest-placeholder pattern; founder call, 2026-07-20). */
-  endingEnabled: boolean;
+  /** False on live activities until pausing ships: Pause all renders
+   *  disabled, with a hint line saying why (honest-placeholder pattern;
+   *  founder call, 2026-07-20). Ending carries no flag. */
+  pausingEnabled: boolean;
   onEndChat: (chatId: string) => void;
   onRequestEndAll: () => void;
   /** The activity-wide pause; pausing confirms, resuming is one tap. */
@@ -43,7 +43,7 @@ export function ChatsInProgressSection({
   activity,
   studentsChattingCount,
   waitingCount,
-  endingEnabled,
+  pausingEnabled,
   onEndChat,
   onRequestEndAll,
   paused,
@@ -118,7 +118,7 @@ export function ChatsInProgressSection({
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={!endingEnabled}
+                  disabled={!pausingEnabled}
                   onClick={onRequestPauseAll}
                   className="border-amber-400/60 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
                 >
@@ -129,7 +129,6 @@ export function ChatsInProgressSection({
               <Button
                 variant="outline"
                 size="sm"
-                disabled={!endingEnabled}
                 onClick={onRequestEndAll}
                 className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
               >
@@ -138,12 +137,11 @@ export function ChatsInProgressSection({
               </Button>
             </div>
           </div>
-          {/* One shared hint for all three disabled ending controls (the
-              cards' End chat buttons included) — per card would repeat the
-              same sentence across the grid (founder call, 2026-07-20). */}
-          {!endingEnabled && (
+          {/* The one still-disabled control's hint (ending shipped; the
+              shared-hint pattern stays for whenever pause needs company). */}
+          {!pausingEnabled && (
             <p className="-mt-2 mb-4 text-xs text-muted-foreground">
-              Ending and pausing chats come in a later update.
+              Pausing chats comes in a later update.
             </p>
           )}
           {paused && (
@@ -172,14 +170,13 @@ export function ChatsInProgressSection({
                 isEnded={false}
                 isPaused={paused}
                 onEndChat={() => onEndChat(chat.id)}
-                endChatDisabled={!endingEnabled}
                 autoEndSecondsLeft={chat.autoEndSecondsLeft}
                 elapsedSeconds={chat.elapsedSeconds ?? null}
                 // A real empty state, not a feature notice: transcripts are
                 // live, so a silent card just hasn't had its first message.
-                // Unconditional (no endingEnabled gate) — on a freshly
-                // paired demo chat it shows for a beat until the first
-                // scripted line, and it's just as true there.
+                // Unconditional — on a freshly paired demo chat it shows for
+                // a beat until the first scripted line, and it's just as
+                // true there.
                 emptyHint="No messages yet. They'll show up here as students type."
                 inactiveParticipantIds={new Set(chat.inactiveStudentIds)}
                 reconnectingParticipantIds={

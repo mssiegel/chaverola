@@ -44,6 +44,7 @@ import {
   activeMembers,
   appendLine,
   createChat,
+  endChat,
   findAutoMatchPair,
   markInactive,
   matchedStudentIds,
@@ -275,12 +276,13 @@ export function attachLobby(
     }
   }
 
-  /** After markInactive: tell the remaining members what happened. A chat
-   *  that ended puts them on the ended screen (wrappingUp — the return to
-   *  the queue is THEIR tap, never automatic); one that continues gets a
-   *  peers update. A disconnected remaining member's matched-seat rule just
-   *  expired with the chat, so a fresh 120s grace starts now — otherwise
-   *  that seat would live untimed until activity death. */
+  /** After markInactive or endChat: tell the remaining members what
+   *  happened. A chat that ended puts them on the ended screen (wrappingUp
+   *  — the return to the queue is THEIR tap, never automatic); one that
+   *  continues gets a peers update. A disconnected remaining member's
+   *  matched-seat rule just expired with the chat, so a fresh 120s grace
+   *  starts now — otherwise that seat would live untimed until activity
+   *  death. */
   function settleMembershipChange(
     record: StoredActivity,
     result: { ended: boolean; chat: StoredChat }
@@ -526,6 +528,40 @@ export function attachLobby(
         broadcastState(current);
       });
 
+      socket.on("chat:end", (payload) => {
+        if (typeof payload?.chatId !== "string") return;
+        const current = getByHostKey(data.hostKey);
+        if (!current) return;
+        const result = endChat(current, payload.chatId);
+        if (!result) return; // idempotent — already ended or unknown
+        log.info(
+          { joinCode: data.joinCode, chatId: result.chat.id },
+          "chat ended by teacher"
+        );
+        settleMembershipChange(current, result);
+        broadcastState(current);
+      });
+
+      socket.on("chats:end-all", () => {
+        const current = getByHostKey(data.hostKey);
+        if (!current) return;
+        // Each student is in at most one active chat, so settling per chat
+        // inside the loop is order-independent; one broadcast at the end.
+        let endedCount = 0;
+        for (const chat of current.chats) {
+          const result = endChat(current, chat.id);
+          if (!result) continue; // already-ended chats in the list
+          endedCount += 1;
+          settleMembershipChange(current, result);
+        }
+        if (endedCount === 0) return; // nothing active — a visible no-op
+        log.info(
+          { joinCode: data.joinCode, chats: endedCount },
+          "all chats ended by teacher"
+        );
+        broadcastState(current);
+      });
+
       socket.on("settings:update", (payload) => {
         const parsed = activitySettingsSchema.safeParse(payload?.settings);
         if (!parsed.success) {
@@ -577,8 +613,9 @@ export function attachLobby(
     broadcastState(record);
 
     // A student socket deliberately gets NO teacher handlers — a student
-    // emitting queue:remove / chat:start / chat:remove / settings:update is
-    // simply ignored (the boundary test pins this).
+    // emitting queue:remove / chat:start / chat:remove / chat:end /
+    // chats:end-all / settings:update is simply ignored (the boundary test
+    // pins this).
     socket.on("lobby:leave", () => {
       const current = getByJoinCode(data.joinCode);
       if (!current) return;

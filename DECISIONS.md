@@ -94,6 +94,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Character rows lead with the emoji avatar](#character-rows-lead-with-the-emoji-avatar)
   - [Setup sections each carry one brand accent; settings stays the quiet one](#setup-sections-each-carry-one-brand-accent-settings-stays-the-quiet-one)
 - [Teacher live activity page](#teacher-live-activity-page)
+  - [Ending ships for real; pausing keeps the placeholder seam](#ending-ships-for-real-pausing-keeps-the-placeholder-seam)
   - [The teacher reads every chat, and that ships with messaging — not after it](#the-teacher-reads-every-chat-and-that-ships-with-messaging--not-after-it)
   - [Message lines are the one delta on the teacher wire](#message-lines-are-the-one-delta-on-the-teacher-wire)
   - [Disabled ending controls share one hint line, not one per card](#disabled-ending-controls-share-one-hint-line-not-one-per-card)
@@ -1426,6 +1427,53 @@ _Implemented in
 
 ## Teacher live activity page
 
+### Ending ships for real; pausing keeps the placeholder seam
+
+_2026-07-21_
+
+**Decision:** "End chat" (per card) and "End all chats" work on live
+activities. Two new teacher commands — `chat:end { chatId }` and
+`chats:end-all` — flip the chat to `status: "ended"` with reason
+`"teacher"` while membership stays intact (nobody is marked inactive).
+Every member's seat goes wrappingUp with the same semantics as a below-2
+end: connected members hear `chat:ended` and land on the ended screen, a
+dropped member gets a fresh 120s grace and hears it on resume (a cold
+resume then returns them to the lobby — the existing post-refresh path,
+which shows no ended screen for a chat the page no longer holds), and
+the return to the queue is otherwise each student's own "Back to the
+lobby" tap, never automatic. "Pause all chats"
+stays a disabled placeholder behind the engine flag, renamed
+`endingEnabled` → `pausingEnabled` (demo `true`, live `false`), and the
+shared hint now reads "Pausing chats comes in a later update."
+
+**Why:** Founder call (feature-6 planning, 2026-07-21): ending only —
+pausing is its own machinery (world-level freeze, composer disabling,
+resume behavior) and stays behind rather than shipping half-real. The
+flag was renamed, not kept: with ending real on both engines a
+constant-true `endingEnabled` is dead code, and the seam that remains is
+pausing's. Teacher ends reuse `settleMembershipChange`, so a
+teacher-ended chat behaves exactly like a below-2 end — one ending
+experience for students, no new states. End-all is **one server command**
+(one loop over active chats, one broadcast), not N client emits, so the
+round closes in a single handler tick. Deliberately not added: `endedAt`
+on the stored chat (ended cards never render the clock, so the growing
+`elapsedSeconds` is invisible), rematch memory (teacher-initiated ends
+make rematches reachable for the first time, but tracking last-partners
+is its own feature), and any auto-return to the queue. One known benign
+window: the End-all confirm emits `chats:end-all` then `settings:update`
+(the auto-match hold) in order on one socket; an auto-match tick landing
+between the two handlers could still pair two _waiting_ students —
+sub-second, and the just-ended students are wrappingUp-ineligible either
+way.
+
+_Implemented in [matching.ts](server/src/live/matching.ts) (`endChat`),
+[lobby.ts](server/src/live/lobby.ts) (the two handlers),
+[useHostActivityLive](client/src/components/Teacher/HostActivity/useHostActivityLive.ts)
+(the emitters and `pausingEnabled: false`), and
+[ChatsInProgressSection](client/src/components/Teacher/HostActivity/ChatsInProgressSection.tsx)
+(the pause-only hint); plan in
+[docs/plans/feature-6-ending-chats.md](docs/plans/feature-6-ending-chats.md)._
+
 ### The teacher reads every chat, and that ships with messaging — not after it
 
 _2026-07-20 · Shipped 2026-07-21: `chat:transcript-line` to the teacher
@@ -1495,6 +1543,12 @@ handler's room emit) and
 _2026-07-20 · Copy updated 2026-07-20: messaging shipped, so the line
 stopped promising it — it now reads "Ending and pausing chats come in a
 later update." The one-shared-line structure stands unchanged._
+
+_Narrowed 2026-07-21 by feature 6: ending shipped, so End chat and End
+all chats are live and ungated, and the line covers only the still-disabled
+Pause — "Pausing chats comes in a later update." (gated by
+`pausingEnabled`). The one-shared-line structure stands for whenever
+pause needs company again._
 
 **Decision:** On a live activity, "End all chats", "Pause all chats", and
 every card's "End chat" render disabled, explained by a single muted hint
@@ -1656,6 +1710,11 @@ slice: students now send real messages — the composer is live, `chat:send`
 pausing, and the auto-end clock remain placeholders exactly as described
 below (`endingEnabled` stays `false`); the teacher's read-only transcript
 is the next slice._
+
+_Ending shipped 2026-07-21 (feature 6): `chat:end` / `chats:end-all` are
+real teacher commands, and `endingEnabled` was renamed `pausingEnabled` —
+pausing and the auto-end clock are the placeholders that remain. See
+[Ending ships for real; pausing keeps the placeholder seam](#ending-ships-for-real-pausing-keeps-the-placeholder-seam)._
 
 **Decision:** Real host pages get the demo's full matching experience,
 working: tap-to-select (2 up to `min(4, roster)`), "Pair everyone 1:1", the

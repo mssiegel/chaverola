@@ -23,10 +23,6 @@ export interface ChatCardProps {
   isPaused?: boolean;
   /** Omit to hide the End chat button (e.g. the homepage preview card). */
   onEndChat?: () => void;
-  /** Renders the End chat button disabled — the live page's honest
-   *  placeholder until ending ships (the section-level hint explains it
-   *  once for all cards). */
-  endChatDisabled?: boolean;
   /** Seconds left on the chat's auto-end clock (null/omitted: no clock). */
   autoEndSecondsLeft?: number | null;
   /** Seconds since the chat started (live cards) — the count-up chip. */
@@ -60,7 +56,6 @@ export function ChatCard({
   isEnded,
   isPaused = false,
   onEndChat,
-  endChatDisabled = false,
   autoEndSecondsLeft = null,
   elapsedSeconds = null,
   emptyHint,
@@ -181,7 +176,6 @@ export function ChatCard({
             variant="outline"
             size="sm"
             className="flex-1 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-            disabled={endChatDisabled}
             onClick={() => setConfirmOpen(true)}
           >
             <LogOut />

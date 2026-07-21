@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { DEFAULT_ACTIVITY_SETTINGS } from "@chaverola/shared";
 import type {
+  ChatSnapshot,
   ChatTranscriptLine,
   ClientToServerEvents,
   QueueEntry,
@@ -31,6 +32,9 @@ import { createChat } from "./matching";
   chats:snapshot, so neither may ever reach a student socket. The typing
   relay's boundary is pinned the same way: chat:peer-typing reaches the
   OTHER chat members only — never the sender, never the teacher room.
+  Teacher-initiated ending pins its own invariants: chat:end/chats:end-all
+  reach every member (wrappingUp, off the matchable pool), repeats emit
+  nothing, and a dropped member's resume re-delivers chat:ended.
 */
 
 type ClientSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -110,6 +114,24 @@ const nextChatLine = (socket: ClientSocket) =>
 const nextTranscriptLine = (socket: ClientSocket) =>
   new Promise<{ chatId: string; line: ChatTranscriptLine }>((resolve) => {
     socket.once("chat:transcript-line", resolve);
+  });
+const nextChatEnded = (socket: ClientSocket) =>
+  new Promise<{ reason: "teacher" }>((resolve) => {
+    socket.once("chat:ended", resolve);
+  });
+/** Chats snapshots fire on every seat change too — wait for the one that
+ *  matters. */
+const chatsSnapshotWhere = (
+  socket: ClientSocket,
+  predicate: (payload: { chats: ChatSnapshot[] }) => boolean
+) =>
+  new Promise<{ chats: ChatSnapshot[] }>((resolve) => {
+    const handler = (payload: { chats: ChatSnapshot[] }) => {
+      if (!predicate(payload)) return;
+      socket.off("chats:snapshot", handler);
+      resolve(payload);
+    };
+    socket.on("chats:snapshot", handler);
   });
 /** Queue snapshots also fire on every join — wait for the one that matters. */
 const snapshotWhere = (
@@ -256,7 +278,7 @@ describe("the live lobby", () => {
     await emptyQueue;
   });
 
-  it("ignores chat:start, settings:update, and chat:remove from a student socket", async () => {
+  it("ignores chat:start, settings:update, chat:remove, chat:end, and chats:end-all from a student socket", async () => {
     const studentA = connect({
       role: "student",
       joinCode: activity.joinCode,
@@ -296,9 +318,168 @@ describe("the live lobby", () => {
       chatId: chat.id,
       studentId: welcomeB.studentId,
     });
+    studentA.emit("chat:end", { chatId: chat.id });
+    studentA.emit("chats:end-all");
     await sleep(100);
     expect(chat.status).toBe("active");
     expect(chat.inactiveStudentIds).toEqual([]);
+  });
+
+  it("chat:end puts every member on the ended screen — chat:ended to both, seats wrappingUp", async () => {
+    const teacher = connect({ role: "teacher", hostKey: activity.hostKey });
+    await nextSnapshot(teacher);
+    const studentA = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Rachel",
+      nonce: "nonce-a",
+    });
+    const studentB = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Noa",
+      nonce: "nonce-b",
+    });
+    const welcomeA = await nextWelcome(studentA);
+    const welcomeB = await nextWelcome(studentB);
+    // `!` — both members are eligible; the chat just built above them.
+    const chat = createChat(
+      activity,
+      [welcomeA.studentId, welcomeB.studentId],
+      Date.now()
+    )!;
+
+    const endedAtA = nextChatEnded(studentA);
+    const endedAtB = nextChatEnded(studentB);
+    const endedSnapshot = chatsSnapshotWhere(teacher, (p) =>
+      p.chats.some((c) => c.id === chat.id && c.status === "ended")
+    );
+    teacher.emit("chat:end", { chatId: chat.id });
+
+    const [payloadA, payloadB] = await Promise.all([endedAtA, endedAtB]);
+    expect(payloadA).toEqual({ reason: "teacher" });
+    expect(payloadB).toEqual({ reason: "teacher" });
+    await endedSnapshot;
+
+    expect(chat.status).toBe("ended");
+    expect(chat.endReason).toBe("teacher");
+    // Nobody left the room — the chat ended around intact membership.
+    expect(chat.inactiveStudentIds).toEqual([]);
+    // Both stay off the matchable pool until their own Back-to-lobby tap.
+    expect(activity.seats.byId.get(welcomeA.studentId)!.wrappingUp).toBe(true);
+    expect(activity.seats.byId.get(welcomeB.studentId)!.wrappingUp).toBe(true);
+  });
+
+  it("chats:end-all closes every active chat at once, and a repeat is a no-op", async () => {
+    const teacher = connect({ role: "teacher", hostKey: activity.hostKey });
+    await nextSnapshot(teacher);
+    const students = [];
+    const welcomes = [];
+    for (const [name, nonce] of [
+      ["Rachel", "nonce-a"],
+      ["Noa", "nonce-b"],
+      ["Tamar", "nonce-c"],
+      ["Adi", "nonce-d"],
+    ] as const) {
+      const socket = connect({
+        role: "student",
+        joinCode: activity.joinCode,
+        name,
+        nonce,
+      });
+      students.push(socket);
+      welcomes.push(await nextWelcome(socket));
+    }
+    const now = Date.now();
+    // `!` — all four are eligible; the chats just built above them.
+    const first = createChat(
+      activity,
+      [welcomes[0]!.studentId, welcomes[1]!.studentId],
+      now
+    )!;
+    const second = createChat(
+      activity,
+      [welcomes[2]!.studentId, welcomes[3]!.studentId],
+      now
+    )!;
+
+    const allEnded = Promise.all(students.map(nextChatEnded));
+    // The members' chat:ended emits land before the room's own broadcast —
+    // wait for the snapshot too, so the collectors below can't catch it.
+    // Both chats present AND ended — an in-flight pre-chat snapshot's empty
+    // list would satisfy a bare every().
+    const bothEndedSnapshot = chatsSnapshotWhere(
+      teacher,
+      (p) => p.chats.length === 2 && p.chats.every((c) => c.status === "ended")
+    );
+    teacher.emit("chats:end-all");
+    for (const payload of await allEnded) {
+      expect(payload).toEqual({ reason: "teacher" });
+    }
+    await bothEndedSnapshot;
+    expect(first.status).toBe("ended");
+    expect(second.status).toBe("ended");
+
+    // A second end-all (zero active) and an end on an already-ended chat
+    // emit nothing — the idempotency rule.
+    const echoes: unknown[] = [];
+    for (const socket of students) {
+      socket.on("chat:ended", (p) => echoes.push(p));
+    }
+    teacher.on("chats:snapshot", (p) => echoes.push(p));
+    teacher.emit("chats:end-all");
+    teacher.emit("chat:end", { chatId: first.id });
+    await sleep(100);
+    expect(echoes).toEqual([]);
+  });
+
+  it("ending around a dropped member arms a fresh grace, and their resume lands on the ended screen", async () => {
+    const teacher = connect({ role: "teacher", hostKey: activity.hostKey });
+    await nextSnapshot(teacher);
+    const studentA = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Rachel",
+      nonce: "nonce-a",
+    });
+    const studentB = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Noa",
+      nonce: "nonce-b",
+    });
+    const welcomeA = await nextWelcome(studentA);
+    const welcomeB = await nextWelcome(studentB);
+    // `!` — both members are eligible; the chat just built above them.
+    createChat(activity, [welcomeA.studentId, welcomeB.studentId], Date.now())!;
+
+    studentA.disconnect();
+    await sleep(100);
+
+    const endedAtB = nextChatEnded(studentB);
+    teacher.emit("chat:end", { chatId: activity.chats[0]!.id });
+    await endedAtB;
+
+    // The dropped member still went wrappingUp, with a fresh grace so the
+    // seat can't live untimed until activity death.
+    const seat = activity.seats.byId.get(welcomeA.studentId)!;
+    expect(seat.wrappingUp).toBe(true);
+    expect(seat.timers.grace).toBeDefined();
+
+    // A resume lands straight on the ended screen — the wrappingUp branch
+    // re-delivers chat:ended.
+    const resumed = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      studentId: welcomeA.studentId,
+      token: welcomeA.token,
+    });
+    const [welcome, ended] = await Promise.all([
+      nextWelcome(resumed),
+      nextChatEnded(resumed),
+    ]);
+    expect(welcome.studentId).toBe(welcomeA.studentId);
+    expect(ended).toEqual({ reason: "teacher" });
   });
 
   it("measures the chat:send cap in code points, not UTF-16 units", async () => {

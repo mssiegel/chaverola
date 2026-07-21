@@ -10,6 +10,7 @@ import type { StoredActivity } from "../store/activityStore";
 import {
   appendLine,
   createChat,
+  endChat,
   markInactive,
   planPairEveryone,
 } from "./matching";
@@ -168,6 +169,40 @@ describe("markInactive", () => {
     expect(result).toEqual({ ended: true, chat });
     expect(chat.status).toBe("ended");
     expect(chat.endReason).toBe("teacher");
+  });
+});
+
+describe("endChat", () => {
+  it('ends an active chat with reason "teacher" and leaves every member active', () => {
+    const activity = makeActivity(ROSTER);
+    const [a, b] = [addSeat(activity), addSeat(activity)];
+    const chat = createChat(activity, [a.studentId, b.studentId], 10_000)!;
+
+    const result = endChat(activity, chat.id);
+    expect(result).toEqual({ ended: true, chat });
+    expect(chat.status).toBe("ended");
+    expect(chat.endReason).toBe("teacher");
+    // Nobody was marked inactive — settleMembershipChange reaches every
+    // member through activeMembers, so all of them hear chat:ended.
+    expect(chat.inactiveStudentIds).toEqual([]);
+  });
+
+  it("no-ops on an already-ended or unknown chat", () => {
+    const activity = makeActivity(ROSTER);
+    const [a, b] = [addSeat(activity), addSeat(activity)];
+    const chat = createChat(activity, [a.studentId, b.studentId], 10_000)!;
+
+    expect(endChat(activity, "no-such-chat")).toBeUndefined();
+
+    endChat(activity, chat.id);
+    expect(endChat(activity, chat.id)).toBeUndefined();
+
+    // A chat the below-2 rule already ended is just as done.
+    const [c, d] = [addSeat(activity), addSeat(activity)];
+    const second = createChat(activity, [c.studentId, d.studentId], 10_000)!;
+    markInactive(activity, second.id, c.studentId);
+    expect(second.status).toBe("ended");
+    expect(endChat(activity, second.id)).toBeUndefined();
   });
 });
 

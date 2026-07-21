@@ -254,12 +254,14 @@ How the layer is put together (`server/src/live/`):
   relays as `chat:peer-typing` to the other active members — ephemeral
   and stateless (nothing stored, nothing resumed), characterId-only,
   volatile in both directions, and deliberately with no teacher emit
-  (DECISIONS.md → "The teacher never sees typing"). **What is still
-  simulated:** ending, pausing, the auto-end clock, student-facing
-  peer-drop UI, and the name reveal. Chats are created and ended
-  structurally (`endReason: "teacher"` when membership drops below 2 is
-  the only reachable ending). The client's `endingEnabled` engine flag
-  is the seam that flips when ending and pausing become real.
+  (DECISIONS.md → "The teacher never sees typing"). Ending is real too
+  (feature 6): a teacher's `chat:end` / `chats:end-all` flips the chat
+  to `status: "ended"` with reason `"teacher"`, every member goes
+  wrappingUp and hears `chat:ended`, and the below-2 rule still ends a
+  chat structurally when membership drops. **What is still simulated:**
+  pausing, the auto-end clock, student-facing peer-drop UI, and the
+  name reveal. The client's `pausingEnabled` engine flag is the seam
+  that flips when pausing becomes real.
 - **The teacher socket is the TTL keep-alive:** while one is connected,
   a ~5-minute `.unref()`ed interval calls `getByHostKey`, so a live
   class can't expire at the 12h TTL mid-lesson. Student sockets never

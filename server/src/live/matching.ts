@@ -11,8 +11,9 @@ import type { Seat } from "./seats";
   sight. lobby.ts owns the io server, the emits, and the auto-match timer;
   this module owns the chat records and the pairing rules. The rules mirror
   hostWorld.ts's demo simulation (read, never import) minus rematch memory —
-  chats effectively never end this feature, so exact-rematch is structurally
-  unreachable and pairing is greedy in queue order.
+  chats end two ways (the teacher's endChat, and markInactive's below-2
+  rule), but the server still tracks no last-partners, so pairing stays
+  greedy in queue order. Rematch memory is its own later feature.
 */
 
 /** One stored transcript line. Deliberately lean: no characterId, no name
@@ -203,6 +204,24 @@ export function markInactive(
     chat.endReason = "teacher";
   }
   return { ended, chat };
+}
+
+/**
+ * The teacher ends a chat outright (per-card End chat, or End-all's loop):
+ * membership stays intact — everyone is still in the room — the chat just
+ * flips to ended with reason "teacher". Undefined when the chat is missing
+ * or already ended — idempotent, like every teacher command. The result
+ * shape matches markInactive's so settleMembershipChange serves both.
+ */
+export function endChat(
+  activity: StoredActivity,
+  chatId: string
+): { ended: true; chat: StoredChat } | undefined {
+  const chat = activity.chats.find((c) => c.id === chatId);
+  if (!chat || chat.status !== "active") return undefined;
+  chat.status = "ended";
+  chat.endReason = "teacher";
+  return { ended: true, chat };
 }
 
 /**

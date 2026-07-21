@@ -156,6 +156,13 @@ export interface ClientToServerEvents {
   "match:pair-everyone": () => void;
   /** Teacher only. Quiet exit; ends the chat when <2 active would remain. */
   "chat:remove": (payload: { chatId: string; studentId: string }) => void;
+  /** Teacher only; idempotent — an already-ended or unknown chat is a
+   *  no-op. Every member is still active when this fires, so all of them
+   *  go wrappingUp and hear chat:ended. */
+  "chat:end": (payload: { chatId: string }) => void;
+  /** Teacher only: the round-closer — ends every active chat at once. A
+   *  class with none active is a no-op. Plural like chats:snapshot. */
+  "chats:end-all": () => void;
   /** Teacher only; zod-validated, replaces the stored settings. */
   "settings:update": (payload: { settings: ActivitySettings }) => void;
   /** Student: the ended screen's Back-to-the-lobby tap — returns a

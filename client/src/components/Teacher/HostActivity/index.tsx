@@ -37,9 +37,9 @@ interface HostActivityDashboardProps {
  * One layout for the demo and real activities alike (matching is real now):
  * on phones it's stacked minimizable sections; on desktop the pairing queue
  * becomes a sticky left rail beside the chats. What still differs: the demo
- * gets its steering panel (demoTriggers), and a real activity's
- * ending/pausing controls render disabled until ending ships
- * (engine.endingEnabled).
+ * gets its steering panel (demoTriggers), and a real activity's pause
+ * control renders disabled until pausing ships (engine.pausingEnabled) —
+ * ending is real everywhere.
  */
 export function HostActivityDashboard({
   activity,
@@ -276,7 +276,7 @@ export function HostActivityDashboard({
               activity={activity}
               studentsChattingCount={engine.studentsChattingCount}
               waitingCount={engine.waiting.length}
-              endingEnabled={engine.endingEnabled}
+              pausingEnabled={engine.pausingEnabled}
               onEndChat={engine.endChat}
               onRequestEndAll={() => setPendingAction({ kind: "end-all" })}
               paused={engine.paused}

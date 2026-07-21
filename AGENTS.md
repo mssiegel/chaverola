@@ -61,13 +61,16 @@ restores every card). Feature 5 made the **typing indicator real**:
 a student's `chat:typing` heartbeat relays as `chat:peer-typing` to
 their peers — ephemeral, characterId-only, volatile both ways, TTL
 expiry, and deliberately never to the teacher (see DECISIONS.md →
-"Chat behavior", the three 2026-07-21 entries). What hasn't shipped:
-"End chat", "End all chats", "Pause all chats", the auto-end clock,
-and the name reveal still render as honest placeholders on real
-activities (the demo still simulates every one of them). The single structural exception: a chat
-whose active membership drops below 2 ends for the remaining peer with
-reason `"teacher"` — otherwise a working Remove would strand a student
-alone in a room.
+"Chat behavior", the three 2026-07-21 entries). Feature 6 made
+**ending real**: "End chat" and "End all chats" work on live
+activities (`chat:end` / `chats:end-all` → the server ends the chat,
+every member goes wrappingUp and hears `chat:ended`, the card moves
+to Completed). What hasn't shipped: "Pause all chats", the auto-end
+clock, and the name reveal still render as honest placeholders on
+real activities (the demo still simulates every one of them). A chat
+whose active membership drops below 2 also still ends for the
+remaining peer with reason `"teacher"` — otherwise a working Remove
+would strand a student alone in a room.
 
 The demo flows are a **permanent product surface** — the homepage links to
 them and the founder pitches with them — not scaffolding; see the working
@@ -136,12 +139,12 @@ Load-bearing flow facts (the reasoning for each is in DECISIONS.md):
     name, never a peer's studentId, in any payload, ever. Pinned by
     exact-key allowlist tests in `projections.test.ts`; keep them
     passing rather than loosening them.
-  - **`endingEnabled` is the ending-era seam.** Ending/pausing render
-    disabled on live activities through that one engine flag (demo
-    `true`, live `false`) — when ending ships, flipping it is an engine
-    change, not a UI hunt. Messaging shipped with the flag still `false`,
-    on purpose: ending and pausing are their own later feature, not a
-    messaging rider.
+  - **`pausingEnabled` is the pausing-era seam.** "Pause all chats"
+    renders disabled on live activities through that one engine flag
+    (demo `true`, live `false`) — when pausing ships, flipping it is an
+    engine change, not a UI hunt. Ending shipped in feature 6 and
+    carries no flag (a constant-true `endingEnabled` would be dead
+    code); pausing stayed behind, on purpose, as its own later feature.
   - **Live socket timers never pass through `scaledMs`**; demo
     simulation always does.
 - The student flow renders navbar-free inside `StudentWorldLayout` (purple

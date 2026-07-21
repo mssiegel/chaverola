@@ -23,11 +23,13 @@ import type { HostedChat, WaitingStudent } from "./hostWorld";
   `queue:snapshot` broadcasts and chat truth from `chats:snapshot`, with
   per-message `chat:transcript-line` deltas keeping transcripts live
   between snapshots — the matching commands (chat:start,
-  match:pair-everyone, chat:remove, settings:update) emit over the same
-  socket. Deliberately imports nothing from hostWorld.ts beyond types —
-  tickWorld runs the SIMULATION's auto-match and must never see a real
-  student. Ending/pausing stay inert (endingEnabled: false) until ending
-  ships.
+  match:pair-everyone, chat:remove, chat:end, chats:end-all,
+  settings:update) emit over the same socket. Ending is real: the emit is
+  bare, and the ended card arrives on the handler's own chats:snapshot —
+  no local state to reconcile. Deliberately imports nothing from
+  hostWorld.ts beyond types — tickWorld runs the SIMULATION's auto-match
+  and must never see a real student. Pausing stays inert (pausingEnabled:
+  false) until it ships.
 
   The server refreshes the activity's TTL while this socket is connected
   (the teacher socket is the keep-alive), so an open host page keeps its
@@ -238,6 +240,12 @@ export function useHostActivityLive({
   const removeFromChat = (chatId: string, studentId: string) => {
     socketRef.current?.emit("chat:remove", { chatId, studentId });
   };
+  const endChat = (chatId: string) => {
+    socketRef.current?.emit("chat:end", { chatId });
+  };
+  const endAllChats = () => {
+    socketRef.current?.emit("chats:end-all");
+  };
   const updateSettings = (settings: ActivitySettings) => {
     socketRef.current?.emit("settings:update", { settings });
   };
@@ -260,23 +268,24 @@ export function useHostActivityLive({
     ),
     characterIdsInUse,
     leftoverStudentId,
-    // No rematch memory server-side this feature: chats effectively never
-    // end, so exactness is structurally impossible (see the plan/DECISIONS).
+    // No rematch memory server-side: the server tracks no last-partners.
+    // Now that chats end, exact-rematch is reachable — its own later
+    // feature (see DECISIONS).
     rematchNotice: null,
     dismissRematchNotice: noop,
     isExactRematch: () => false,
     startChat,
     pairEveryone,
-    // Ending/pausing stay placeholders until ending ships.
-    endChat: noop,
-    endAllChats: noop,
+    endChat,
+    endAllChats,
+    // Pausing stays a placeholder until it ships.
     paused: false,
     pauseAllChats: noop,
     resumeAllChats: noop,
     removeFromQueue,
     removeFromChat,
     updateSettings,
-    endingEnabled: false,
+    pausingEnabled: false,
     connection,
   };
 }
