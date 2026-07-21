@@ -30,9 +30,23 @@ export interface Seat {
   /** On the ended screen after their chat ended — off the queue and
    *  unmatchable until their lobby:back tap (returnToQueue). */
   wrappingUp: boolean;
+  /** Set on a seat minted for a reaped-from-chat returner: which chat to
+   *  replay while they're wrappingUp (a refresh ON the ended screen resumes
+   *  by the NEW credentials, so the token-keyed map can't serve it).
+   *  Cleared by returnToQueue — stale context must never outlive the tap,
+   *  or a later ending would replay the wrong chat. */
+  reapedFromChat?: ReapedChatMemory;
   disconnectedAt?: number;
   nonce?: string;
   timers: { broadcast?: NodeJS.Timeout; grace?: NodeJS.Timeout };
+}
+
+/** What the activity remembers about a seat reaped OUT OF a chat. The
+ *  studentId is the OLD one — the chat-membership identity projections
+ *  resolve through; the returner's fresh seat gets a new id. */
+export interface ReapedChatMemory {
+  chatId: string;
+  studentId: string;
 }
 
 export interface ActivitySeats {
@@ -45,10 +59,20 @@ export interface ActivitySeats {
    *  "removed" rejection instead of silently rejoining. Never counts
    *  against the cap; dies with the activity. */
   tombstonedTokens: Set<string>;
+  /** Tokens of seats reaped OUT OF a chat → what to replay when that token
+   *  returns. Same lifetime as tombstonedTokens: never counts against the
+   *  cap, never expires, dies with the activity (the activity's own TTL is
+   *  the real bound — no timer machinery for entries this small). */
+  reapedFromChatByToken: Map<string, ReapedChatMemory>;
 }
 
 export function createSeatState(): ActivitySeats {
-  return { byId: new Map(), byNonce: new Map(), tombstonedTokens: new Set() };
+  return {
+    byId: new Map(),
+    byNonce: new Map(),
+    tombstonedTokens: new Set(),
+    reapedFromChatByToken: new Map(),
+  };
 }
 
 export type SeatResult =
@@ -58,8 +82,12 @@ export type SeatResult =
 /**
  * Seat or resume a student socket. Precedence: tombstoned token → removed;
  * matching studentId+token → resume; known nonce → resume; otherwise a
- * fresh join (an unknown token with a live activity is a SILENT fresh join —
- * grace expired or the server restarted, both indistinguishable and fine).
+ * fresh join. An unknown token is a SILENT fresh join (grace expired while
+ * waiting, or the server restarted) — unless the reap memory knows it, in
+ * which case the fresh seat is minted wrappingUp with the ended chat to
+ * replay. The memory leg must stay LAST: a returner who reconnects again
+ * before the new welcome persisted presents the old token AND the nonce,
+ * and the nonce resume of the new seat has to win or we'd mint a duplicate.
  */
 export function seatStudent(
   activity: StoredActivity,
@@ -95,6 +123,15 @@ export function seatStudent(
     return { kind: "rejected", code: "full" };
   }
 
+  // A remembered token turns the fresh join into a reaped-from-chat return:
+  // seated under a fresh identity but wrappingUp (unmatchable until their
+  // own lobby:back tap), with the ended chat stamped on for the caller to
+  // replay. The map entry stays — repeat returns behave identically.
+  const reapedFromChat =
+    auth.token !== undefined
+      ? seats.reapedFromChatByToken.get(auth.token)
+      : undefined;
+
   const seat: Seat = {
     studentId: randomUUID(),
     // Same shape as a hostKey: 18 random bytes → 24 base64url chars.
@@ -103,9 +140,10 @@ export function seatStudent(
     joinedAt: now,
     connected: true,
     currentSocketId: socketId,
-    wrappingUp: false,
+    wrappingUp: reapedFromChat !== undefined,
     timers: {},
   };
+  if (reapedFromChat !== undefined) seat.reapedFromChat = reapedFromChat;
   if (auth.nonce !== undefined) {
     seat.nonce = auth.nonce;
     seats.byNonce.set(auth.nonce, seat.studentId);
@@ -197,9 +235,22 @@ export function removeSeat(
   return seat;
 }
 
-/** Grace expired: the seat is reaped without a tombstone (a very late
- *  reconnect becomes a silent fresh join, by design). */
-export function reapSeat(activity: StoredActivity, seat: Seat): void {
+/** Grace expired. A seat reaped out of a chat (fromChatId) is remembered so
+ *  the returning token gets the ended chat replayed instead of a silent
+ *  fresh join; a waiting seat's reap stays memory-free, by design — only a
+ *  grace expiry inside an active chat earns the "you lost connection"
+ *  screen. Chat-unaware: the id is opaque here. */
+export function reapSeat(
+  activity: StoredActivity,
+  seat: Seat,
+  fromChatId?: string
+): void {
+  if (fromChatId !== undefined) {
+    activity.seats.reapedFromChatByToken.set(seat.token, {
+      chatId: fromChatId,
+      studentId: seat.studentId,
+    });
+  }
   dropSeat(activity, seat);
 }
 
@@ -209,10 +260,13 @@ export function markWrappingUp(seat: Seat): void {
   seat.wrappingUp = true;
 }
 
-/** The lobby:back tap — back in line with a fresh wait clock. */
+/** The lobby:back tap — back in line with a fresh wait clock. Clearing the
+ *  replay context is load-bearing: reaped from chat 1 → back → rematched →
+ *  chat 2 ends → a refresh must replay chat 2, not chat 1. */
 export function returnToQueue(seat: Seat, now: number): void {
   seat.wrappingUp = false;
   seat.joinedAt = now;
+  delete seat.reapedFromChat;
 }
 
 /** Teacher-facing queue, oldest join first. Skips wrappingUp seats and

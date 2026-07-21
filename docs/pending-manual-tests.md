@@ -287,3 +287,69 @@ actually back; any real name in the banner.
 - The server test pins the wire: the drop lands past the 4s gate with a
   plausible `secondsLeft`, the resume announces the return, and neither
   the affected seat nor the teacher room ever hears the event.
+
+## 5. The self-timeout screen after a real radio outage
+
+**Asked:** 2026-07-21 (feature 9's "Done when"). **Blocked:** the feature
+ran in an autonomous session with no founder at hand to drive a phone.
+Same setup as entries 1–4 — run all five in one sitting.
+
+**Needs:** a phone on cellular (wifi off), a laptop tab as the second
+student, and the teacher page open somewhere.
+
+### Why it's worth doing
+
+The 📶 "You lost connection" screen exists precisely for a phone that
+went dark without a close frame and came back after the 2-minute grace
+already reaped its seat. Every scripted drop closes the socket cleanly
+and every scripted return rides a fresh context on broadband; the real
+path is a radio that dies mid-chat and a reconnect (with the OLD token,
+through socket.io's backoff, possibly on polling) minutes later. That
+reconnect-with-stale-credentials leg is exactly where feature 3's buffer
+bug hid.
+
+### Steps
+
+1. Make an activity, join from the phone and a laptop tab, pair them
+   from the teacher page.
+2. On the phone: **airplane mode on**, and leave it on for a **full
+   three minutes** (the ~45s ping-cycle detection plus the 120s grace —
+   under that you're testing the resume path, not the reap).
+3. Watch the laptop student get the 🔌 "Your partner lost connection"
+   wrap-up when the grace runs out.
+4. **Airplane mode off**, then reopen the **same tab** on the phone (the
+   session lives in the tab — a fully closed browser is a different,
+   also-valid test: it should land on the join screen as a stranger).
+5. Keep the teacher's host page in view throughout.
+
+### What should happen
+
+- The phone shows the 📶 "You lost connection" screen — "You couldn't
+  get back in time, so this chat ended for you. It happens!" — with the
+  whole conversation still readable above it, within a few seconds of
+  the radio returning.
+- The teacher's queue does NOT list the phone student while that screen
+  is up; their "Back to the lobby" tap puts them in the waiting lobby
+  and the queue row appears with a fresh wait clock.
+- The laptop student's screen doesn't react to the return at all.
+
+**Bug:** the phone silently landing back in the waiting lobby with no
+explanation — that's the exact pre-feature behavior this shipped to
+kill. Also a 📶 screen with no transcript, or any flash on the
+partner's screen when the reaped student returns.
+
+### What covers it in the meantime
+
+- A local browser pass (2026-07-21, `f9-selftimeout-local.mjs`, 20/20
+  with a shortened grace): the 1:1 story end to end — survivor's 🔌,
+  the returner's 📶 with the transcript, hidden from the queue, a
+  reload keeping the screen, the tap re-queueing — plus the trio leg
+  (the chat survives its reaped member; their return is silent to the
+  room).
+- The server e2e pins the wire: the return replays exactly
+  `lobby:welcome` → `chat:started` (old transcript, old characterIds)
+  → `chat:ended {reason:"self-timeout"}` under a fresh identity, with
+  the survivor's collectors silent throughout.
+
+So the residual risk is the radio path itself: a dead-radio reconnect
+presenting stale credentials through backoff, not the replay logic.

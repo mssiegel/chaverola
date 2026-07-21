@@ -91,6 +91,12 @@ countdown from the first one back. Its last slice aligned the demo:
 the `1234` peer-drop simulation now plays the wire's story — no
 spinner phase, the countdown ticks through a pause, and the window is
 the shared `LOBBY_GRACE_SECONDS` (the demo's own mirror is gone).
+Feature 9 closed the loop for the **reaped student's own return**: the
+activity remembers a seat reaped out of a chat for the rest of its
+life, and the returning token is re-seated wrappingUp under a fresh
+identity and replayed `chat:started` + `chat:ended` with the wire-only
+reason `"self-timeout"` — the 📶 "You lost connection" wrap-up over
+the old transcript, instead of a silent fresh join into the lobby.
 What hasn't shipped: the auto-end clock and the name reveal still
 render as honest placeholders on real activities (the demo still
 simulates both).
@@ -154,7 +160,10 @@ Load-bearing flow facts (the reasoning for each is in DECISIONS.md):
     minutes; past that, their membership goes inactive and the partner
     is freed. Matched seats used to arm no timer at all, which stranded
     a partner forever when a `lobby:leave` died in transit (found on a
-    real handset 2026-07-20). Don't "restore" the missing timer.
+    real handset 2026-07-20). Don't "restore" the missing timer. The
+    reap is remembered (feature 9): the returning token gets the ended
+    chat replayed as `"self-timeout"` and a wrappingUp seat — only a
+    WAITING seat's reap stays a silent fresh join.
   - **Auto-match runs only while a teacher socket is connected** —
     armed on the 0→1st, released on the last. A closed laptop holding
     pairing is the product, not a bug (founder call).

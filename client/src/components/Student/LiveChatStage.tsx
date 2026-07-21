@@ -27,9 +27,10 @@ interface LiveChatStageProps {
   returnedFlashId: string | null;
   isEnded: boolean;
   /** Why the chat ended (chat:ended's payload): "peer-timeout" is a 1:1
-   *  partner's expired grace — the 🔌 wrap-up — "teacher" everything else.
-   *  Null while the chat is going. */
-  endReason: "teacher" | "peer-timeout" | null;
+   *  partner's expired grace — the 🔌 wrap-up — "self-timeout" the
+   *  student's own (the 📶 wrap-up on their return), "teacher" everything
+   *  else. Null while the chat is going. */
+  endReason: "teacher" | "peer-timeout" | "self-timeout" | null;
   /** The teacher's activity-wide pause (activity:paused / lobby:welcome).
    *  Chatbox freezes the room: banner, locked composer. Ended wins. */
   isPaused: boolean;
@@ -58,7 +59,8 @@ interface LiveChatStageProps {
  * and so is the peer-drop banner (chat:peer-connection, feature 8): the
  * page hands this stage the offline map and the stage ticks the countdown.
  * The ending tells the truth as well — chat:ended's reason renders the 🔌
- * wrap-up when a 1:1 partner's grace ran out, not the teacher's 🎓. Still
+ * wrap-up when a 1:1 partner's grace ran out (and the 📶 one when it was
+ * this student's own, replayed on their return), not the teacher's 🎓. Still
  * quiet on the rest, on purpose: no auto-end clock and no name reveal
  * (their own later features). Exits are honest too: walking out mid-chat
  * leaves the whole activity, and the confirm says so.

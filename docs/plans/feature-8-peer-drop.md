@@ -49,7 +49,10 @@ Each prompt records its own in DECISIONS.md.
 7. **The self-timeout screen ("You lost connection 📶") is deferred** to
    its own later feature. Direction recorded: the server will remember
    reaped seats for at most 30 minutes so a late returner can learn what
-   happened instead of silently landing back in the lobby.
+   happened instead of silently landing back in the lobby. _(Shipped as
+   feature 9, 2026-07-21 — with activity-lifetime memory instead of 30
+   minutes; see DECISIONS.md, "A timed-out student returns to their
+   ended chat, never silently to the lobby".)_
 
 ## How to use this document
 

@@ -26,8 +26,10 @@ clocks hold, and every connected student hears `activity:paused`. Feature
 the teacher's own 4s gate) and return ride `chat:peer-connection`, with
 the reconnect countdown seeded server-side — and makes the expiry
 honest: a 1:1 ended by a partner's expired grace says so
-(`chat:ended` reason `"peer-timeout"`). The auto-end clock and the
-name reveal are further out still.
+(`chat:ended` reason `"peer-timeout"`). Feature 9 makes the reaped
+student's own return honest too: their ended chat replays with the
+wire-only reason `"self-timeout"`. The auto-end clock and the name
+reveal are further out still.
 
 ## Conventions
 
@@ -300,8 +302,13 @@ export interface ServerToClientEvents {
    *  socket blipped around the ending still learns the honest one).
    *  "peer-timeout" is a 1:1 partner's expired grace; every teacher-caused
    *  ending — chat:end, chats:end-all, chat:remove, and a below-2 ending
-   *  from lobby:leave — stays "teacher". */
-  "chat:ended": (payload: { reason: "teacher" | "peer-timeout" }) => void;
+   *  from lobby:leave — stays "teacher". "self-timeout" exists only on
+   *  the wire, never in the store: the per-recipient reason a reaped
+   *  student hears on their return (the stored 1:1 reason stays
+   *  "peer-timeout" — the survivor's perspective). */
+  "chat:ended": (payload: {
+    reason: "teacher" | "peer-timeout" | "self-timeout";
+  }) => void;
   /** Teacher room minus the sender — keeps a second host device coherent. */
   "settings:changed": (payload: { settings: ActivitySettings }) => void;
 }
@@ -626,10 +633,16 @@ hears `chat:peer-typing`, and neither does the sender's own.
 - **Grace window — every seat, waiting or matched.** A dropped seat
   survives `LOBBY_GRACE_SECONDS` (120) starting at _detected_ disconnect,
   marked `reconnecting`, and reconnecting restores it with its original
-  wait clock. At expiry a waiting seat is reaped; a seat **in a chat**
-  leaves its chat as well (see the matching truths above). A pause does
-  NOT hold this window — the grace runs through it, and the teacher's
-  "reconnecting" tags keep real time even while the wait clocks freeze.
+  wait clock. At expiry a waiting seat is reaped silently; a seat **in a
+  chat** leaves its chat as well (see the matching truths above) — and
+  the activity remembers its token for the rest of its life. A later
+  join presenting that token is seated wrapping-up under a fresh
+  identity and replayed the ended chat: `chat:started` (the old
+  transcript, projected through the old membership id), then
+  `chat:ended {reason:"self-timeout"}` — the 📶 screen instead of a
+  silent lobby. A pause does NOT hold this window — the grace runs
+  through it, and the teacher's "reconnecting" tags keep real time even
+  while the wait clocks freeze.
 - **Broadcast delay.** Every "lost connection" surface waits
   `LOBBY_DISCONNECT_BROADCAST_DELAY_MS` (4000) so a student's ~1–2s page
   refresh never flashes anything: the teacher's queue row, the chat
@@ -643,8 +656,10 @@ hears `chat:peer-typing`, and neither does the sender's own.
   and the current offline peers in `reconnectingPeers`, which is how a
   blip's missed messages and a missed partner drop arrive (refresh, wifi
   recovery, duplicate-tab takeover all land back in the same chat) — and
-  a wrapping-up seat gets `chat:ended` again. Clients don't have to
-  persist chat state.
+  a wrapping-up seat gets `chat:ended` again. The one true replay is the
+  reaped returner's (the grace-window bullet above), and it re-states on
+  every resume too: a refresh on the 📶 screen gets the same burst back.
+  Clients don't have to persist chat state.
 - **Duplicate tabs.** Two sockets presenting the same seat token: the
   newer socket takes the seat, the older one is disconnected.
 

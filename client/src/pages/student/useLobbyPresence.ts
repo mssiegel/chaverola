@@ -83,9 +83,10 @@ function buildStudentAuth(
  * delivery, since every other fan-out skips disconnected seats —
  * `onChatUpdate` is a membership change, `onChatLine` an incoming message
  * (the student's own send echoes back through it too), `onChatEnded` the
- * chat's ending with its honest reason ("teacher", or "peer-timeout" when
- * a 1:1 partner's grace ran out) — re-sent on resume while the seat is
- * wrapping up.
+ * chat's ending with its honest reason ("teacher"; "peer-timeout" when a
+ * 1:1 partner's grace ran out; "self-timeout" when it was this student's
+ * own — delivered right after the replayed chat:started on their return)
+ * — re-sent on resume while the seat is wrapping up.
  *
  * `paused` is the activity-wide teacher pause, delivered on lobby:welcome
  * (so a refresh mid-pause stays frozen) and flipped live by
@@ -136,7 +137,9 @@ export function useLobbyPresence({
   }) => void;
   onChatUpdate?: (payload: { chatId: string; peers: ChatPeer[] }) => void;
   onChatLine?: (payload: { chatId: string; line: ChatLine }) => void;
-  onChatEnded?: (payload: { reason: "teacher" | "peer-timeout" }) => void;
+  onChatEnded?: (payload: {
+    reason: "teacher" | "peer-timeout" | "self-timeout";
+  }) => void;
   onPeerTyping?: (payload: { chatId: string; characterId: string }) => void;
   onPeerConnection?: (payload: {
     chatId: string;

@@ -234,11 +234,12 @@ export function JoinActivityPage() {
   // the page title) can tell chatting from ended.
   const [chatEnded, setChatEnded] = useState(false);
   // Why the live chat ended, from chat:ended's payload — "peer-timeout" is
-  // a 1:1 partner's expired grace (the 🔌 wrap-up), "teacher" everything
-  // else. Beside chatEnded rather than on the match state: it describes
-  // the ending, and it resets on the same edges.
+  // a 1:1 partner's expired grace (the 🔌 wrap-up), "self-timeout" the
+  // student's own (the 📶 wrap-up, delivered on their return), "teacher"
+  // everything else. Beside chatEnded rather than on the match state: it
+  // describes the ending, and it resets on the same edges.
   const [liveEndReason, setLiveEndReason] = useState<
-    "teacher" | "peer-timeout" | null
+    "teacher" | "peer-timeout" | "self-timeout" | null
   >(null);
   // The DEMO's activity-wide pause, mocked at page level so it survives
   // lobby ⇄ chat ⇄ ended and the demo controls can flip it. Real activities
@@ -350,6 +351,7 @@ export function JoinActivityPage() {
 
   // Back to the queue: only ever by the student's own tap (see DECISIONS.md).
   const backToLobby = () => {
+    liveChatIdRef.current = null;
     setMatch(null);
     setChatEnded(false);
     setLiveEndReason(null);
@@ -480,8 +482,11 @@ export function JoinActivityPage() {
   //   for a chat already in memory merges the missed transcript backlog,
   //   then reconciles peers instead of resetting, then rebuilds the
   //   offline map from the payload's reconnectingPeers backlog.
-  // - onChatEnded with no match in memory is the post-refresh ended screen
-  //   — nothing to show, so the seat goes straight back to the queue.
+  // - onChatEnded keys off liveChatIdRef, not the render closure's match:
+  //   the reaped-returner replay (chat:started + chat:ended in one burst)
+  //   arrives before React re-renders, so the closure would still see null
+  //   and bounce the 📶 screen back to the queue. No chat:started this
+  //   connection means nothing to show — straight back to the queue.
   // The typing indicator's TTL: re-armed on every relayed heartbeat, so it
   // runs from the LAST one. Same pattern as submitSlowTimerRef. No cleanup
   // effect on purpose: a stray post-unmount fire is a guarded setMatch
@@ -490,6 +495,10 @@ export function JoinActivityPage() {
   // The 🎉 flash's clear timer — same no-cleanup pattern: a stray
   // post-unmount fire is a guarded setMatch no-op.
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The chat this socket has been handed via chat:started, updated
+  // SYNCHRONOUSLY (a ref, not state) so onChatEnded can trust it inside
+  // the same event burst. Cleared wherever the match clears.
+  const liveChatIdRef = useRef<string | null>(null);
 
   const seated =
     baseStage === "lobby" || baseStage === "chatting" || baseStage === "ended";
@@ -510,6 +519,7 @@ export function JoinActivityPage() {
       signOut();
       setName("");
       setRemovedByTeacher(true);
+      liveChatIdRef.current = null;
       setMatch(null);
       setChatEnded(false);
     },
@@ -518,9 +528,11 @@ export function JoinActivityPage() {
     },
     onChatStarted: (payload) => {
       if (!session) return;
+      liveChatIdRef.current = payload.chatId;
       setChatEnded(false);
-      // A chat:started only ever arrives for an active chat (a wrappingUp
-      // resume gets chat:ended instead), so any held reason is stale.
+      // Any held reason is stale: for an active chat there's no ending to
+      // name, and the reaped-returner replay's own chat:ended follows in
+      // order and re-sets it.
       setLiveEndReason(null);
       setMatch((prev) => {
         if (prev?.kind === "live" && prev.chatId === payload.chatId) {
@@ -702,13 +714,13 @@ export function JoinActivityPage() {
       }, RETURNED_FLASH_MS);
     },
     onChatEnded: (payload) => {
-      if (match?.kind === "live") {
+      if (liveChatIdRef.current !== null) {
         setChatEnded(true);
         setLiveEndReason(payload.reason);
       } else {
-        // Post-refresh (or post-anything that lost the match from memory):
-        // there's no chat to show an ended screen for — go straight back
-        // to the queue instead of pretending.
+        // No chat:started this connection (a survivor's cold refresh onto
+        // a wrappingUp seat): there's no chat to show an ended screen for
+        // — go straight back to the queue instead of pretending.
         returnToLobby();
       }
     },

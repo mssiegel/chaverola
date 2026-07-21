@@ -162,7 +162,9 @@ function findActiveChatOf(
 }
 
 /** A wrappingUp seat's ended chat — the most recent one that ended around
- *  them (they're still an active member of it; only leavers go inactive). */
+ *  them (they're still an active member of it; only leavers go inactive).
+ *  A reaped-from-chat returner never resolves here — their new studentId is
+ *  in no chat; their resume replays through seat.reapedFromChat instead. */
 function findEndedChatOf(
   record: StoredActivity,
   studentId: string
@@ -310,7 +312,9 @@ export function attachLobby(
           );
           if (result) settleMembershipChange(record, result);
         }
-        reapSeat(record, seat);
+        // A chat seat's reap is remembered (the returning token replays the
+        // ended chat as "self-timeout"); a waiting seat's stays silent.
+        reapSeat(record, seat, chat?.id);
         broadcastState(record);
       },
     });
@@ -710,11 +714,38 @@ export function attachLobby(
       // duplicate-tab takeovers, and StrictMode double-mounts invisible.
       sendPeerConnection(record, activeChat, data.studentId, "returned", null);
     } else if (seat.wrappingUp) {
-      const endedChat = findEndedChatOf(record, data.studentId);
-      socket.emit(
-        "chat:ended",
-        endedChat ? toChatEnded(endedChat) : { reason: "teacher" }
-      );
+      const reaped = seat.reapedFromChat;
+      if (reaped) {
+        // A reaped-from-chat returner: replay the chat they were reaped out
+        // of — transcript first, then the ending — through the OLD
+        // membership studentId (the seat's new id is in no chat). The
+        // reason is per-recipient, never toChatEnded's stored one: the 1:1
+        // record says "peer-timeout" (the survivor's side), and a group's
+        // chat may still be active. No fan-out fires — the survivors
+        // already saw this member leave, and hear nothing on their return.
+        log.info(
+          {
+            joinCode: data.joinCode,
+            studentId: data.studentId,
+            chatId: reaped.chatId,
+          },
+          "reaped student returned to their ended chat"
+        );
+        const chat = record.chats.find((c) => c.id === reaped.chatId);
+        if (chat) {
+          socket.emit(
+            "chat:started",
+            toChatStarted(chat, record, reaped.studentId, Date.now())
+          );
+        }
+        socket.emit("chat:ended", { reason: "self-timeout" });
+      } else {
+        const endedChat = findEndedChatOf(record, data.studentId);
+        socket.emit(
+          "chat:ended",
+          endedChat ? toChatEnded(endedChat) : { reason: "teacher" }
+        );
+      }
     }
     broadcastState(record);
 

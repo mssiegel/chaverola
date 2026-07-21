@@ -106,7 +106,9 @@ export interface ServerToClientEvents {
     leftoverStudentId: string | null; // pair-everyone's odd one out
     paused: boolean; // the world-level pause — keeps a second host device coherent
   }) => void;
-  /** Student only, targeted; re-sent on every resume while matched. `lines`
+  /** Student only, targeted; re-sent on every resume while matched, and
+   *  replayed once for a chat the recipient was reaped out of (immediately
+   *  followed by chat:ended {reason:"self-timeout"}). `lines`
    *  is the transcript backlog and is authoritative on every delivery — the
    *  chat:line fan-out skips disconnected seats, so this payload is the only
    *  channel that heals a blip. `everPeers` is everyone ever in the room
@@ -168,8 +170,13 @@ export interface ServerToClientEvents {
    *  own socket blipped around the ending still learns the honest one).
    *  "peer-timeout" is a 1:1 partner's expired grace; every teacher-caused
    *  ending — chat:end, chats:end-all, chat:remove, and a below-2 ending
-   *  from lobby:leave — stays "teacher". */
-  "chat:ended": (payload: { reason: "teacher" | "peer-timeout" }) => void;
+   *  from lobby:leave — stays "teacher". "self-timeout" exists only on the
+   *  wire, never in the store: it's the per-recipient reason a reaped
+   *  student hears when they return to their ended chat (the stored 1:1
+   *  reason stays "peer-timeout" — the survivor's perspective). */
+  "chat:ended": (payload: {
+    reason: "teacher" | "peer-timeout" | "self-timeout";
+  }) => void;
   /** Student only, targeted at every connected seat — chat members, lobby
    *  waiters, and wrappingUp alike (the pause is activity-wide). Connect-time
    *  state rides lobby:welcome instead; this event only carries live flips. */

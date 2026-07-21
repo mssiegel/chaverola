@@ -219,6 +219,8 @@ export function toChatStarted(
   reconnectingPeers: { characterId: string; secondsLeft: number }[];
 } {
   // Callers only project a chat for its own members — the find can't miss.
+  // Deliberately `members`, not activeMembers: the reaped-returner replay
+  // projects through an INACTIVE member of a possibly-ended chat.
   const self = chat.members.find((m) => m.studentId === studentId)!;
   return {
     chatId: chat.id,

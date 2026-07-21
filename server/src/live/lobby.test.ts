@@ -18,7 +18,8 @@ import type {
 import { createActivity, resetForTests } from "../store/activityStore";
 import type { StoredActivity } from "../store/activityStore";
 import { attachLobby } from "./lobby";
-import { createChat } from "./matching";
+import { createChat, markInactive } from "./matching";
+import { markWrappingUp, reapSeat } from "./seats";
 
 /*
   Deliberately light (see the plan doc): the safety invariants and one happy
@@ -43,6 +44,9 @@ import { createChat } from "./matching";
   affected seat, never the teacher room — with the drop landing past the
   4s gate and a resume announcing the return. (That one test waits out the
   real 4s delay; grace TIMING itself stays out, per the charter above.)
+  The reaped returner (feature 9) pins its wire shape the same way: the
+  expiry is simulated store-direct, and the return must replay exactly
+  welcome → chat:started → chat:ended {self-timeout}, silently to the room.
 */
 
 type ClientSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -130,9 +134,11 @@ const nextTranscriptLine = (socket: ClientSocket) =>
     socket.once("chat:transcript-line", resolve);
   });
 const nextChatEnded = (socket: ClientSocket) =>
-  new Promise<{ reason: "teacher" | "peer-timeout" }>((resolve) => {
-    socket.once("chat:ended", resolve);
-  });
+  new Promise<{ reason: "teacher" | "peer-timeout" | "self-timeout" }>(
+    (resolve) => {
+      socket.once("chat:ended", resolve);
+    }
+  );
 const nextPeerConnection = (socket: ClientSocket) =>
   new Promise<{
     chatId: string;
@@ -838,5 +844,125 @@ describe("the live lobby", () => {
 
     await sleep(100);
     expect(leaks).toEqual([]);
+  }, 15_000);
+
+  it("a reaped chat member's return replays the ended chat as self-timeout and seats them wrapping up", async () => {
+    const teacher = connect({ role: "teacher", hostKey: activity.hostKey });
+    await nextSnapshot(teacher);
+    const studentA = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Rachel",
+      nonce: "nonce-a",
+    });
+    const studentB = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Noa",
+      nonce: "nonce-b",
+    });
+    const welcomeA = await nextWelcome(studentA);
+    const welcomeB = await nextWelcome(studentB);
+    // `!` — both members are eligible; the chat just built above them.
+    const chat = createChat(
+      activity,
+      [welcomeA.studentId, welcomeB.studentId],
+      Date.now()
+    )!;
+
+    // One line on the record, delivered — the replay must carry it back.
+    const lineAtB = nextChatLine(studentB);
+    studentA.emit("chat:send", { text: "Et tu?" });
+    await lineAtB;
+
+    studentA.disconnect();
+    await sleep(100);
+
+    // Simulate the grace expiry store-direct — onGraceExpiry minus its
+    // emits (grace TIMING stays out of this file, per the header; B's own
+    // chat:ended {peer-timeout} leg is feature 8's, pinned by its browser
+    // pass and matching.test.ts): the chat ends around B, and A's seat is
+    // reaped WITH its chat remembered.
+    const seatA = activity.seats.byId.get(welcomeA.studentId)!;
+    const seatB = activity.seats.byId.get(welcomeB.studentId)!;
+    markInactive(activity, chat.id, welcomeA.studentId, "peer-timeout");
+    markWrappingUp(seatB);
+    reapSeat(activity, seatA, chat.id);
+    expect(activity.seats.byId.has(welcomeA.studentId)).toBe(false);
+
+    // The boundary: B — who already saw the ending — hears nothing when
+    // the reaped member returns. No ghost chat:started, no return flash.
+    const leaksAtB: unknown[] = [];
+    studentB.on("chat:started", (p) => leaksAtB.push(p));
+    studentB.on("chat:peer-connection", (p) => leaksAtB.push(p));
+    studentB.on("chat:ended", (p) => leaksAtB.push(p));
+
+    // The return presents exactly what a real reload persists: the old
+    // credentials and the old nonce.
+    const resumed = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Rachel",
+      nonce: "nonce-a",
+      studentId: welcomeA.studentId,
+      token: welcomeA.token,
+    });
+    const order: string[] = [];
+    let welcome: { studentId: string; token: string } | undefined;
+    let started:
+      | {
+          chatId: string;
+          selfCharacterId: string;
+          peers: { characterId: string }[];
+          lines: { text: string }[];
+        }
+      | undefined;
+    resumed.on("lobby:welcome", (p) => {
+      order.push("welcome");
+      welcome = p;
+    });
+    resumed.on("chat:started", (p) => {
+      order.push("started");
+      started = p;
+    });
+    const ended = await new Promise((resolve) => {
+      resumed.once("chat:ended", (p) => {
+        order.push("ended");
+        resolve(p);
+      });
+    });
+
+    // The whole replay, in order, through the OLD chat identity — under a
+    // NEW seat identity.
+    expect(order).toEqual(["welcome", "started", "ended"]);
+    expect(welcome!.studentId).not.toBe(welcomeA.studentId);
+    // `!` — the chat was just created with both as members.
+    const memberA = chat.members.find(
+      (m) => m.studentId === welcomeA.studentId
+    )!;
+    const memberB = chat.members.find(
+      (m) => m.studentId === welcomeB.studentId
+    )!;
+    expect(started!.chatId).toBe(chat.id);
+    expect(started!.selfCharacterId).toBe(memberA.characterId);
+    expect(started!.peers).toEqual([{ characterId: memberB.characterId }]);
+    expect(started!.lines.map((l) => l.text)).toEqual(["Et tu?"]);
+    expect(ended).toEqual({ reason: "self-timeout" });
+
+    // Off the queue until their own tap.
+    const newSeat = activity.seats.byId.get(welcome!.studentId)!;
+    expect(newSeat.wrappingUp).toBe(true);
+
+    // The tap re-queues them under the new identity — and clears the
+    // replay context, so a later ending can't replay this chat again.
+    const requeued = snapshotWhere(teacher, (p) =>
+      p.students.some((s) => s.id === welcome!.studentId && s.name === "Rachel")
+    );
+    resumed.emit("lobby:back");
+    await requeued;
+    expect(newSeat.reapedFromChat).toBeUndefined();
+
+    await sleep(100);
+    expect(leaksAtB).toEqual([]);
   }, 15_000);
 });

@@ -65,7 +65,9 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [One page serves both join routes; a wrong code never changes the URL](#one-page-serves-both-join-routes-a-wrong-code-never-changes-the-url)
   - [Student sign-in lives in the tab, and removal sends you to the name step](#student-sign-in-lives-in-the-tab-and-removal-sends-you-to-the-name-step)
 - [Chat behavior](#chat-behavior)
+  - [A timed-out student returns to their ended chat, never silently to the lobby](#a-timed-out-student-returns-to-their-ended-chat-never-silently-to-the-lobby)
   - [Students see a partner's drop and return, on the teacher's own 4s gate](#students-see-a-partners-drop-and-return-on-the-teachers-own-4s-gate)
+  - [A grace expiry ends a 1:1 as "peer-timeout"; the group notice is a client heuristic](#a-grace-expiry-ends-a-11-as-peer-timeout-the-group-notice-is-a-client-heuristic)
   - [The teacher never sees typing](#the-teacher-never-sees-typing)
   - [Typing is a heartbeat that dies in five seconds, never a stored fact](#typing-is-a-heartbeat-that-dies-in-five-seconds-never-a-stored-fact)
   - [One typing slot per room, last writer wins](#one-typing-slot-per-room-last-writer-wins)
@@ -719,6 +721,51 @@ _Implemented in [studentSession.ts](client/src/lib/studentSession.ts) and
 
 ## Chat behavior
 
+### A timed-out student returns to their ended chat, never silently to the lobby
+
+_2026-07-21_
+
+**Decision:** Two product calls (2026-07-21, feature 9):
+
+- A student whose own grace expired mid-chat comes back to the chat page,
+  not the lobby: the server replays the chat they were reaped out of —
+  transcript and all — followed by the ended notice with the wire reason
+  `"self-timeout"`, so the existing 📶 "You lost connection" wrap-up
+  renders on the same path as the survivor's 🔌 screen. They're re-seated
+  under a fresh identity but wrapping up — off the queue and unmatchable
+  until their own Back-to-the-lobby tap, like every other ended screen.
+  The reason is per-recipient at emit and never stored: the stored 1:1
+  reason stays `"peer-timeout"` (the survivor's perspective), and a
+  group's chat may still be running when its reaped member returns.
+- The activity remembers reaped-from-chat students for the **rest of the
+  activity** — the same lifetime as removed students' tombstones. This
+  supersedes the "at most 30 minutes" direction recorded under
+  [A grace expiry ends a 1:1 as "peer-timeout"; the group notice is a
+  client heuristic](#a-grace-expiry-ends-a-11-as-peer-timeout-the-group-notice-is-a-client-heuristic).
+  The boundary: only a grace expiry inside an **active chat** earns the
+  screen. A student reaped while waiting (or while already on an ended
+  screen) still lands back in the lobby as a silent fresh join, and if
+  the whole activity ended meanwhile, the activity-ended screen wins.
+
+**Why:** Landing silently in the lobby after a two-minute drop read like
+the app had erased what happened — the student's conversation was simply
+gone, with the queue where it used to be. Replaying the transcript under
+the honest 📶 reason tells them what happened and that it wasn't their
+fault, and it reuses the survivor's ended-screen path wholesale: a bare
+message screen was rejected because the chat page needs the room data to
+render anyway, so "lighter" would actually have been a new render path.
+Activity-lifetime memory won over the recorded 30-minute cap because the
+entries are a few bytes, the activity's own TTL is the real bound, and a
+timer would be machinery for a distinction students would rarely hit.
+The wrapping-up seat matters: without it the returner would be silently
+re-queued and could be auto-matched into a new chat while still reading
+about losing the last one.
+
+_Implemented in [seats.ts](server/src/live/seats.ts) (the reap memory),
+[lobby.ts](server/src/live/lobby.ts) (the return replay), and
+[JoinActivityPage](client/src/pages/student/JoinActivityPage.tsx) (the
+burst-safe ended handler)._
+
 ### Students see a partner's drop and return, on the teacher's own 4s gate
 
 _2026-07-21_
@@ -792,7 +839,10 @@ _2026-07-21_
   ran out the window themselves) is **deferred** to its own later
   feature. Direction recorded: the server will remember reaped seats for
   at most 30 minutes, so a late returner can learn what happened instead
-  of silently landing back in the lobby.
+  of silently landing back in the lobby. _(Shipped 2026-07-21 — see
+  [A timed-out student returns to their ended chat, never silently to the
+  lobby](#a-timed-out-student-returns-to-their-ended-chat-never-silently-to-the-lobby);
+  the memory became activity-lifetime, not 30 minutes.)_
 
 **Why:** The wrong copy was worse than no copy: telling a child "Your
 teacher ended the chat" when a partner's phone died points the blame at
