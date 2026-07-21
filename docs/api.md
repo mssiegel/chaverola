@@ -677,10 +677,24 @@ send rate limit (10 per 10s) and the typing relay floor
 server-internal, in `lobby.ts`. Matched and wrapping-up seats count
 toward the seat cap — they still hold seats; tombstones don't.
 
+**Dev-only time scaling.** A dev server started with
+`CHAVEROLA_TIME_SCALE=n` (1–100) divides the lobby's flow clocks by n —
+grace, broadcast gate, the engine.io ping cycle, the auto-match tick/gap,
+and the teacher-set auto-match threshold (derived in
+`server/src/live/timing.ts`; floor 50ms per timer). Production is pinned
+to 1 (`NODE_ENV === "production"` forces it in `readTimeScale`, and Render
+never sets the var), so every number above is the truth on the wire.
+`/healthz` reports `timeScale` whenever it isn't 1, plus the process
+`pid`. The abuse guards and lifecycle clocks — send rate limit, `TYPING_*`
+timings, teacher keepalive, store TTL/sweep, the client's
+`LEAVE_FLUSH_MS` — never scale. See DECISIONS.md → "Localhost real flows
+compress through a server-side time-scale knob; production is pinned
+to 1".
+
 ## curl smoke
 
 ```bash
-curl -s http://localhost:3001/healthz          # 200 {"ok":true}
+curl -s http://localhost:3001/healthz          # 200 {"ok":true,"pid":…} (+"timeScale" when scaled)
 curl -s -X POST http://localhost:3001/activities -H "content-type: application/json" \
   -d '{"hostName":"Ms. Cohen","characters":[{"name":"Brutus"},{"name":"Caesar"}],"settings":{"revealNames":true,"autoEndChats":true,"autoEndMinutes":7,"rematchWarning":true,"autoMatch":true,"autoMatchSeconds":20}}'
                                                # 201; note joinCode + hostKey

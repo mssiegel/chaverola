@@ -42,8 +42,10 @@ import { markWrappingUp, reapSeat } from "./seats";
   The peer-drop relay (feature 8) gets the same treatment:
   chat:peer-connection reaches the OTHER chat members only — never the
   affected seat, never the teacher room — with the drop landing past the
-  4s gate and a resume announcing the return. (That one test waits out the
-  real 4s delay; grace TIMING itself stays out, per the charter above.)
+  broadcast gate and a resume announcing the return. (That one test runs
+  its own lobby at timeScale 8 — the gate wait shrinks to 500ms and the
+  scaling mechanism itself gets pinned; grace TIMING stays out, per the
+  charter above.)
   The reaped returner (feature 9) pins its wire shape the same way: the
   expiry is simulated store-direct, and the return must replay exactly
   welcome → chat:started → chat:ended {self-timeout}, silently to the room.
@@ -64,7 +66,7 @@ beforeEach(async () => {
   httpServer = http.createServer();
   io = attachLobby(
     httpServer,
-    { port: 0, nodeEnv: "test", corsOrigins: [] },
+    { port: 0, nodeEnv: "test", corsOrigins: [], timeScale: 1 },
     pino({ level: "silent" })
   );
   await new Promise<void>((resolve) => {
@@ -773,78 +775,114 @@ describe("the live lobby", () => {
     expect(startedAgain.chatId).toBe(chat.id);
   });
 
-  it("a partner's drop past the 4s gate reaches the room, and their resume flips it back", async () => {
-    const teacher = connect({ role: "teacher", hostKey: activity.hostKey });
-    const studentA = connect({
-      role: "student",
-      joinCode: activity.joinCode,
-      name: "Rachel",
-      nonce: "nonce-a",
+  it("a partner's drop past the broadcast gate reaches the room, and their resume flips it back", async () => {
+    // This test runs on its OWN lobby at timeScale 8 — the 4s gate lands in
+    // 500ms and grace is a 15s window, so waiting out the gate costs half a
+    // second instead of four AND the scaling mechanism itself stays pinned
+    // in the automated suite. The scale deliberately does NOT go in the
+    // shared beforeEach config: at scale 8 the default 20s auto-match
+    // threshold compresses to 2.5s and would quietly auto-pair waiting
+    // students mid-test across the rest of the suite. (Both lobbies share
+    // the store, so the shared `activity` record works here too.)
+    const scaledHttp = http.createServer();
+    const scaledIo = attachLobby(
+      scaledHttp,
+      { port: 0, nodeEnv: "test", corsOrigins: [], timeScale: 8 },
+      pino({ level: "silent" })
+    );
+    await new Promise<void>((resolve) => {
+      scaledHttp.listen(0, "127.0.0.1", resolve);
     });
-    const studentB = connect({
-      role: "student",
-      joinCode: activity.joinCode,
-      name: "Noa",
-      nonce: "nonce-b",
-    });
-    const welcomeA = await nextWelcome(studentA);
-    const welcomeB = await nextWelcome(studentB);
-    // `!` — both members are eligible; the chat just built above them.
-    const chat = createChat(
-      activity,
-      [welcomeA.studentId, welcomeB.studentId],
-      Date.now()
-    )!;
+    const scaledPort = (scaledHttp.address() as AddressInfo).port;
+    const connectScaled = (auth: Record<string, unknown>): ClientSocket => {
+      const socket: ClientSocket = connectClient(
+        `http://127.0.0.1:${scaledPort}`,
+        { auth, transports: ["websocket"], reconnection: false, forceNew: true }
+      );
+      clients.push(socket);
+      return socket;
+    };
 
-    // The boundary: the affected seat and the teacher room never hear it
-    // (the teacher's card already carries reconnectingStudentIds).
-    const leaks: unknown[] = [];
-    teacher.on("chat:peer-connection", (p) => leaks.push(p));
-    studentA.on("chat:peer-connection", (p) => leaks.push(p));
+    try {
+      const teacher = connectScaled({
+        role: "teacher",
+        hostKey: activity.hostKey,
+      });
+      const studentA = connectScaled({
+        role: "student",
+        joinCode: activity.joinCode,
+        name: "Rachel",
+        nonce: "nonce-a",
+      });
+      const studentB = connectScaled({
+        role: "student",
+        joinCode: activity.joinCode,
+        name: "Noa",
+        nonce: "nonce-b",
+      });
+      const welcomeA = await nextWelcome(studentA);
+      const welcomeB = await nextWelcome(studentB);
+      // `!` — both members are eligible; the chat just built above them.
+      const chat = createChat(
+        activity,
+        [welcomeA.studentId, welcomeB.studentId],
+        Date.now()
+      )!;
 
-    const droppedAtB = nextPeerConnection(studentB);
-    studentA.disconnect();
-    // Lands past the real 4s broadcast-delay gate — the one wait this
-    // file's charter allows, since the gate IS the invariant here.
-    const dropped = await droppedAtB;
-    expect(Object.keys(dropped).sort()).toEqual([
-      "characterId",
-      "chatId",
-      "secondsLeft",
-      "state",
-    ]);
-    expect(dropped.state).toBe("dropped");
-    expect(dropped.chatId).toBe(chat.id);
-    // `!` — the chat was just created with A as a member.
-    const memberA = chat.members.find(
-      (m) => m.studentId === welcomeA.studentId
-    )!;
-    expect(dropped.characterId).toBe(memberA.characterId);
-    // 120 minus the 4s gate. Slack on both sides: a slow event loop fires
-    // the timer late (secondsLeft dips), and Windows timer resolution can
-    // fire it a hair EARLY (ceil then lands on 117 — observed in the
-    // feature's browser pass).
-    expect(dropped.secondsLeft).toBeGreaterThan(110);
-    expect(dropped.secondsLeft).toBeLessThan(120);
+      // The boundary: the affected seat and the teacher room never hear it
+      // (the teacher's card already carries reconnectingStudentIds).
+      const leaks: unknown[] = [];
+      teacher.on("chat:peer-connection", (p) => leaks.push(p));
+      studentA.on("chat:peer-connection", (p) => leaks.push(p));
 
-    const returnedAtB = nextPeerConnection(studentB);
-    const resumed = connect({
-      role: "student",
-      joinCode: activity.joinCode,
-      studentId: welcomeA.studentId,
-      token: welcomeA.token,
-    });
-    // The returning student must not hear their own return either.
-    resumed.on("chat:peer-connection", (p) => leaks.push(p));
-    const returned = await returnedAtB;
-    expect(returned.state).toBe("returned");
-    expect(returned.chatId).toBe(chat.id);
-    expect(returned.characterId).toBe(memberA.characterId);
-    expect(returned.secondsLeft).toBeNull();
+      const droppedAtB = nextPeerConnection(studentB);
+      studentA.disconnect();
+      // Lands past the (scaled) broadcast-delay gate — the gate IS the
+      // invariant here.
+      const dropped = await droppedAtB;
+      expect(Object.keys(dropped).sort()).toEqual([
+        "characterId",
+        "chatId",
+        "secondsLeft",
+        "state",
+      ]);
+      expect(dropped.state).toBe("dropped");
+      expect(dropped.chatId).toBe(chat.id);
+      // `!` — the chat was just created with A as a member.
+      const memberA = chat.members.find(
+        (m) => m.studentId === welcomeA.studentId
+      )!;
+      expect(dropped.characterId).toBe(memberA.characterId);
+      // The 15s window minus the 0.5s gate. Slack on both sides: a slow
+      // event loop fires the timer late (secondsLeft dips), and Windows
+      // timer resolution can fire it a hair EARLY (ceil then lands on the
+      // full window — the unscaled version's 117-vs-120 lesson).
+      expect(dropped.secondsLeft).toBeGreaterThan(10);
+      expect(dropped.secondsLeft).toBeLessThanOrEqual(15);
 
-    await sleep(100);
-    expect(leaks).toEqual([]);
-  }, 15_000);
+      const returnedAtB = nextPeerConnection(studentB);
+      const resumed = connectScaled({
+        role: "student",
+        joinCode: activity.joinCode,
+        studentId: welcomeA.studentId,
+        token: welcomeA.token,
+      });
+      // The returning student must not hear their own return either.
+      resumed.on("chat:peer-connection", (p) => leaks.push(p));
+      const returned = await returnedAtB;
+      expect(returned.state).toBe("returned");
+      expect(returned.chatId).toBe(chat.id);
+      expect(returned.characterId).toBe(memberA.characterId);
+      expect(returned.secondsLeft).toBeNull();
+
+      await sleep(100);
+      expect(leaks).toEqual([]);
+    } finally {
+      await new Promise<void>((resolve) => {
+        scaledIo.close(() => resolve());
+      });
+    }
+  });
 
   it("a reaped chat member's return replays the ended chat as self-timeout and seats them wrapping up", async () => {
     const teacher = connect({ role: "teacher", hostKey: activity.hostKey });

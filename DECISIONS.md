@@ -175,6 +175,7 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [`/demo`, `/demo/teacher`, and `/demo/student` are thin redirects, never pages](#demo-demoteacher-and-demostudent-are-thin-redirects-never-pages)
   - [The temporary `/demo/*` routes are gone — every surface lives in its real flow](#the-temporary-demo-routes-are-gone--every-surface-lives-in-its-real-flow)
 - [Backend & API](#backend--api)
+  - [Localhost real flows compress through a server-side time-scale knob; production is pinned to 1](#localhost-real-flows-compress-through-a-server-side-time-scale-knob-production-is-pinned-to-1)
   - [The student chat wire carries characterIds only](#the-student-chat-wire-carries-characterids-only)
   - [Starting a chat clamps to the server's roster instead of rejecting](#starting-a-chat-clamps-to-the-servers-roster-instead-of-rejecting)
   - [Sockets connect at lobby entry and host-page load, and never on the demo](#sockets-connect-at-lobby-entry-and-host-page-load-and-never-on-the-demo)
@@ -3513,6 +3514,40 @@ _Routes live in [App.tsx](client/src/App.tsx)._
 ---
 
 ## Backend & API
+
+### Localhost real flows compress through a server-side time-scale knob; production is pinned to 1
+
+_2026-07-21_
+
+**Decision:** A dev server started with `CHAVEROLA_TIME_SCALE=n` (clamped
+to 1–100) runs every lobby flow clock n× fast: the 120s reconnect grace,
+the 4s disconnect broadcast gate, the engine.io ping cycle (so
+dead-connection detection compresses too), the auto-match tick/gap, and the
+teacher-set auto-match threshold. Production is hard-pinned to scale 1 by
+two independent locks — Render never sets the variable, and
+`NODE_ENV === "production"` forces 1 even if it leaks in. The client gets
+no knob: every real-activity countdown is server-seeded and the ping
+settings ride the handshake, so scaling the server scales the world.
+Deliberately NOT scaled: the `chat:send` rate-limit window, the `TYPING_*`
+heartbeat/TTL, the teacher keepalive, the store TTL/sweep, and the client's
+`LEAVE_FLUSH_MS`. `/healthz` reports `timeScale` whenever it isn't 1 (plus
+`pid` always), so a wrongly-scaled or stale server identifies itself.
+
+**Why:** Founder call (speedup planning, 2026-07-21). Verification of real
+socket flows was waiting out real-world clocks on localhost — ~20s
+auto-match, ~45s dead-connection detection, 120s grace — while `?fast`
+compresses demo timers only. A server-side knob compresses everything the
+browser harness waits on without touching client code, and an unset knob
+(and production, always) is byte-identical to today. The alternative — a
+client-side scale reaching real activities — was cut as unnecessary
+(see [speedup plan](docs/plans/speedup.md), "Considered and cut").
+
+_Implemented in [timing.ts](server/src/live/timing.ts) (the derived-numbers
+singleton and its what-never-scales docblock),
+[config.ts](server/src/config.ts) (`readTimeScale`), and
+[lobby.ts](server/src/live/lobby.ts) (`applyTimeScale` first thing in
+`attachLobby`); the scale-8 peer-connection test in `lobby.test.ts` pins
+the mechanism._
 
 ### The student chat wire carries characterIds only
 

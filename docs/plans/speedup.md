@@ -79,7 +79,7 @@ Ordering: 1 → 2 → 3 in that order; 4 → 5 in that order; 6 → 7 in that
 order. The three chains are independent of each other. Prompt 8 needs
 prompt 2 (its browser pass runs on the new harness).
 
-- [ ] Prompt 1 — Localhost time obeys a dev knob
+- [x] Prompt 1 — Localhost time obeys a dev knob
 - [ ] Prompt 2 — The verify harness lives in the repo
 - [ ] Prompt 3 — The verify skill tells the new story
 - [ ] Prompt 4 — DECISIONS.md becomes an index

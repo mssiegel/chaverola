@@ -5,13 +5,10 @@ import { Server } from "socket.io";
 import { z } from "zod";
 
 import {
-  AUTO_MATCH_GAP_SECONDS,
   CHAT_MESSAGE_MAX_CHARS,
   DEMO_JOIN_CODE,
   HOST_KEY_PATTERN,
   JOIN_CODE_PATTERN,
-  LOBBY_DISCONNECT_BROADCAST_DELAY_MS,
-  LOBBY_GRACE_SECONDS,
   STUDENT_NAME_MAX_CHARS,
   TYPING_HEARTBEAT_MS,
 } from "@chaverola/shared";
@@ -69,6 +66,7 @@ import {
   toQueueEntries,
 } from "./seats";
 import type { Seat } from "./seats";
+import { applyTimeScale, timing } from "./timing";
 
 /*
   The Socket.IO layer. engine.io intercepts /socket.io/ on the http.Server
@@ -196,9 +194,16 @@ export function attachLobby(
   logger: Logger
 ): LobbyServer {
   const log = logger.child({ module: "lobby" });
+  // First thing: every timing.* read below (and in projections.ts) must see
+  // this config's scale.
+  applyTimeScale(config.timeScale);
   const io: LobbyServer = new Server(httpServer, {
     cors: { origin: config.corsOrigins, credentials: false },
     serveClient: false,
+    // engine.io's own defaults, routed through timing so dead-connection
+    // detection (~45s unscaled) compresses with everything else.
+    pingInterval: timing.pingIntervalMs,
+    pingTimeout: timing.pingTimeoutMs,
   });
 
   function queuePayload(record: StoredActivity, now: number) {
@@ -267,7 +272,7 @@ export function attachLobby(
     seat: Seat,
     graceMs: number
   ): void {
-    armDisconnectTimers(seat, graceMs, LOBBY_DISCONNECT_BROADCAST_DELAY_MS, {
+    armDisconnectTimers(seat, graceMs, timing.broadcastDelayMs, {
       // The delay gates every "lost connection" surface at once — the
       // teacher's reconnecting tag and, since feature 8, the partner's
       // banner flip together (a refresh reconnects faster and shows
@@ -373,7 +378,7 @@ export function attachLobby(
             ?.emit("chat:ended", toChatEnded(chat));
         } else {
           clearSeatTimers(seat);
-          armSeatTimers(record, seat, LOBBY_GRACE_SECONDS * 1000);
+          armSeatTimers(record, seat, timing.graceMs);
         }
       } else if (seat.connected) {
         io.sockets.sockets
@@ -393,7 +398,9 @@ export function attachLobby(
     if (now < state.nextAt) return;
     const pair = findAutoMatchPair(
       record,
-      record.settings.autoMatchSeconds,
+      // The teacher-set threshold compresses with the world — a scaled dev
+      // run auto-matches in seconds, not the real 20.
+      record.settings.autoMatchSeconds / timing.scale,
       now
     );
     if (!pair) return;
@@ -401,20 +408,23 @@ export function attachLobby(
     if (!chat) return;
     log.info({ joinCode, chatId: chat.id }, "auto-matched a pair");
     // One pair per firing, with a breather — pairs land one at a time.
-    state.nextAt = now + AUTO_MATCH_GAP_SECONDS * 1000;
+    state.nextAt = now + timing.autoMatchGapMs;
     sendChatStarted(record, chat);
     broadcastState(record);
   }
 
-  /** Arm on the 0→1st teacher socket: a 1s tick that reads everything else
-   *  fresh each firing. */
+  /** Arm on the 0→1st teacher socket: a 1s tick (scaled) that reads
+   *  everything else fresh each firing. */
   function armAutoMatch(joinCode: string): void {
     const state = autoMatchTimers.get(joinCode);
     if (state) {
       state.teacherCount += 1;
       return;
     }
-    const timer = setInterval(() => autoMatchTick(joinCode), 1000);
+    const timer = setInterval(
+      () => autoMatchTick(joinCode),
+      timing.autoMatchTickMs
+    );
     timer.unref();
     autoMatchTimers.set(joinCode, { timer, teacherCount: 1, nextAt: 0 });
   }
@@ -883,7 +893,7 @@ export function attachLobby(
       // real handset, 2026-07-20). 120s is long enough to walk back into
       // your chat after a lift or a lock screen, and short enough that
       // nobody waits on someone who is never coming back.
-      armSeatTimers(current, dropped, LOBBY_GRACE_SECONDS * 1000);
+      armSeatTimers(current, dropped, timing.graceMs);
     });
   });
 

@@ -11,7 +11,12 @@ import { resetForTests } from "../store/activityStore";
 // happy path. TTL/sweep, capacity, 429, CORS, and body-parser mapping are
 // covered by curl smoke and the browser pass.
 
-const app = buildApp({ port: 0, nodeEnv: "test", corsOrigins: [] });
+const app = buildApp({
+  port: 0,
+  nodeEnv: "test",
+  corsOrigins: [],
+  timeScale: 1,
+});
 
 const validBody: CreateActivityRequest = {
   hostName: "Ms. Cohen",

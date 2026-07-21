@@ -93,7 +93,16 @@ export function buildApp(config: Config, logger?: Logger): express.Express {
   // Render's health check — neither should burn limiter budget.
   app.get("/healthz", (_req, res) => {
     // `commit` comes from Render's injected env; JSON drops it locally.
-    res.json({ ok: true, commit: process.env.RENDER_GIT_COMMIT });
+    // `pid` + `timeScale` let the verify harness (and a human) identify a
+    // stale or wrongly-scaled server from the answer alone — no more
+    // Get-NetTCPConnection ritual. timeScale is omitted at 1 (production
+    // always), so its presence alone flags a scaled server.
+    res.json({
+      ok: true,
+      commit: process.env.RENDER_GIT_COMMIT,
+      pid: process.pid,
+      timeScale: config.timeScale === 1 ? undefined : config.timeScale,
+    });
   });
 
   // The two GET lookups (joinCode + hostKey) share one limiter.

@@ -1,7 +1,3 @@
-import {
-  LOBBY_DISCONNECT_BROADCAST_DELAY_MS,
-  LOBBY_GRACE_SECONDS,
-} from "@chaverola/shared";
 import type {
   Activity,
   Character,
@@ -15,6 +11,7 @@ import type {
 
 import { activeMembers } from "../live/matching";
 import type { StoredChat, StoredChatLine } from "../live/matching";
+import { timing } from "../live/timing";
 import type { Seat } from "../live/seats";
 import type { StoredActivity } from "./activityStore";
 
@@ -54,12 +51,14 @@ export function toHostedActivity(stored: StoredActivity): HostedActivity {
 
 /** A drop reads "reconnecting" only past the broadcast delay — a refresh
  *  reconnects in ~1–2s and shouldn't flash the row (or dim a card member).
- *  The delay gates only this teacher-facing state, never the grace clock. */
+ *  The delay gates only this teacher-facing state, never the grace clock.
+ *  timing.*, not the shared constants: countdown payloads must track the
+ *  actual (possibly time-scaled) reap clock or they desync. */
 function isReconnecting(seat: Seat, now: number): boolean {
   return (
     !seat.connected &&
     seat.disconnectedAt !== undefined &&
-    now - seat.disconnectedAt >= LOBBY_DISCONNECT_BROADCAST_DELAY_MS
+    now - seat.disconnectedAt >= timing.broadcastDelayMs
   );
 }
 
@@ -69,7 +68,7 @@ function isReconnecting(seat: Seat, now: number): boolean {
  *  timer's own seat, or one isReconnecting just passed), so disconnectedAt
  *  is set (the fallback keeps the helper total). */
 export function graceSecondsLeft(seat: Seat, now: number): number {
-  const deadline = (seat.disconnectedAt ?? now) + LOBBY_GRACE_SECONDS * 1000;
+  const deadline = (seat.disconnectedAt ?? now) + timing.graceMs;
   return Math.max(0, Math.ceil((deadline - now) / 1000));
 }
 

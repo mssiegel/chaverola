@@ -10,6 +10,9 @@ export interface Config {
   nodeEnv: string;
   /** The CORS allowlist, from allowedOrigins(). */
   corsOrigins: Array<string | RegExp>;
+  /** The dev-only clock compressor, from readTimeScale(). 1 in production,
+   *  always. */
+  timeScale: number;
 }
 
 /**
@@ -45,13 +48,30 @@ export function allowedOrigins(
   if (env.NODE_ENV === "production") return production;
   // 5173 is Vite's default; 5174 is where Vite lands when another repo's
   // dev server already holds 5173 — a daily occurrence on this machine.
+  // 5199 is the designated verification port (tools/verify pins it with
+  // --strictPort), so harness launches need no CLIENT_ORIGINS override.
   return [
     ...production,
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:5174",
     "http://127.0.0.1:5174",
+    "http://localhost:5199",
+    "http://127.0.0.1:5199",
   ];
+}
+
+/**
+ * CHAVEROLA_TIME_SCALE compresses the lobby's real-flow clocks (grace,
+ * broadcast gate, ping cycle, auto-match — see live/timing.ts) so localhost
+ * verification doesn't wait out real-world minutes. Dev-only by two locks:
+ * Render never sets the var, and production forces 1 even if it leaks in.
+ */
+export function readTimeScale(env: NodeJS.ProcessEnv = process.env): number {
+  if (env.NODE_ENV === "production") return 1;
+  const scale = Number(env.CHAVEROLA_TIME_SCALE);
+  if (!Number.isFinite(scale)) return 1;
+  return Math.min(100, Math.max(1, scale));
 }
 
 export function readConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -60,5 +80,6 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): Config {
     port: Number.isInteger(port) && port > 0 ? port : 3001,
     nodeEnv: env.NODE_ENV ?? "development",
     corsOrigins: allowedOrigins(env),
+    timeScale: readTimeScale(env),
   };
 }
