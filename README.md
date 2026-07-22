@@ -23,8 +23,7 @@ automatically via Vercel).
 > real name, on the host page's chat cards, **can end any chat (or
 > all of them) whenever the round is over, and can pause the whole
 > class** — composers lock, clocks freeze, matchmaking waits, and one
-> tap resumes. The auto-end clock and the name reveal are honest
-> placeholders for now. See
+> tap resumes. The name reveal is an honest placeholder for now. See
 > [Shared_Project_Context.md](Shared_Project_Context.md)
 > for the full brief and [docs/plans/](docs/plans/) for the current feature plan.
 

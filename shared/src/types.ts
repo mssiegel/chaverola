@@ -40,10 +40,6 @@ export interface Activity {
 export interface ActivitySettings {
   /** Students learn who they were really chatting with once a chat ends. */
   revealNames: boolean;
-  /** End every chat automatically after `autoEndMinutes`. */
-  autoEndChats: boolean;
-  /** Whole minutes, 1–30. Kept (but inert) while `autoEndChats` is off. */
-  autoEndMinutes: number;
   /** Warn the teacher before pairing students who already chatted together. */
   rematchWarning: boolean;
   /** Pair waiting students 1:1 on their own after `autoMatchSeconds`. */

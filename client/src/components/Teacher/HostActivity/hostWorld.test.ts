@@ -83,20 +83,6 @@ describe("createChat", () => {
     expect(w.lastPartners.b).toEqual(["a"]);
   });
 
-  it("starts the auto-end clock only when the setting is on", () => {
-    const queue = [student("a"), student("b")];
-    const on = createChat(world({ queue }), ["a", "b"], activity());
-    expect(on.chats[0]!.autoEndSecondsLeft).toBe(
-      DEFAULT_ACTIVITY_SETTINGS.autoEndMinutes * 60
-    );
-    const off = createChat(
-      world({ queue }),
-      ["a", "b"],
-      activity(2, { autoEndChats: false })
-    );
-    expect(off.chats[0]!.autoEndSecondsLeft).toBeNull();
-  });
-
   it("does nothing for fewer than two seatable students", () => {
     const w = world({ queue: [student("a")] });
     expect(createChat(w, ["a"], activity())).toBe(w);
@@ -349,23 +335,10 @@ describe("reconnecting students are unmatchable", () => {
 });
 
 describe("tickWorld", () => {
-  it("advances wait times and ends a chat whose clock hits zero with reason timer", () => {
-    const seeded = createChat(
-      world({ queue: [student("a", 10), student("b", 10), student("c", 10)] }),
-      ["a", "b"],
-      activity()
-    );
-    seeded.chats[0]!.autoEndSecondsLeft = 1;
-
-    const ticked = tickWorld(seeded, activity());
-    expect(ticked.queue.map((s) => s.waitSeconds)).toEqual([11]);
-    expect(ticked.chats[0]!.status).toBe("ended");
-    expect(ticked.chats[0]!.endReason).toBe("timer");
-    // The ended chat's students wrap up before rejoining the queue.
-    expect(ticked.wrappingUp.map((e) => e.student.id).sort()).toEqual([
-      "a",
-      "b",
-    ]);
+  it("advances wait times each tick", () => {
+    const w = world({ queue: [student("a", 10), student("b", 10)] });
+    const ticked = tickWorld(w, activity());
+    expect(ticked.queue.map((s) => s.waitSeconds)).toEqual([11, 11]);
   });
 
   it("auto-matches a waiting pair once the gap counts down", () => {
@@ -381,7 +354,7 @@ describe("tickWorld", () => {
 });
 
 describe("tickWorld while paused", () => {
-  it("holds wait times, chat clocks, and the auto-match countdown, and pairs nobody", () => {
+  it("holds wait times and the auto-match countdown, and pairs nobody", () => {
     const seeded = createChat(
       world({
         queue: ["a", "b", "c", "d"].map((id) => student(id, 30)),
@@ -390,28 +363,13 @@ describe("tickWorld while paused", () => {
       ["a", "b"],
       activity(2, { autoMatch: true })
     );
-    const clockBefore = seeded.chats[0]!.autoEndSecondsLeft;
     const paused = { ...seeded, paused: true };
 
     const ticked = tickWorld(paused, activity(2, { autoMatch: true }));
     expect(ticked.queue.map((s) => s.waitSeconds)).toEqual([30, 30]);
-    expect(ticked.chats[0]!.autoEndSecondsLeft).toBe(clockBefore);
     expect(ticked.secondsUntilAutoMatch).toBe(0);
     // Both leftovers are past the threshold, yet no pair forms.
     expect(ticked.chats).toHaveLength(1);
-  });
-
-  it("never expires a clock mid-pause, even at 1 second left", () => {
-    const seeded = createChat(
-      world({ queue: [student("a"), student("b")] }),
-      ["a", "b"],
-      activity()
-    );
-    seeded.chats[0]!.autoEndSecondsLeft = 1;
-    let w = { ...seeded, paused: true };
-    for (let i = 0; i < 5; i++) w = tickWorld(w, activity());
-    expect(w.chats[0]!.status).toBe("active");
-    expect(w.chats[0]!.autoEndSecondsLeft).toBe(1);
   });
 
   it("keeps joins dripping and wrapping-up students returning", () => {
@@ -429,7 +387,7 @@ describe("tickWorld while paused", () => {
     expect(ticked.wrappingUp).toHaveLength(0);
   });
 
-  it("still creates chats — born with a full, frozen clock", () => {
+  it("still creates chats while paused", () => {
     const w = createChat(
       world({ paused: true, queue: [student("a"), student("b")] }),
       ["a", "b"],
@@ -437,8 +395,5 @@ describe("tickWorld while paused", () => {
     );
     expect(w.chats).toHaveLength(1);
     expect(w.paused).toBe(true);
-    expect(w.chats[0]!.autoEndSecondsLeft).toBe(
-      DEFAULT_ACTIVITY_SETTINGS.autoEndMinutes * 60
-    );
   });
 });

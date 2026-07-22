@@ -145,9 +145,6 @@ export function toChatSnapshot(
   activity: StoredActivity,
   now: number
 ): ChatSnapshot {
-  // Paused clocks freeze at the anchor; reconnecting state keeps real time
-  // (same split as toQueueEntry — the grace clock runs through a pause).
-  const clockNow = activity.pausedAt ?? now;
   return {
     id: chat.id,
     participants: chat.members.map((member) => ({
@@ -163,7 +160,6 @@ export function toChatSnapshot(
       })
       .map((member) => member.studentId),
     messages: chat.lines.map((line) => toChatTranscriptLine(chat, line)),
-    elapsedSeconds: Math.max(0, Math.floor((clockNow - chat.startedAt) / 1000)),
     status: chat.status,
     endReason: chat.endReason,
   };

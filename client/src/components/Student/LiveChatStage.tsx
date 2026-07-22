@@ -61,9 +61,9 @@ interface LiveChatStageProps {
  * The ending tells the truth as well — chat:ended's reason renders the 🔌
  * wrap-up when a 1:1 partner's grace ran out (and the 📶 one when it was
  * this student's own, replayed on their return), not the teacher's 🎓. Still
- * quiet on the rest, on purpose: no auto-end clock and no name reveal
- * (their own later features). Exits are honest too: walking out mid-chat
- * leaves the whole activity, and the confirm says so.
+ * quiet on the rest, on purpose: no name reveal (its own later feature).
+ * Exits are honest too: walking out mid-chat leaves the whole activity, and
+ * the confirm says so.
  */
 export function LiveChatStage({
   self,
@@ -127,10 +127,8 @@ export function LiveChatStage({
       : null;
 
   // The room, live messages, typing, the teacher's pause, the peer-drop
-  // banner, and the honest end reason included. What a demo engine would
-  // animate beyond them stays pinned to its quiet value: no auto-end clock
-  // runs server-side. The "teacher" fallback keeps the derivation total if
-  // the ended flag ever lands without a reason.
+  // banner, and the honest end reason included. The "teacher" fallback keeps
+  // the derivation total if the ended flag ever lands without a reason.
   const chat: ChatRoomState = {
     self,
     peers,
@@ -145,7 +143,6 @@ export function LiveChatStage({
           : "connected",
     offlinePeerId: returnedFlashId ?? offlinePeerId,
     reconnectSecondsLeft,
-    autoEndSecondsLeft: null,
     isEnded,
     isPaused,
     endReason: isEnded ? (endReason ?? "teacher") : null,

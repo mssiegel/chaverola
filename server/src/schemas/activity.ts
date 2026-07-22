@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import {
-  AUTO_END_MINUTES,
   AUTO_MATCH_SECONDS,
   EMAIL_MAX_CHARS,
   EMAIL_PATTERN,
@@ -45,12 +44,6 @@ const characterInputSchema = z.object({
  *  is exactly the settings object the create request carries. */
 export const activitySettingsSchema = z.object({
   revealNames: z.boolean(),
-  autoEndChats: z.boolean(),
-  autoEndMinutes: z
-    .number()
-    .int()
-    .min(AUTO_END_MINUTES.min)
-    .max(AUTO_END_MINUTES.max),
   rematchWarning: z.boolean(),
   autoMatch: z.boolean(),
   autoMatchSeconds: z

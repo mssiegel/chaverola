@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
-import { GraduationCap, Pause, Play, TimerOff } from "lucide-react";
+import { GraduationCap, Pause, Play } from "lucide-react";
 
 import { useChatDemo } from "@/components/chat/useChatDemo";
 import { ChatDemoControls } from "@/components/demo/ChatDemoControls";
 import { EventButton } from "@/components/demo/DemoControls";
 import { Chatbox } from "@/components/Student/Chatbox";
-import { DEFAULT_ACTIVITY_SETTINGS } from "@/lib/activitySetup";
 import { useBackGuard } from "@/lib/useBackGuard";
 import {
   activityChatScenarios,
@@ -49,13 +48,9 @@ export function ChatStage({
     const base = activityChatScenarios[scenarioKey];
     return { ...base, self: { ...base.self, realName: studentName } };
   });
-  // The demo activity runs the recommended settings, so this chat carries the
-  // default auto-end clock (both tabs stay independently mocked — there's no
-  // cross-tab sync with a teacher's live settings).
-  const chat = useChatDemo(scenario, {
-    autoEndSeconds: DEFAULT_ACTIVITY_SETTINGS.autoEndMinutes * 60,
-    isPaused: classPaused,
-  });
+  // Both tabs stay independently mocked — there's no cross-tab sync with a
+  // teacher's live settings.
+  const chat = useChatDemo(scenario, { isPaused: classPaused });
 
   // Mock of the teacher's activity-level "reveal names" setting, until the
   // teacher host page owns it for real.
@@ -102,14 +97,6 @@ export function ChatStage({
               icon={<GraduationCap className="size-4" />}
             >
               Teacher ends chat
-            </EventButton>
-            <EventButton
-              onWorld
-              onClick={() => chat.endChat("timer")}
-              disabled={chat.isEnded}
-              icon={<TimerOff className="size-4" />}
-            >
-              Auto-end timer fires
             </EventButton>
             {/* Deliberately not gated on isEnded: pause is world-level, so
                 flipping it from the ended screen sends the student back to a

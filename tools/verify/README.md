@@ -89,9 +89,8 @@ and opens a teacher socket (`/socket.io/` traffic; the demo has zero).
 your students" — plus the chat sections), so demo-vs-live is no longer a
 layout difference. What still differs on a real page: no golden banner, no
 demo steering panel, ending controls disabled ("End all chats" / "Pause all
-chats" / each card's "End chat") under one shared hint line, an
-empty-transcript hint on live cards, and a count-up clock that appears only
-after a chat's first 60s (the demo shows an auto-end countdown instead).
+chats" / each card's "End chat") under one shared hint line, and an
+empty-transcript hint on live cards.
 
 - Tap-to-select rows are `ul li button[aria-pressed]` on both; the remove
   control is `button[aria-label="Remove <name> from the activity"]`.

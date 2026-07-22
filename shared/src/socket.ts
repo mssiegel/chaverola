@@ -40,7 +40,6 @@ export interface ChatSnapshot {
   inactiveStudentIds: string[]; // removed / left mid-chat
   reconnectingStudentIds: string[]; // active members dropped past the 4s delay
   messages: ChatTranscriptLine[]; // the whole capped transcript, oldest first
-  elapsedSeconds: number; // computed server-side at emit; client ticks between
   status: "active" | "ended";
   // "peer-timeout": a below-2 ending caused by a partner's expired grace.
   endReason: "teacher" | "peer-timeout" | null;

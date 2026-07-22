@@ -1,24 +1,17 @@
 import { CheckCircle2, Pause, X } from "lucide-react";
 
-import { AutoEndCountdown } from "@/components/chat/AutoEndCountdown";
 import { LiveDot } from "@/components/ui/live-dot";
 import { characterLabel } from "@/lib/characterLabel";
 import { cn } from "@/lib/utils";
 import type { Participant } from "@/types/chat";
-
-import { ElapsedClock } from "./ElapsedClock";
 
 interface ChatCardHeaderProps {
   participants: Participant[];
   /** Distinct color (CSS var) per character id in this chat. */
   characterColors: Map<string, string>;
   isEnded: boolean;
-  /** The activity-wide pause: the badge and clock freeze. Ended wins. */
+  /** The activity-wide pause: the badge freezes. Ended wins. */
   isPaused?: boolean;
-  /** Seconds left on the chat's auto-end clock (null/omitted: no clock). */
-  autoEndSecondsLeft?: number | null;
-  /** Seconds since the chat started (live cards) — the count-up chip. */
-  elapsedSeconds?: number | null;
   /** Participants no longer in the room (removed mid-chat) render muted. */
   inactiveParticipantIds?: ReadonlySet<string>;
   /** Active members riding a dropped connection — dimmed with a
@@ -30,17 +23,14 @@ interface ChatCardHeaderProps {
 
 /**
  * Who's in this chat: each student's real name next to the character they're
- * playing (the teacher always sees real names), plus a live/ended badge, the
- * chat's remaining time when the activity auto-ends chats, and — on the live
- * host page — a per-participant remove control.
+ * playing (the teacher always sees real names), plus a live/ended badge and —
+ * on the live host page — a per-participant remove control.
  */
 export function ChatCardHeader({
   participants,
   characterColors,
   isEnded,
   isPaused = false,
-  autoEndSecondsLeft = null,
-  elapsedSeconds = null,
   inactiveParticipantIds,
   reconnectingParticipantIds,
   onRemoveParticipant,
@@ -115,18 +105,6 @@ export function ChatCardHeader({
             <LiveDot />
             Live
           </span>
-        )}
-        {!isEnded && autoEndSecondsLeft !== null && (
-          <span className="flex items-center rounded-full bg-card px-2.5 py-1 shadow-sm">
-            <AutoEndCountdown
-              secondsLeft={autoEndSecondsLeft}
-              paused={isPaused}
-              className="text-xs"
-            />
-          </span>
-        )}
-        {!isEnded && elapsedSeconds !== null && (
-          <ElapsedClock seconds={elapsedSeconds} />
         )}
       </div>
     </header>

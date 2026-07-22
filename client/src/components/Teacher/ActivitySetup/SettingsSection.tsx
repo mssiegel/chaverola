@@ -3,13 +3,12 @@ import {
   Eye,
   Repeat2,
   SlidersHorizontal,
-  Timer,
   Zap,
   type LucideIcon,
 } from "lucide-react";
 
 import { Switch } from "@/components/ui/switch";
-import { AUTO_END_MINUTES, AUTO_MATCH_SECONDS } from "@/lib/activitySetup";
+import { AUTO_MATCH_SECONDS } from "@/lib/activitySetup";
 import { cn } from "@/lib/utils";
 import type { ActivitySettings } from "@/types/activity";
 
@@ -27,7 +26,7 @@ interface SettingsSectionProps {
 }
 
 /**
- * The four activity toggles. Everything defaults to on (the recommended
+ * The three activity toggles. Everything defaults to on (the recommended
  * state), and a toggle's sub-control stays visible but disabled while it's
  * off — the teacher can see what turning it on will do, and nothing jumps
  * around. All of it stays editable while the activity runs.
@@ -47,27 +46,6 @@ export function SettingsSection({
         checked={settings.revealNames}
         onCheckedChange={(revealNames) => onChange({ revealNames })}
       />
-
-      <SettingRow
-        id="setting-auto-end"
-        icon={Timer}
-        title="End chats on a timer"
-        description="Every chat wraps up on its own after the time you pick."
-        checked={settings.autoEndChats}
-        onCheckedChange={(autoEndChats) => onChange({ autoEndChats })}
-      >
-        <SubControl label="End chats after" muted={!settings.autoEndChats}>
-          <NumberStepper
-            value={settings.autoEndMinutes}
-            bounds={AUTO_END_MINUTES}
-            disabled={!settings.autoEndChats}
-            format={(v) => (v === 1 ? "1 minute" : `${v} minutes`)}
-            decreaseLabel="One minute less"
-            increaseLabel="One minute more"
-            onChange={(autoEndMinutes) => onChange({ autoEndMinutes })}
-          />
-        </SubControl>
-      </SettingRow>
 
       <SettingRow
         id="setting-rematch-warning"

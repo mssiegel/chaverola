@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { DoorOpen, LogOut } from "lucide-react";
 
-import { AutoEndCountdown } from "@/components/chat/AutoEndCountdown";
 import { ChatFrame } from "@/components/chat/ChatFrame";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { Conversation } from "@/components/chat/Conversation";
@@ -77,7 +76,6 @@ export function Chatbox({
     peerState,
     offlinePeerId,
     reconnectSecondsLeft,
-    autoEndSecondsLeft,
     isEnded,
     isPaused,
     endReason,
@@ -144,15 +142,7 @@ export function Chatbox({
         actions={
           !isEnded && (
             <div className="flex shrink-0 items-center gap-2">
-              {autoEndSecondsLeft !== null && (
-                <AutoEndCountdown
-                  secondsLeft={autoEndSecondsLeft}
-                  onDark
-                  paused={isPaused}
-                />
-              )}
-              {/* On narrow widths the pill compresses to icon + "End" so the
-                  clock fits without crowding the header. */}
+              {/* On narrow widths the pill compresses to icon + "End". */}
               <button
                 type="button"
                 onClick={() => setConfirmOpen(true)}

@@ -73,13 +73,12 @@ describe("readActivityDraft (sessionStorage sanitizing)", () => {
             { name: "Antony" },
             { name: "One row too many" },
           ],
-          settings: { autoEndMinutes: 500, autoMatchSeconds: 7 },
+          settings: { autoMatchSeconds: 7 },
         }),
     });
     const draft = readActivityDraft();
     expect(draft.characters).toHaveLength(4);
     expect(draft.characters[0]!.name).toHaveLength(30);
-    expect(draft.settings.autoEndMinutes).toBe(30);
     // 7 snaps onto the 5-step grid that counts from 5.
     expect(draft.settings.autoMatchSeconds).toBe(5);
   });

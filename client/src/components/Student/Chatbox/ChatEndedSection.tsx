@@ -57,12 +57,6 @@ function endedCopy(
         title: "Your teacher ended the chat",
         body: "Time for what's next in class. Nicely played! 👏",
       };
-    case "timer":
-      return {
-        tile: "⏰",
-        title: "Time's up!",
-        body: "The chat timer ran out. Nicely played! 👏",
-      };
     case "peer-timeout":
       return {
         tile: "🔌",
@@ -92,10 +86,10 @@ function endedCopy(
 
 /**
  * Shown once the chat ends. The header tile explains what happened — who
- * ended it (you, a named character, your teacher), the activity timer, or a
- * lost connection — then optionally reveals who the student was really
- * talking to and invites them back to the lobby for a rematch. The student
- * only leaves when they tap the button.
+ * ended it (you, a named character, your teacher) or a lost connection — then
+ * optionally reveals who the student was really talking to and invites them
+ * back to the lobby for a rematch. The student only leaves when they tap the
+ * button.
  */
 export function ChatEndedSection({
   peers,

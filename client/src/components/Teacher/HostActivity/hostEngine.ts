@@ -47,8 +47,6 @@ export interface HostDemoTriggers {
   /** A student joins right now. */
   triggerJoin: () => void;
   canTriggerJoin: boolean;
-  /** Fast-forward every live clock (finale, then expiry). */
-  fastForwardClocks: () => void;
   /** A random waiting student drops and comes back — the lost-connection row. */
   triggerWifiBlip: () => void;
   canTriggerWifiBlip: boolean;

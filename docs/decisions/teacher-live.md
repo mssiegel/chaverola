@@ -5,6 +5,39 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
+### Chats show no timer or clock — the teacher ends them by hand
+
+_2026-07-22_
+
+**Decision:** Chats have no auto-end timer, and the teacher's cards have no
+clock. There's no "End chats on a timer" setting, no countdown in the student
+chat header, no ⏰ "Time's up!" ending, and no count-up "elapsed" clock on the
+chat cards. A chat ends only when someone acts on it: the teacher (per chat or
+"End all chats"), a student who leaves or ends it, or a 1:1 partner whose
+disconnect grace runs out. Gone with it — the `autoEndChats`/`autoEndMinutes`
+settings, the `"timer"` end reason, and the wire's `elapsedSeconds`.
+
+**Why:** Product-owner call (2026-07-22). A teacher usually can't tell up front
+how long an activity will run, so a countdown students can see promises
+something the teacher can't keep: end the activity early while a student's chat
+still shows time left, and that student feels cheated. The game-like appeal
+wasn't worth the risk. The teacher's own elapsed clock came out for a simpler
+reason — it's not something the teacher acts on, so it was just noise on the
+card.
+
+_Removed from
+[useChatDemo](../../client/src/components/chat/useChatDemo.ts),
+[useHostActivityDemo](../../client/src/components/Teacher/HostActivity/useHostActivityDemo.ts),
+[hostWorld](../../client/src/components/Teacher/HostActivity/hostWorld.ts), the
+[teacher chat card](../../client/src/components/Teacher/ChatCard/ChatCardHeader.tsx),
+and the
+[setup form](../../client/src/components/Teacher/ActivitySetup/SettingsSection.tsx).
+Supersedes
+[Every chat runs its own auto-end clock, and students watch it tick](#every-chat-runs-its-own-auto-end-clock-and-students-watch-it-tick),
+[Auto-end edits: new minutes wait for new chats; the toggle acts immediately](#auto-end-edits-new-minutes-wait-for-new-chats-the-toggle-acts-immediately),
+and
+[The live card's count-up clock appears only after the first minute](#the-live-cards-count-up-clock-appears-only-after-the-first-minute)._
+
 ### Pausing ships end to end; the grace window keeps running through it
 
 _2026-07-21_
@@ -193,24 +226,6 @@ buttons covers all three controls and disappears with them when ending
 ships (`endingEnabled`).
 
 _Implemented in [ChatsInProgressSection](../../client/src/components/Teacher/HostActivity/ChatsInProgressSection.tsx)._
-
-### The live card's count-up clock appears only after the first minute
-
-_2026-07-20_
-
-**Decision:** Live chat cards carry an m:ss count-up clock (how long the
-chat has been going) in the same header spot the demo's auto-end countdown
-uses — but it stays hidden for the chat's first 60 seconds and fades in at
-1:00.
-
-**Why:** Founder call (2026-07-20). A fresh card full of chrome (Live badge,
-names, hint line) doesn't need a `0:07` ticking at the teacher; the elapsed
-time only becomes information once a chat has been running a while. The
-threshold lives in one place (`ElapsedClock.SHOW_FROM_SECONDS`). The demo
-keeps the auto-end countdown instead — real chats have no auto-end clock
-yet.
-
-_Implemented in [ElapsedClock](../../client/src/components/Teacher/ChatCard/ElapsedClock.tsx)._
 
 ### An empty live transcript explains itself; a finished one doesn't
 
@@ -1012,50 +1027,6 @@ _Implemented in `removeFromChat` in
 the control lives in
 [ChatCardHeader](../../client/src/components/Teacher/ChatCard/ChatCardHeader.tsx)._
 
-### Every chat runs its own auto-end clock, and students watch it tick
-
-_2026-07-15_
-
-**Decision:** The auto-end timer is **per chat**: it starts when the chat
-starts, counting down the activity's auto-end minutes, and ends the chat
-with reason `"timer"` (⏰ "Time's up!") at zero. The countdown is part of
-the chat-engine contract (`ChatRoomState.autoEndSecondsLeft`, ticked by
-`useChatDemo`). Students see a quiet m:ss clock in the chat header that
-shifts to amber and pulses in the final 60 seconds; on narrow widths the
-End chat pill compresses to icon + "End" so the clock fits. Teacher chat
-cards show the same per-chat remaining time. Demo panels get a staged
-fast-forward (first press → the finale, second press → the expiry).
-
-**Why:** Before this, the ⏰ ended screen was the first students heard of a
-time limit — a scene deserves a wrap-up, not a trap door. Per-chat (rather
-than per-round) clocks mean a chat started late still gets its full time;
-when the teacher pairs everyone at once the chats naturally end together
-anyway, and "End all chats" is the round-closer for everyone-done-now.
-
-_Implemented in [useChatDemo](../../client/src/components/chat/useChatDemo.ts) and
-[useHostActivityDemo](../../client/src/components/Teacher/HostActivity/useHostActivityDemo.ts),
-rendered by
-[AutoEndCountdown](../../client/src/components/chat/AutoEndCountdown.tsx)._
-
-### Auto-end edits: new minutes wait for new chats; the toggle acts immediately
-
-_2026-07-15_
-
-**Decision:** Changing the auto-end **minutes** mid-round affects only
-chats started after the change — running chats keep the clock they started
-with. Flipping the auto-end **toggle** is different (product-owner call,
-2026-07-15): turning it off clears the clocks on running chats right away,
-and turning it on starts a fresh full clock on running chats.
-
-**Why:** A shortened duration must never instantly kill a live chat
-mid-sentence — that's why minutes changes wait for the next round. The
-toggle is the teacher's blunt instrument: "off" means "stop rushing them"
-and should grant relief now, "on" means "these chats need an ending" and a
-fresh clock is the only fair one to give them.
-
-_Implemented in the settings-change effect in
-[useHostActivityDemo](../../client/src/components/Teacher/HostActivity/useHostActivityDemo.ts)._
-
 ### Live edits propagate after a 1-second pause, and invalid states never do
 
 _2026-07-15_
@@ -1161,6 +1132,69 @@ _Implemented in
 
 Replaced decisions, kept for history. Don't apply these; each date line links
 to what replaced it.
+
+### Every chat runs its own auto-end clock, and students watch it tick
+
+_2026-07-15 · Superseded by
+[Chats show no timer or clock — the teacher ends them by hand](#chats-show-no-timer-or-clock--the-teacher-ends-them-by-hand)_
+
+**Decision:** The auto-end timer is **per chat**: it starts when the chat
+starts, counting down the activity's auto-end minutes, and ends the chat
+with reason `"timer"` (⏰ "Time's up!") at zero. The countdown is part of
+the chat-engine contract (`ChatRoomState.autoEndSecondsLeft`, ticked by
+`useChatDemo`). Students see a quiet m:ss clock in the chat header that
+shifts to amber and pulses in the final 60 seconds; on narrow widths the
+End chat pill compresses to icon + "End" so the clock fits. Teacher chat
+cards show the same per-chat remaining time. Demo panels get a staged
+fast-forward (first press → the finale, second press → the expiry).
+
+**Why:** Before this, the ⏰ ended screen was the first students heard of a
+time limit — a scene deserves a wrap-up, not a trap door. Per-chat (rather
+than per-round) clocks mean a chat started late still gets its full time;
+when the teacher pairs everyone at once the chats naturally end together
+anyway, and "End all chats" is the round-closer for everyone-done-now.
+
+_Was implemented in `useChatDemo` and `useHostActivityDemo`, rendered by the
+`AutoEndCountdown` component (all since removed)._
+
+### Auto-end edits: new minutes wait for new chats; the toggle acts immediately
+
+_2026-07-15 · Superseded by
+[Chats show no timer or clock — the teacher ends them by hand](#chats-show-no-timer-or-clock--the-teacher-ends-them-by-hand)_
+
+**Decision:** Changing the auto-end **minutes** mid-round affects only
+chats started after the change — running chats keep the clock they started
+with. Flipping the auto-end **toggle** is different (product-owner call,
+2026-07-15): turning it off clears the clocks on running chats right away,
+and turning it on starts a fresh full clock on running chats.
+
+**Why:** A shortened duration must never instantly kill a live chat
+mid-sentence — that's why minutes changes wait for the next round. The
+toggle is the teacher's blunt instrument: "off" means "stop rushing them"
+and should grant relief now, "on" means "these chats need an ending" and a
+fresh clock is the only fair one to give them.
+
+_Was implemented in the settings-change effect in `useHostActivityDemo`
+(since removed)._
+
+### The live card's count-up clock appears only after the first minute
+
+_2026-07-20 · Superseded by
+[Chats show no timer or clock — the teacher ends them by hand](#chats-show-no-timer-or-clock--the-teacher-ends-them-by-hand)_
+
+**Decision:** Live chat cards carry an m:ss count-up clock (how long the
+chat has been going) in the same header spot the demo's auto-end countdown
+uses — but it stays hidden for the chat's first 60 seconds and fades in at
+1:00.
+
+**Why:** Founder call (2026-07-20). A fresh card full of chrome (Live badge,
+names, hint line) doesn't need a `0:07` ticking at the teacher; the elapsed
+time only becomes information once a chat has been running a while. The
+threshold lives in one place (`ElapsedClock.SHOW_FROM_SECONDS`). The demo
+keeps the auto-end countdown instead — real chats have no auto-end clock
+yet.
+
+_Was implemented in the `ElapsedClock` component (since removed)._
 
 ### The chat sections hide entirely on real activities until matching ships
 

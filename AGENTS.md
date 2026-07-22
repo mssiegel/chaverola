@@ -18,7 +18,7 @@ This file is the canonical source of guidance for all AI agents (Claude Code, Cu
 | 8 · Peer-drop UI       | **Complete** — `chat:peer-connection` on the teacher's 4s gate, countdown ticks through a pause, "is back! 🎉"; expiry honest, a blip can't hide a drop.               | [feature-8](docs/plans/feature-8-peer-drop.md)        |
 | 9 · Reaped-seat return | **Complete** — a seat reaped out of a chat is remembered for the activity's life, replayed as `chat:started` + `chat:ended {self-timeout}` ("📶 You lost connection"). | [feature-8](docs/plans/feature-8-peer-drop.md)        |
 
-Still an honest placeholder on real activities (the demo simulates both): the per-chat **auto-end clock** and the **name reveal**.
+Still an honest placeholder on real activities (the demo simulates it): the **name reveal**.
 
 ## Project Brief
 
@@ -81,7 +81,7 @@ Load-bearing — trip over them before you break one:
 - **Every seat gets the same 120s grace, matched or waiting — and a matched seat that runs it out leaves its CHAT, not just its seat.** A student who drops mid-chat can resume into that chat for two minutes; past that, their membership goes inactive and the partner is freed. Matched seats used to arm no timer at all, which stranded a partner forever when a `lobby:leave` died in transit (found on a real handset 2026-07-20). Don't "restore" the missing timer. The reap is remembered (feature 9): the returning token gets the ended chat replayed as `"self-timeout"` and a wrappingUp seat — only a WAITING seat's reap stays a silent fresh join.
 - **Auto-match runs only while a teacher socket is connected** — armed on the 0→1st, released on the last. A closed laptop holding pairing is the product, not a bug (founder call).
 - **The student wire carries characterIds only** — never a peer's name, never a peer's studentId, in any payload, ever. Pinned by exact-key allowlist tests in `projections.test.ts`; keep them passing rather than loosening them.
-- **`pausedAt` is both the pause flag and the freeze anchor.** While set, snapshots clock `waitSeconds`/`elapsedSeconds` against it (but reconnecting state keeps real time — the grace clock runs through a pause), and `resumeChats` shifts the stored timestamps forward by the pause duration so nothing jumps. Don't split it into a boolean plus a timestamp, and don't "fix" the grace window to freeze.
+- **`pausedAt` is both the pause flag and the freeze anchor.** While set, snapshots clock `waitSeconds` against it (but reconnecting state keeps real time — the grace clock runs through a pause), and `resumeChats` shifts the stored timestamps forward by the pause duration so nothing jumps. Don't split it into a boolean plus a timestamp, and don't "fix" the grace window to freeze.
 - **Live socket timers never pass through `scaledMs`**; demo simulation always does.
 - **`LiveChatStage` is a component split beside the demo's `ChatStage.tsx`, never a conditional hook.**
 - **The create-activity submit has no client-side timeout** — create isn't idempotent, and a retry could mint a second activity.

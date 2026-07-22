@@ -34,38 +34,22 @@ export interface ChatDemo extends ChatRoomState, ChatRoomActions {
   disconnectPeer: () => void;
   reconnectPeer: () => void;
   skipReconnectWait: () => void;
-  skipAutoEndWait: () => void;
   nudgePeer: () => void;
 }
 
 export interface ChatDemoOptions {
   /**
-   * The activity's auto-end clock for this chat, in seconds. Omit (or pass
-   * null) for no clock — the homepage hero chat must never time out under a
-   * visitor mid-read.
-   */
-  autoEndSeconds?: number | null;
-  /**
    * The teacher's activity-wide pause, owned by the page (a real backend
    * pushes it; the demo drives it from the demo controls). While true the
-   * room freezes: no messages in or out, typing clears, and the auto-end
-   * clock holds its remaining time. A dropped peer's reconnect countdown
-   * keeps ticking — the server's grace runs through a pause.
+   * room freezes: no messages in or out, typing clears. A dropped peer's
+   * reconnect countdown keeps ticking — the server's grace runs through a
+   * pause.
    */
   isPaused?: boolean;
 }
 
 /** Where "skip the wait" jumps the countdown to, so the timeout is testable. */
 const SKIP_WAIT_SECONDS = 3;
-
-/**
- * The auto-end fast-forward is staged: the first press jumps just above the
- * final minute (to show the clock's finale state), a second press jumps to
- * the last few seconds (to show the expiry itself). Shared with the host
- * page's engine so both fast-forwards behave the same.
- */
-export const SKIP_AUTO_END_TO_FINALE_SECONDS = 63;
-export const SKIP_AUTO_END_TO_EXPIRY_SECONDS = 5;
 
 /**
  * The demo chat "engine". With no backend, this simulates a live room: the
@@ -79,7 +63,6 @@ export function useChatDemo(
   scenario: ChatScenario,
   options?: ChatDemoOptions
 ): ChatDemo {
-  const autoEndSeconds = options?.autoEndSeconds ?? null;
   const isPaused = options?.isPaused ?? false;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [typingPeerId, setTypingPeerId] = useState<string | null>(null);
@@ -143,15 +126,6 @@ export function useChatDemo(
         },
       ]);
     }
-  );
-
-  // The activity's per-chat auto-end clock. At zero the chat ends for
-  // everyone with reason "timer" (the ⏰ "Time's up!" wrap-up copy). See
-  // DECISIONS.md. (endChat is declared below; the callback only runs later.)
-  const [autoEndSecondsLeft, setAutoEndSecondsLeft] = useSecondCountdown(
-    autoEndSeconds,
-    status === "active" && !isPaused,
-    () => endChat("timer")
   );
 
   const timers = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
@@ -219,7 +193,6 @@ export function useChatDemo(
     setEndedByPeerId(null);
     setDroppedPeerIds(new Set());
     setReconnectSecondsLeft(null);
-    setAutoEndSecondsLeft(autoEndSeconds);
     statusRef.current = "active";
     peerStateRef.current = "connected";
     droppedPeerIdsRef.current = new Set();
@@ -332,19 +305,6 @@ export function useChatDemo(
     );
   };
 
-  /**
-   * Dev-only: fast-forward the auto-end clock. First press lands just above
-   * the final minute (the finale state), pressing again lands on the expiry.
-   */
-  const skipAutoEndWait = () => {
-    setAutoEndSecondsLeft((s) => {
-      if (s === null) return s;
-      return s > SKIP_AUTO_END_TO_FINALE_SECONDS
-        ? SKIP_AUTO_END_TO_FINALE_SECONDS
-        : Math.min(s, SKIP_AUTO_END_TO_EXPIRY_SECONDS);
-    });
-  };
-
   const nudgePeer = () => {
     if (
       statusRef.current !== "active" ||
@@ -425,7 +385,6 @@ export function useChatDemo(
     peerState,
     offlinePeerId,
     reconnectSecondsLeft,
-    autoEndSecondsLeft,
     isEnded: status === "ended",
     isPaused,
     endReason,
@@ -438,7 +397,6 @@ export function useChatDemo(
     disconnectPeer,
     reconnectPeer,
     skipReconnectWait,
-    skipAutoEndWait,
     nudgePeer,
   };
 }

@@ -107,11 +107,11 @@ describe("mergeExternalSettings", () => {
   it("keeps a pending draft edit on a different key", () => {
     const prev = settings();
     const next = { ...settings(), autoMatch: false };
-    const draft = { ...settings(), autoEndMinutes: 12 };
+    const draft = { ...settings(), rematchWarning: false };
     expect(mergeExternalSettings(prev, next, draft)).toEqual({
       ...settings(),
       autoMatch: false,
-      autoEndMinutes: 12,
+      rematchWarning: false,
     });
   });
 

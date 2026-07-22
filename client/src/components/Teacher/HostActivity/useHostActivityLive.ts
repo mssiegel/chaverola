@@ -77,9 +77,7 @@ function toHostedChat(snapshot: ChatSnapshot): HostedChat {
     messages: snapshot.messages.map(toTranscriptMessage),
     status: snapshot.status,
     endReason: snapshot.endReason,
-    autoEndSecondsLeft: null,
     reconnectingStudentIds: snapshot.reconnectingStudentIds,
-    elapsedSeconds: snapshot.elapsedSeconds,
   };
 }
 
@@ -222,12 +220,12 @@ export function useHostActivityLive({
     };
   }, [hostKey, onActivityGoneRef, onSettingsSyncRef]);
 
-  // The local 1s tick between snapshots: the server stamps waitSeconds and
-  // elapsedSeconds at emit time; this keeps the clocks moving so rows and
-  // cards never look frozen. Never through scaledMs — real classroom time
-  // is never compressed. While paused it stands down entirely: the server's
-  // numbers are frozen at the pause anchor, and resume re-snapshots with
-  // the clocks shifted, so nothing jumps.
+  // The local 1s tick between snapshots: the server stamps waitSeconds at
+  // emit time; this keeps the queue clocks moving so rows never look frozen.
+  // Never through scaledMs — real classroom time is never compressed. While
+  // paused it stands down entirely: the server's numbers are frozen at the
+  // pause anchor, and resume re-snapshots with the clocks shifted, so nothing
+  // jumps.
   useEffect(() => {
     if (paused) return;
     const interval = setInterval(() => {
@@ -235,15 +233,6 @@ export function useHostActivityLive({
         prev.length === 0
           ? prev
           : prev.map((s) => ({ ...s, waitSeconds: s.waitSeconds + 1 }))
-      );
-      setChats((prev) =>
-        prev.some((c) => c.status === "active")
-          ? prev.map((c) =>
-              c.status === "active" && c.elapsedSeconds !== undefined
-                ? { ...c, elapsedSeconds: c.elapsedSeconds + 1 }
-                : c
-            )
-          : prev
       );
     }, 1000);
     return () => clearInterval(interval);

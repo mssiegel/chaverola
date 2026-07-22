@@ -116,7 +116,7 @@ export const HOST_SEED_CHATS: readonly HostSeedChat[] = [
   {
     size: 4,
     status: "ended",
-    endReason: "timer",
+    endReason: "teacher",
     lines: [
       { seat: 0, text: "everyone remember the plan?" },
       { seat: 1, text: "there was a plan??" },

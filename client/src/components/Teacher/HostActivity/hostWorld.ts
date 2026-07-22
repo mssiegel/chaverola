@@ -61,14 +61,9 @@ export interface HostedChat {
   status: ChatStatus;
   /** Why it ended; reaches students as their wrap-up copy. */
   endReason: ChatEndReason | null;
-  /** Seconds left on this chat's auto-end clock (null: no clock). */
-  autoEndSecondsLeft: number | null;
   /** Active members currently riding a dropped connection — live only; the
    *  demo never sets it (its wifi-blip simulation lives on queue rows). */
   reconnectingStudentIds?: readonly string[];
-  /** Seconds since the chat started — live only; drives the card's
-   *  count-up chip. The demo shows the auto-end countdown instead. */
-  elapsedSeconds?: number;
 }
 
 export interface RosterStudent {
@@ -94,9 +89,8 @@ export interface HostWorld {
   /**
    * The teacher paused the whole activity. World-level on purpose — there is
    * no per-chat pause (see DECISIONS.md). While true, tickWorld holds every
-   * clock (wait times, auto-end, the auto-match countdown) but keeps joins
-   * and lobby returns flowing; chats created during a pause are born frozen
-   * simply because the world is.
+   * clock (wait times, the auto-match countdown) but keeps joins and lobby
+   * returns flowing.
    */
   paused: boolean;
 }
@@ -147,9 +141,6 @@ export function createChat(
     messages: [],
     status: "active",
     endReason: null,
-    autoEndSecondsLeft: activity.settings.autoEndChats
-      ? activity.settings.autoEndMinutes * 60
-      : null,
   };
   // The rematch memory is one round deep: starting a chat overwrites each
   // member's previous partners with this room.
@@ -181,7 +172,6 @@ export function endChatIn(
     ...chat,
     status: "ended",
     endReason: reason,
-    autoEndSecondsLeft: null,
   };
   return {
     ...w,
@@ -265,29 +255,13 @@ export function pairEveryoneIn(
 /** One second of simulated classroom. */
 export function tickWorld(w: HostWorld, activity: HostedActivity): HostWorld {
   const settings = activity.settings;
-  // While paused, every clock holds — wait times, auto-end, the auto-match
-  // countdown — so resume picks up exactly where the pause landed and never
-  // fires a burst of auto-matches. Gated per block, not an early return:
-  // joins and lobby returns below keep flowing (they aren't chat activity).
+  // While paused, every clock holds — wait times, the auto-match countdown —
+  // so resume picks up exactly where the pause landed and never fires a burst
+  // of auto-matches. Gated per block, not an early return: joins and lobby
+  // returns below keep flowing (they aren't chat activity).
   let queue = w.paused
     ? w.queue
     : w.queue.map((s) => ({ ...s, waitSeconds: s.waitSeconds + 1 }));
-
-  // Per-chat auto-end clocks. At zero the chat ends with reason "timer" —
-  // students get the ⏰ "Time's up!" copy, never the generic one. A paused
-  // world's clocks don't move, so nothing can expire mid-pause.
-  const expiring: HostedChat[] = [];
-  const chats = w.paused
-    ? w.chats
-    : w.chats.map((chat) => {
-        if (chat.status !== "active" || chat.autoEndSecondsLeft === null) {
-          return chat;
-        }
-        const left = chat.autoEndSecondsLeft - 1;
-        if (left > 0) return { ...chat, autoEndSecondsLeft: left };
-        expiring.push(chat);
-        return chat;
-      });
 
   let wrappingUp = w.wrappingUp;
 
@@ -334,7 +308,6 @@ export function tickWorld(w: HostWorld, activity: HostedActivity): HostWorld {
   let next: HostWorld = {
     ...w,
     queue,
-    chats,
     wrappingUp,
     joinPool,
     secondsUntilNextJoin,
@@ -342,10 +315,6 @@ export function tickWorld(w: HostWorld, activity: HostedActivity): HostWorld {
       ? w.secondsUntilAutoMatch
       : Math.max(0, w.secondsUntilAutoMatch - 1),
   };
-
-  for (const chat of expiring) {
-    next = endChatIn(next, chat.id, "timer");
-  }
 
   // Setting #4: waiting students past the threshold pair up on their own,
   // 1:1, never as an exact rerun. One pair at a time so the rail reads.
@@ -409,14 +378,6 @@ export function seedWorld(activity: HostedActivity): HostWorld {
         })),
       status: seed.status,
       endReason: seed.endReason,
-      // In-progress seeds join mid-round, so their clocks are partly spent.
-      autoEndSecondsLeft:
-        active && activity.settings.autoEndChats
-          ? Math.max(
-              90,
-              activity.settings.autoEndMinutes * 60 - randInt(90, 200)
-            )
-          : null,
     });
     students.forEach((s) => {
       lastPartners[s.id] = students

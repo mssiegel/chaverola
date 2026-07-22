@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, Timer, UserPlus, UsersRound, WifiOff } from "lucide-react";
+import { Loader2, UserPlus, UsersRound, WifiOff } from "lucide-react";
 
 import { listNames } from "@chaverola/shared";
 
@@ -310,17 +310,6 @@ export function HostActivityDashboard({
                     icon={<UserPlus className="size-4" />}
                   >
                     A student joins
-                  </EventButton>
-                  <EventButton
-                    onClick={demoTriggers.fastForwardClocks}
-                    disabled={
-                      !engine.chatsInProgress.some(
-                        (c) => c.autoEndSecondsLeft !== null
-                      )
-                    }
-                    icon={<Timer className="size-4" />}
-                  >
-                    Fast-forward clocks
                   </EventButton>
                   <EventButton
                     onClick={demoTriggers.triggerWifiBlip}

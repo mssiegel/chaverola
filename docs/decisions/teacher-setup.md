@@ -124,13 +124,12 @@ in [text.ts](../../client/src/lib/text.ts), the counter in
 
 _2026-07-14_
 
-**Decision:** All four setup toggles — reveal names on chat end, auto-end
-chats (7 minutes, 1–30 in 1-minute steps), rematch warning, auto-match 1:1
-(20 seconds, 5–120 in 5-second steps) — default to **on**, and the section
-hint says out loud that these defaults are the recommendation and that
-everything stays editable while the activity runs. When a toggle with a
-stepper is off, the stepper stays visible but disabled. The whole settings
-block gets a quieter card than the field sections.
+**Decision:** All three setup toggles — reveal names on chat end, rematch
+warning, auto-match 1:1 (20 seconds, 5–120 in 5-second steps) — default to
+**on**, and the section hint says out loud that these defaults are the
+recommendation and that everything stays editable while the activity runs.
+When a toggle with a stepper is off, the stepper stays visible but disabled.
+The whole settings block gets a quieter card than the field sections.
 
 **Why:** Recommended defaults make the fastest path (touch nothing) also the
 best one. A visible-but-disabled stepper shows what turning the toggle on

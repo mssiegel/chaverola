@@ -4,7 +4,6 @@ import {
   FastForward,
   LogOut,
   MessageCirclePlus,
-  Timer,
   Unplug,
   Wifi,
   WifiOff,
@@ -27,9 +26,9 @@ interface ChatDemoControlsProps {
 
 /**
  * The demo steering panel for a student-seat chat: the events a real backend
- * will push later (connection drops, a peer or the clock ending the chat)
- * plus the mocked "reveal names" setting, as visitor-friendly buttons. Used
- * by the join flow's chatting stage, which adds its own extras.
+ * will push later (connection drops, a peer ending the chat) plus the mocked
+ * "reveal names" setting, as visitor-friendly buttons. Used by the join
+ * flow's chatting stage, which adds its own extras.
  */
 export function ChatDemoControls({
   chat,
@@ -125,16 +124,6 @@ export function ChatDemoControls({
               icon={<Unplug className="size-4" />}
             >
               You drop off (2 min pass)
-            </EventButton>
-            {/* Staged: first press jumps to the clock's final-minute state,
-                a second press jumps to the expiry itself. */}
-            <EventButton
-              onWorld={onWorld}
-              onClick={chat.skipAutoEndWait}
-              disabled={chat.autoEndSecondsLeft === null || chat.isEnded}
-              icon={<Timer className="size-4" />}
-            >
-              Fast-forward clock
             </EventButton>
             {extraEvents}
           </div>

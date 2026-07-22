@@ -30,9 +30,9 @@ interface ChatsInProgressSectionProps {
 
 /**
  * The live chats, one teacher chat card each — last 5 lines, expandable,
- * per-chat end with its own confirmation, the chat's remaining time when
- * auto-end is on, and a per-participant remove control (quiet exit; see
- * DECISIONS.md). "End all chats" is the round-closer and confirms first.
+ * per-chat end with its own confirmation, and a per-participant remove control
+ * (quiet exit; see DECISIONS.md). "End all chats" is the round-closer and
+ * confirms first.
  */
 export function ChatsInProgressSection({
   chats,
@@ -157,8 +157,6 @@ export function ChatsInProgressSection({
                 isEnded={false}
                 isPaused={paused}
                 onEndChat={() => onEndChat(chat.id)}
-                autoEndSecondsLeft={chat.autoEndSecondsLeft}
-                elapsedSeconds={chat.elapsedSeconds ?? null}
                 // A real empty state, not a feature notice: transcripts are
                 // live, so a silent card just hasn't had its first message.
                 // Unconditional — on a freshly paired demo chat it shows for

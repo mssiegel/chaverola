@@ -60,7 +60,6 @@ export type ChatEndReason =
   | "student"
   | "peer"
   | "teacher"
-  | "timer"
   | "peer-timeout"
   | "self-timeout"
   | "self-left";
@@ -93,21 +92,14 @@ export interface ChatRoomState {
   offlinePeerId: string | null;
   /** Seconds left in the offline peer's reconnect window (null: no window). */
   reconnectSecondsLeft: number | null;
-  /**
-   * Seconds left on this chat's auto-end clock (null: auto-end is off). The
-   * clock is per chat — it starts when the chat starts — and the engine ends
-   * the chat with reason "timer" when it hits zero.
-   */
-  autoEndSecondsLeft: number | null;
   isEnded: boolean;
   /**
    * True while the teacher has the whole activity paused. The room freezes:
-   * send() is a no-op, no peer messages arrive, typing indicators clear, and
-   * the auto-end clock holds its remaining time. A reconnect window does NOT
-   * hold — the server's grace runs through a pause, so the countdown keeps
-   * ticking (see DECISIONS.md). Pause is activity-wide, never per chat — a
-   * real backend broadcasts one world-level event. isEnded wins over
-   * isPaused.
+   * send() is a no-op, no peer messages arrive, and typing indicators clear.
+   * A reconnect window does NOT hold — the server's grace runs through a
+   * pause, so the countdown keeps ticking (see DECISIONS.md). Pause is
+   * activity-wide, never per chat — a real backend broadcasts one world-level
+   * event. isEnded wins over isPaused.
    */
   isPaused: boolean;
   /** Why the chat ended; drives the wrap-up copy. Null while it's going. */

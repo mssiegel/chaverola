@@ -2,10 +2,6 @@ import { useEffect, useRef, useState } from "react";
 
 import { isExactRematchIn } from "@chaverola/shared";
 
-import {
-  SKIP_AUTO_END_TO_EXPIRY_SECONDS,
-  SKIP_AUTO_END_TO_FINALE_SECONDS,
-} from "@/components/chat/useChatDemo";
 import { characterLabel } from "@/lib/characterLabel";
 import { scaledMs } from "@/lib/demoTime";
 import { withCurrentCharacters } from "@/lib/hostActivity";
@@ -35,8 +31,8 @@ import {
 /*
   The `1234` demo's world "engine": it simulates the whole round — students
   joining over time, the waiting queue, pairing (manual, pair-everyone, and
-  auto-match), per-chat auto-end clocks, chats that keep talking, wifi
-  blips, and quiet-exit removals. The components only render its state and
+  auto-match), chats that keep talking, wifi blips, and quiet-exit removals.
+  The components only render its state and
   call its actions through the HostEngine contract (hostEngine.ts) — real
   activities plug useHostActivityLive into the same seam, so this hook now
   serves the demo classroom only. The pure simulation rules live in
@@ -68,7 +64,7 @@ export function useHostActivityDemo(
     setWorld(next);
   };
 
-  // The master 1-second tick: wait times, clocks, returns, joins, auto-match.
+  // The master 1-second tick: wait times, returns, joins, auto-match.
   useEffect(() => {
     const interval = setInterval(() => {
       commit(tickWorld(worldRef.current, activityRef.current));
@@ -113,36 +109,6 @@ export function useHostActivityDemo(
     }, scaledMs(DRIP_INTERVAL_MS));
     return () => clearInterval(interval);
   }, []);
-
-  // Flipping the auto-end toggle applies to RUNNING chats immediately — off
-  // clears their clocks, on starts them fresh. Changing only the minutes
-  // deliberately does nothing here: running chats keep the clock they
-  // started with; the new duration reaches chats started afterward. See
-  // DECISIONS.md.
-  const prevAutoEndOn = useRef(activity.settings.autoEndChats);
-  useEffect(() => {
-    const wasOn = prevAutoEndOn.current;
-    const isOn = activity.settings.autoEndChats;
-    prevAutoEndOn.current = isOn;
-    if (wasOn === isOn) return;
-    const w = worldRef.current;
-    commit({
-      ...w,
-      chats: w.chats.map((c) =>
-        c.status === "active"
-          ? {
-              ...c,
-              autoEndSecondsLeft: isOn
-                ? activity.settings.autoEndMinutes * 60
-                : null,
-            }
-          : c
-      ),
-    });
-    // The minutes are deliberately NOT a dependency: a minutes-only change
-    // must never touch running chats (see the comment above).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activity.settings.autoEndChats]);
 
   const startChat = (studentIds: string[]) => {
     commit({
@@ -205,7 +171,6 @@ export function useHostActivityDemo(
         ...chat,
         status: "ended",
         endReason: "teacher",
-        autoEndSecondsLeft: null,
         inactiveStudentIds: [...chat.inactiveStudentIds, studentId],
       };
       commit({
@@ -293,28 +258,6 @@ export function useHostActivityDemo(
     }, scaledMs(WIFI_BLIP_MS));
   };
 
-  // Stays enabled while paused on purpose: it only clamps numbers, and a
-  // paused tick can't expire anything — the clock waits at its new value.
-  const fastForwardClocks = () => {
-    const w = worldRef.current;
-    const clocks = w.chats
-      .filter((c) => c.status === "active" && c.autoEndSecondsLeft !== null)
-      .map((c) => c.autoEndSecondsLeft!);
-    if (clocks.length === 0) return;
-    // Staged like the student demo's skip: first to the finale, then expiry.
-    const target = clocks.some((s) => s > SKIP_AUTO_END_TO_FINALE_SECONDS)
-      ? SKIP_AUTO_END_TO_FINALE_SECONDS
-      : SKIP_AUTO_END_TO_EXPIRY_SECONDS;
-    commit({
-      ...w,
-      chats: w.chats.map((c) =>
-        c.status === "active" && c.autoEndSecondsLeft !== null
-          ? { ...c, autoEndSecondsLeft: Math.min(c.autoEndSecondsLeft, target) }
-          : c
-      ),
-    });
-  };
-
   const chatsInProgress = world.chats.filter((c) => c.status === "active");
   const completedChats = world.chats.filter((c) => c.status === "ended");
   const characterIdsInUse = new Set(
@@ -352,7 +295,6 @@ export function useHostActivityDemo(
     connection: "connected",
     triggerJoin,
     canTriggerJoin: world.joinPool.length > 0,
-    fastForwardClocks,
     triggerWifiBlip,
     canTriggerWifiBlip:
       world.queue.some((s) => s.connection === "connected") &&

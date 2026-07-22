@@ -40,13 +40,6 @@ export interface StepperBounds {
   default: number;
 }
 
-export const AUTO_END_MINUTES: StepperBounds = {
-  min: 1,
-  max: 30,
-  step: 1,
-  default: 7,
-};
-
 export const AUTO_MATCH_SECONDS: StepperBounds = {
   min: 5,
   max: 120,
@@ -56,8 +49,6 @@ export const AUTO_MATCH_SECONDS: StepperBounds = {
 
 export const DEFAULT_ACTIVITY_SETTINGS: ActivitySettings = {
   revealNames: true,
-  autoEndChats: true,
-  autoEndMinutes: AUTO_END_MINUTES.default,
   rematchWarning: true,
   autoMatch: true,
   autoMatchSeconds: AUTO_MATCH_SECONDS.default,

@@ -28,8 +28,7 @@ the reconnect countdown seeded server-side — and makes the expiry
 honest: a 1:1 ended by a partner's expired grace says so
 (`chat:ended` reason `"peer-timeout"`). Feature 9 makes the reaped
 student's own return honest too: their ended chat replays with the
-wire-only reason `"self-timeout"`. The auto-end clock and the name
-reveal are further out still.
+wire-only reason `"self-timeout"`. The name reveal is further out still.
 
 ## Conventions
 
@@ -334,7 +333,6 @@ export interface ChatSnapshot {
   inactiveStudentIds: string[]; // removed / left mid-chat
   reconnectingStudentIds: string[]; // active members dropped past the 4s delay
   messages: ChatTranscriptLine[]; // the whole capped transcript, oldest first
-  elapsedSeconds: number; // computed server-side at emit; client ticks between
   status: "active" | "ended";
   // "peer-timeout": a below-2 ending caused by a partner's expired grace.
   endReason: "teacher" | "peer-timeout" | null;
@@ -375,11 +373,11 @@ same rule, since `chats:snapshot` also carries the transcript — a dropped
 delta heals on the next seat change or reconnect; the delta is an
 optimization, never the only path. `queue:snapshot` excludes
 matched and wrapping-up seats, so the queue is exactly the pool the
-pairing rail can act on. The two clocks (`waitSeconds`, `elapsedSeconds`)
-are computed server-side at emit and ticked locally by the client between
-snapshots — while the class is paused they're computed against the pause
-anchor instead (frozen), the client's local tick stands down, and resume
-shifts the stored timestamps so the clocks continue without a jump.
+pairing rail can act on. The queue clock (`waitSeconds`) is computed
+server-side at emit and ticked locally by the client between snapshots —
+while the class is paused it's computed against the pause anchor instead
+(frozen), the client's local tick stands down, and resume shifts the stored
+timestamps so the clock continues without a jump.
 
 `ChatParticipant.character` is the **server's** roster copy on purpose:
 character edits stay local to the teacher's page, so a locally renamed
@@ -520,7 +518,7 @@ below.
 - **The teacher can pause the whole class.** `chats:pause-all` stamps
   `pausedAt` — one field, both the flag and the freeze anchor. While
   paused: `chat:send` and `chat:typing` refuse silently, the auto-match
-  tick stands down, snapshots clock `waitSeconds` / `elapsedSeconds`
+  tick stands down, snapshots clock `waitSeconds`
   against the anchor, and every connected seat (chatting, waiting, or
   wrapping up) hears `activity:paused` — `lobby:welcome` carries the
   state for anyone who connects mid-pause. Still flowing on purpose:
@@ -536,8 +534,8 @@ below.
   zod-validated against the same schema `POST /activities` uses and
   replaces the stored settings wholesale; the server echoes
   `settings:changed` to the teacher's **other** devices (the room minus
-  the sender). Invalid payloads are logged and dropped. `revealNames` and
-  `autoEndChats` are stored but still act on nothing. Character,
+  the sender). Invalid payloads are logged and dropped. `revealNames` is
+  stored but still acts on nothing. Character,
   scenario, and host-name edits stay local to the teacher's page —
   they'd have to reach students' lobbies, which is a bigger feature than
   a settings echo.
@@ -704,7 +702,7 @@ to 1".
 ```bash
 curl -s http://localhost:3001/healthz          # 200 {"ok":true,"pid":…} (+"timeScale" when scaled)
 curl -s -X POST http://localhost:3001/activities -H "content-type: application/json" \
-  -d '{"hostName":"Ms. Cohen","characters":[{"name":"Brutus"},{"name":"Caesar"}],"settings":{"revealNames":true,"autoEndChats":true,"autoEndMinutes":7,"rematchWarning":true,"autoMatch":true,"autoMatchSeconds":20}}'
+  -d '{"hostName":"Ms. Cohen","characters":[{"name":"Brutus"},{"name":"Caesar"}],"settings":{"revealNames":true,"rematchWarning":true,"autoMatch":true,"autoMatchSeconds":20}}'
                                                # 201; note joinCode + hostKey
 curl -s http://localhost:3001/activities/<joinCode>        # 200, student projection only
 curl -s http://localhost:3001/activities/1234              # 404

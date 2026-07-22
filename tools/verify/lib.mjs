@@ -75,8 +75,6 @@ export async function createActivity({
       characters: characters.map((name) => ({ name, description: "" })),
       settings: {
         revealNames: true,
-        autoEndChats: false,
-        autoEndMinutes: 7,
         rematchWarning: true,
         autoMatch: false,
         autoMatchSeconds: 5,

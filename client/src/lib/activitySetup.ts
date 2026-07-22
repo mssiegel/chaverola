@@ -1,5 +1,4 @@
 import {
-  AUTO_END_MINUTES,
   AUTO_MATCH_SECONDS,
   DEFAULT_ACTIVITY_SETTINGS,
   EMAIL_PATTERN,
@@ -30,7 +29,6 @@ import { clampChars, clampWords } from "./text";
 */
 
 export {
-  AUTO_END_MINUTES,
   AUTO_MATCH_SECONDS,
   DEFAULT_ACTIVITY_SETTINGS,
   EMAIL_PATTERN,
@@ -145,8 +143,6 @@ function sanitizeDraft(raw: unknown): ActivityDraft {
       : {};
   draft.settings = {
     revealNames: asBoolean(settings.revealNames, true),
-    autoEndChats: asBoolean(settings.autoEndChats, true),
-    autoEndMinutes: snapToBounds(settings.autoEndMinutes, AUTO_END_MINUTES),
     rematchWarning: asBoolean(settings.rematchWarning, true),
     autoMatch: asBoolean(settings.autoMatch, true),
     autoMatchSeconds: snapToBounds(

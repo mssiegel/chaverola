@@ -23,10 +23,6 @@ export interface ChatCardProps {
   isPaused?: boolean;
   /** Omit to hide the End chat button (e.g. the homepage preview card). */
   onEndChat?: () => void;
-  /** Seconds left on the chat's auto-end clock (null/omitted: no clock). */
-  autoEndSecondsLeft?: number | null;
-  /** Seconds since the chat started (live cards) — the count-up chip. */
-  elapsedSeconds?: number | null;
   /** Shown in the conversation area while there are no messages — a real
    *  empty state, since a live card is silent until its first message and
    *  a chat can end before one. Omit to render an empty feed. */
@@ -56,8 +52,6 @@ export function ChatCard({
   isEnded,
   isPaused = false,
   onEndChat,
-  autoEndSecondsLeft = null,
-  elapsedSeconds = null,
   emptyHint,
   inactiveParticipantIds,
   reconnectingParticipantIds,
@@ -115,8 +109,6 @@ export function ChatCard({
         characterColors={characterColors}
         isEnded={isEnded}
         isPaused={isPaused}
-        autoEndSecondsLeft={autoEndSecondsLeft}
-        elapsedSeconds={elapsedSeconds}
         inactiveParticipantIds={inactiveParticipantIds}
         reconnectingParticipantIds={reconnectingParticipantIds}
         onRemoveParticipant={onRemoveParticipant}

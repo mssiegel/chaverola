@@ -362,7 +362,7 @@ How the layer is put together (`server/src/live/`):
   7): `chats:pause-all` stamps `StoredActivity.pausedAt` — one field,
   both the flag and the freeze anchor. While set, `chat:send` /
   `chat:typing` refuse, the auto-match tick stands down, and snapshots
-  clock `waitSeconds` / `elapsedSeconds` against the anchor (frozen),
+  clock `waitSeconds` against the anchor (frozen),
   while reconnecting state keeps real time — the 120s grace
   deliberately runs through a pause. Every connected student hears
   `activity:paused`, `lobby:welcome` carries the state so a mid-pause
@@ -383,8 +383,7 @@ How the layer is put together (`server/src/live/`):
   `chat:started` (the old transcript, projected through the old
   membership id) followed by `chat:ended {reason:"self-timeout"}` — a
   wire-only, per-recipient reason; the stored 1:1 reason stays
-  `"peer-timeout"`. **What is still simulated:** the auto-end clock and
-  the name reveal.
+  `"peer-timeout"`. **What is still simulated:** the name reveal.
 - **The teacher socket is the TTL keep-alive:** while one is connected,
   a ~5-minute `.unref()`ed interval calls `getByHostKey`, so a live
   class can't expire at the 12h TTL mid-lesson. Student sockets never

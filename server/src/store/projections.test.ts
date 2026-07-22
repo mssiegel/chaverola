@@ -123,7 +123,6 @@ describe("toChatSnapshot (teacher chat card)", () => {
   it("exposes exactly the card fields, each participant never a token", () => {
     const snapshot = toChatSnapshot(fullChat, fullRecord, 30_000);
     expect(Object.keys(snapshot).sort()).toEqual([
-      "elapsedSeconds",
       "endReason",
       "id",
       "inactiveStudentIds",
