@@ -517,11 +517,13 @@ Run from the repo root:
   covers the server suite). For server behavior beyond the tests' safety
   invariants, curl against `pnpm dev:server` is the next rung — and for
   socket behavior, which curl can't reach, scratch `socket.io-client`
-  scripts driving a teacher and a couple of students (in the scratchpad,
-  never the repo) beat opening four browser tabs. Drive the
+  scripts driving a teacher and a couple of students (in
+  `tools/verify/scratch/`, importing `../lib.mjs`) beat opening four browser
+  tabs. Drive the
   browser (the `verify` skill) only when the change shows up in rendered
   UI — and then only the surfaces the change touches, at desktop and phone
-  widths, with fast timers on (`?fast=10` on a dev build; see the skill).
+  widths, with fast timers on (`?fast=10` for demo flows, or `verify:up
+--scale 10` for the server's real socket flows; see the skill).
   A full every-surface sweep is for cross-cutting changes (layout shells,
   design tokens, shared chat pieces), not for localized ones. Every rung of
   this ladder runs against the local stack; production driving is reserved

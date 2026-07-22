@@ -190,6 +190,8 @@ the affected part. Link related entries by title anchor, never by "above" /
   - [Transcripts wait: feature 1 only stores the teacher's email](#transcripts-wait-feature-1-only-stores-the-teachers-email)
   - [Considered and rejected for the backend: TanStack Query, dotenv, a hostKey stash, an npm conversion](#considered-and-rejected-for-the-backend-tanstack-query-dotenv-a-hostkey-stash-an-npm-conversion)
 - [Process & tooling](#process--tooling)
+  - [The per-feature prod pass trims to cold-wake, a smoke, and one network leg](#the-per-feature-prod-pass-trims-to-cold-wake-a-smoke-and-one-network-leg)
+  - [No CI; the local pre-push typecheck and test are the gate](#no-ci-the-local-pre-push-typecheck-and-test-are-the-gate)
   - [The verify harness is repo code; one-shot drivers live and die in scratch](#the-verify-harness-is-repo-code-one-shot-drivers-live-and-die-in-scratch)
   - [Slices verify on localhost; production driving happens once per feature](#slices-verify-on-localhost-production-driving-happens-once-per-feature)
   - [Until launch, server pushes can happen at any hour](#until-launch-server-pushes-can-happen-at-any-hour)
@@ -3883,6 +3885,70 @@ forever.
 
 ## Process & tooling
 
+### The per-feature prod pass trims to cold-wake, a smoke, and one network leg
+
+_2026-07-22_
+
+**Decision:** The once-per-feature production pass is a short, fixed sequence,
+not a replay of every prior gauntlet:
+
+1. `coldwake --prod` **first**, before any other prod contact — a naturally
+   asleep instance is the only place the cold-start path is exercisable.
+2. `smoke --prod` — the deployed-build smoke.
+3. **one** feature-specific, network-sensitive leg, written fresh in
+   `tools/verify/scratch/` — the single thing about this feature that only
+   Render's proxy and real reconnect backoff can prove.
+4. a handset ask **only** when the feature touches offline/disconnect paths;
+   otherwise the ask goes to `docs/pending-manual-tests.md`.
+
+Prior features' gauntlets are **not** re-run over areas the feature didn't
+touch. A fuller regression sweep runs only when the code it guards changes —
+the leave/flush logic (`LEAVE_FLUSH_MS`), seat teardown, or demo gating — and
+once more as the launch-readiness gate before the end of August 2026. No cron,
+no scheduled sweep. The per-push deploy checks (`/healthz` for the new server
+commit, Vercel Ready for the expected SHA) are unchanged — they are deploy
+discipline, not feature verification.
+
+**Why:** Founder call (2026-07-21, speedup plan). Once slices verify on
+localhost, the feature-end prod pass exists to prove the handful of things
+localhost structurally can't (Render's lazy close frames, coalesced
+emit-then-disconnect, the cold start, the deploy pipeline, a genuinely offline
+handset) — and those are few and feature-specific. Re-running an era-specific
+gauntlet over unchanged code costs real prod minutes and proves nothing new;
+worse, committed gauntlets rot against current UI copy (two dead assertions
+were already on record). Tying each regression sweep to a change in the code
+it guards keeps the coverage honest without the standing tax. The accepted
+risk, named out loud: a regression in an untouched area waits for the
+launch-readiness sweep to surface — acceptable pre-launch, with no live
+classes.
+
+This **refines** the feature-end clause of
+[Slices verify on localhost; production driving happens once per feature](#slices-verify-on-localhost-production-driving-happens-once-per-feature):
+"the full gauntlet" becomes "one feature-specific leg, prior gauntlets not
+re-run", and the rest of that decision stands.
+
+_Reflected in the verify skill's Production section and
+[tools/verify/README.md](tools/verify/README.md)._
+
+### No CI; the local pre-push typecheck and test are the gate
+
+_2026-07-22_
+
+**Decision:** There is no continuous-integration workflow. Push-to-main stays
+ungated beyond what already runs: Render's `tsc --noEmit` on the server build,
+and the agent loop's own `pnpm typecheck && pnpm test` before every push. No
+GitHub Actions, no pre-push hook, no tripwire job.
+
+**Why:** Founder call (2026-07-21, speedup plan). The single committer is an
+agent loop that already runs typecheck and the full suite (~2s) before
+pushing, so a CI job would re-run the same checks minutes later and gate
+nothing the loop didn't. A CI tripwire was considered and declined for now; it
+can be revisited at launch, when human contributors or a heavier merge flow
+would make an independent gate worth its keep.
+
+_Reflected in the verify skill and
+[docs/plans/speedup.md](docs/plans/speedup.md)._
+
 ### The verify harness is repo code; one-shot drivers live and die in scratch
 
 _2026-07-22_
@@ -3912,7 +3978,9 @@ _Implemented in [tools/verify/](tools/verify/); the launch story is in
 
 ### Slices verify on localhost; production driving happens once per feature
 
-_2026-07-21_
+_2026-07-21 · Revised 2026-07-22: the feature-end pass is trimmed — no full
+gauntlet re-run over unchanged areas; see
+[The per-feature prod pass trims to cold-wake, a smoke, and one network leg](#the-per-feature-prod-pass-trims-to-cold-wake-a-smoke-and-one-network-leg)._
 
 **Decision:** A slice's verification runs against the local stack —
 `pnpm dev:client --port 5199 --strictPort` plus `pnpm dev:server` with the
