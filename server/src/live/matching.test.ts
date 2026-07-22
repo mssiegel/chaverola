@@ -11,6 +11,7 @@ import {
   appendLine,
   createChat,
   endChat,
+  findAutoMatchPair,
   markInactive,
   pauseChats,
   planPairEveryone,
@@ -180,6 +181,38 @@ describe("planPairEveryone (the odd-count branch)", () => {
     expect(plan).not.toBeNull();
     expect(plan!.leftoverStudentId).toBe(seats[2]!.studentId);
     expect(plan!.groups).toEqual([[seats[0]!.studentId, seats[1]!.studentId]]);
+  });
+});
+
+describe("findAutoMatchPair", () => {
+  it("prefers fresh, falls back to a non-exact repeat, and never re-forms an exact pair", () => {
+    const activity = makeActivity(ROSTER);
+    const a = addSeat(activity, { joinedAt: 1_000 });
+    const b = addSeat(activity, { joinedAt: 2_000 });
+    const c = addSeat(activity, { joinedAt: 3_000 });
+    activity.lastPartners = {
+      [a.studentId]: [b.studentId],
+      [b.studentId]: [a.studentId],
+    };
+
+    // All three past a 0s threshold: A+B just chatted, so the fresh pair A+C
+    // is taken in queue order rather than rerunning A+B.
+    expect(findAutoMatchPair(activity, 0, 100_000)).toEqual([
+      a.studentId,
+      c.studentId,
+    ]);
+
+    // Raise the threshold so only A and B are past it (C, joined latest, isn't
+    // ready). They're an exact rematch — nobody is auto-paired into a rerun.
+    expect(findAutoMatchPair(activity, 98, 100_000)).toBeNull();
+
+    // A one-directional repeat isn't an exact rerun for both, so with only A
+    // and B ready it's an acceptable fallback.
+    activity.lastPartners = { [b.studentId]: [a.studentId] };
+    expect(findAutoMatchPair(activity, 98, 100_000)).toEqual([
+      a.studentId,
+      b.studentId,
+    ]);
   });
 });
 

@@ -19,7 +19,7 @@ Same rules as features 4–7: each prompt is sized for one agent session, ends g
 The prompts are sequential (2 and 3 build on the memory prompt 1 establishes) but each is self-contained and independently shippable — after prompt 1 the reported bug is fixed and the rest is optional-to-defer.
 
 - [x] Prompt 1 — The rematch warning fires on real activities (end to end)
-- [ ] Prompt 2 — Auto-match stops re-pairing the same partners (end to end)
+- [x] Prompt 2 — Auto-match stops re-pairing the same partners (end to end)
 - [ ] Prompt 3 — Pair-everyone avoids reruns and shows the "still in line" notice (end to end)
 
 ## Shared context: the memory model

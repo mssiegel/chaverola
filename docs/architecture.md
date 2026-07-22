@@ -287,8 +287,9 @@ How the layer is put together (`server/src/live/`):
   (the shared `dealCast` — one Fisher–Yates for both engines, in
   `@chaverola/shared` alongside `activeMembersBy` and the odd-count
   `splitOddPool`), `planPairEveryone` is the demo's `pairEveryoneIn` minus
-  rematch memory, `findAutoMatchPair` picks the two longest waiting past
-  the threshold, `markInactive` owns the below-2 ending, and
+  rematch memory, `findAutoMatchPair` runs the ready pool through the
+  shared fresh-first rule (`pickAutoMatchPair`, no exact rerun),
+  `markInactive` owns the below-2 ending, and
   `appendLine` owns the transcript (membership guard, id minting, the
   200-line cap). The split is the payoff: the lobby layer decides who may
   command what and who hears about it; matching.ts decides what actually

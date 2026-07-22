@@ -4,6 +4,7 @@ import {
   CHAT_TRANSCRIPT_MAX_LINES,
   activeMembersBy,
   dealCast,
+  pickAutoMatchPair,
   splitOddPool,
 } from "@chaverola/shared";
 
@@ -26,12 +27,13 @@ import type { Seat } from "./seats";
   on real students, and shared/ has none of those. The precedent is
   LOBBY_GRACE_SECONDS.
 
-  What deliberately diverges (named, not drifted): `findAutoMatchPair` is
-  still greedy in queue order — the server now tracks one-round last-partner
-  memory (createChat maintains `activity.lastPartners`, powering the rematch
-  heads-up), but auto-match and pair-everyone don't consult it yet (feature 9,
-  prompts 2–3). Chats end two ways (the teacher's endChat, and markInactive's
-  below-2 rule); the whole class pauses as one switch
+  What deliberately diverges (named, not drifted): the server now tracks
+  one-round last-partner memory (createChat maintains `activity.lastPartners`),
+  and `findAutoMatchPair` runs it through the shared fresh-first rule
+  (`pickAutoMatchPair`) — no exact rerun is auto-formed. `planPairEveryone` is
+  the one rule that still ignores the memory (greedy in queue order), pending
+  feature 9 prompt 3. Chats end two ways (the teacher's endChat, and
+  markInactive's below-2 rule); the whole class pauses as one switch
   (pauseChats/resumeChats); ids are minted with randomUUID, not the demo's
   counter.
 */
@@ -201,8 +203,10 @@ export function planPairEveryone(
   return { groups, leftoverStudentId: leftover };
 }
 
-/** The two longest-waiting eligible students once both are past the
- *  threshold — greedy in queue order, no rematch memory. */
+/** Auto-match's pick: eligible students past the wait threshold, in queue
+ *  order, run through the shared fresh-first rule — a fully-fresh pair when
+ *  one exists, else any non-exact-rerun pair, else null (an exact pair waits
+ *  for someone new rather than repeating). Mirrors the demo's findAutoMatchPair. */
 export function findAutoMatchPair(
   activity: StoredActivity,
   thresholdSeconds: number,
@@ -211,9 +215,10 @@ export function findAutoMatchPair(
   const ready = eligibleWaiting(activity).filter(
     (seat) => (now - seat.joinedAt) / 1000 >= thresholdSeconds
   );
-  if (ready.length < 2) return null;
-  // Two elements exist — just checked.
-  return [ready[0]!.studentId, ready[1]!.studentId];
+  return pickAutoMatchPair(
+    ready.map((seat) => seat.studentId),
+    activity.lastPartners
+  );
 }
 
 /**

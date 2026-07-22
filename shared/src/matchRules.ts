@@ -75,3 +75,54 @@ export function isExactRematchIn(
     );
   });
 }
+
+/** Did A's previous chat include B? One-directional — isFreshPair checks both
+ *  ways. */
+function wereLastPartnersIn(
+  lastPartners: Record<string, string[]>,
+  aId: string,
+  bId: string
+): boolean {
+  return lastPartners[aId]?.includes(bId) ?? false;
+}
+
+/** Fresh both ways: neither student's previous chat included the other. */
+export function isFreshPair(
+  lastPartners: Record<string, string[]>,
+  aId: string,
+  bId: string
+): boolean {
+  return (
+    !wereLastPartnersIn(lastPartners, aId, bId) &&
+    !wereLastPartnersIn(lastPartners, bId, aId)
+  );
+}
+
+/**
+ * Auto-match's choice from the ready pool — connected students past the wait
+ * threshold, in queue order. The first fully-fresh pair when any exists, then
+ * the first pair that wouldn't be an exact rerun for both; an exact rematch is
+ * never returned (those two wait for someone new). Ids only — the caller maps
+ * them back to its own seat/queue shape.
+ */
+export function pickAutoMatchPair(
+  readyIds: string[],
+  lastPartners: Record<string, string[]>
+): [string, string] | null {
+  for (let i = 0; i < readyIds.length; i++) {
+    for (let j = i + 1; j < readyIds.length; j++) {
+      // Both loop indexes are within bounds.
+      if (isFreshPair(lastPartners, readyIds[i]!, readyIds[j]!)) {
+        return [readyIds[i]!, readyIds[j]!];
+      }
+    }
+  }
+  for (let i = 0; i < readyIds.length; i++) {
+    for (let j = i + 1; j < readyIds.length; j++) {
+      if (!isExactRematchIn(lastPartners, [readyIds[i]!, readyIds[j]!])) {
+        return [readyIds[i]!, readyIds[j]!];
+      }
+    }
+  }
+  return null;
+}

@@ -15,11 +15,12 @@ _2026-07-22_
 `activeMembersBy` (active-membership filtering), `dealCast` (a chat of N takes
 the roster's first N characters, shuffled), and `splitOddPool` (pair-everyone's
 odd-count trio/leftover rule). `shuffled` (Fisher–Yates) moves to `shared/`
-too. What stays divergent is named, not drifted: the server's
-`findAutoMatchPair` is greedy in queue order while the demo prefers fresh
-partners (rematch memory is client-only, its own later feature), the
-pair-everyone pairing loop with its swap-repair and `rematchNotice` stays in
-the demo, and id minting stays split (`randomUUID` server, a counter client).
+too. What stays divergent is named, not drifted: the pair-everyone
+pairing loop with its swap-repair and `rematchNotice` stays in the demo, and
+id minting stays split (`randomUUID` server, a counter client). (Feature 9
+later promoted the rematch predicates and `pickAutoMatchPair` here too, so
+`findAutoMatchPair` now shares the fresh-first rule; `planPairEveryone` is the
+last greedy holdout.)
 `tickWorld`, `seedWorld`, and the rest of the simulation stay in `hostWorld.ts`.
 
 **Why:** Speedup planning (2026-07-21). The "mirror, never import" rule guarded

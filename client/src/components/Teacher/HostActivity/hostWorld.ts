@@ -2,6 +2,8 @@ import {
   activeMembersBy,
   dealCast,
   isExactRematchIn,
+  isFreshPair,
+  pickAutoMatchPair,
   splitOddPool,
 } from "@chaverola/shared";
 import type { LobbyConnectionState } from "@chaverola/shared";
@@ -106,26 +108,6 @@ export function activeChatMembers(chat: HostedChat): Participant[] {
     chat.participants,
     chat.inactiveStudentIds,
     (p) => p.id
-  );
-}
-
-function wereLastPartnersIn(
-  lastPartners: Record<string, string[]>,
-  aId: string,
-  bId: string
-): boolean {
-  return lastPartners[aId]?.includes(bId) ?? false;
-}
-
-/** Fresh both ways: neither student's previous chat included the other. */
-function isFreshPair(
-  lastPartners: Record<string, string[]>,
-  aId: string,
-  bId: string
-): boolean {
-  return (
-    !wereLastPartnersIn(lastPartners, aId, bId) &&
-    !wereLastPartnersIn(lastPartners, bId, aId)
   );
 }
 
@@ -237,22 +219,16 @@ export function findAutoMatchPair(
   const ready = queue.filter(
     (s) => s.connection === "connected" && s.waitSeconds >= thresholdSeconds
   );
-  for (let i = 0; i < ready.length; i++) {
-    for (let j = i + 1; j < ready.length; j++) {
-      // Both loop indexes are within bounds.
-      if (isFreshPair(lastPartners, ready[i]!.id, ready[j]!.id)) {
-        return [ready[i]!, ready[j]!];
-      }
-    }
-  }
-  for (let i = 0; i < ready.length; i++) {
-    for (let j = i + 1; j < ready.length; j++) {
-      if (!isExactRematchIn(lastPartners, [ready[i]!.id, ready[j]!.id])) {
-        return [ready[i]!, ready[j]!];
-      }
-    }
-  }
-  return null;
+  const pick = pickAutoMatchPair(
+    ready.map((s) => s.id),
+    lastPartners
+  );
+  if (!pick) return null;
+  // pickAutoMatchPair draws both ids from `ready`, so both rows resolve.
+  return [
+    ready.find((s) => s.id === pick[0])!,
+    ready.find((s) => s.id === pick[1])!,
+  ];
 }
 
 /**
