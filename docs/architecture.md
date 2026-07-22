@@ -247,6 +247,18 @@ bundles its own.
 
 How the layer is put together (`server/src/live/`):
 
+- **`lobby.ts` is a thin composition root** (`attachLobby`) — it creates
+  the `Server`, applies the time scale, builds the shared `LobbyContext`
+  (`lobbyContext.ts`: the `io`, the child logger, and the broadcast/timer
+  helpers every handler leans on — `broadcastState`, `armSeatTimers`,
+  `settleMembershipChange`, and the snapshot builders), installs the auth
+  middleware (`auth.ts`), dispatches each connection to
+  `registerTeacherHandlers` (`handlers/teacher.ts`) or
+  `registerStudentSession` (`handlers/studentSession.ts` +
+  `studentChat.ts`), arms the auto-match timer (`autoMatch.ts`), and
+  registers the `onActivityRemoved` cleanup. The split is by concern: an
+  agent editing `chat:send` opens `handlers/studentChat.ts` and never
+  reads the teacher commands.
 - **`seats.ts` is the pure, io-free seat lifecycle** — testable without
   sockets. Seats hang off the `StoredActivity` record (the activity's
   lifecycle owns the seats' lifecycle), and the module owns the tricky
@@ -261,11 +273,11 @@ How the layer is put together (`server/src/live/`):
   grace), cleared on resume, leave, remove, and activity removal.
   `armDisconnectTimers` arms both on every drop — the same 120s grace
   for every seat, matched or waiting (the 2026-07-20 handset fix); what
-  grace expiry means for a seat mid-chat is lobby.ts's callback, so
-  seats.ts stays chat-unaware.
+  grace expiry means for a seat mid-chat is the lobby layer's callback
+  (`armSeatTimers` in `lobbyContext.ts`), so seats.ts stays chat-unaware.
   A seat's `wrappingUp` flag marks the ended-screen state; `toQueueEntries`
   skips those and takes an `exclude` set for matched seats, so seats.ts
-  itself stays chat-unaware (lobby.ts supplies the set).
+  itself stays chat-unaware (the lobby layer supplies the set).
 - **`matching.ts` is the same charter, one layer up** — pure, io-free,
   unit-tested: the chat records and every rule that moves them.
   `eligibleWaiting` is the single matchable pool (connected, unmatched,
@@ -278,7 +290,7 @@ How the layer is put together (`server/src/live/`):
   rematch memory, `findAutoMatchPair` picks the two longest waiting past
   the threshold, `markInactive` owns the below-2 ending, and
   `appendLine` owns the transcript (membership guard, id minting, the
-  200-line cap). The split is the payoff: lobby.ts decides who may
+  200-line cap). The split is the payoff: the lobby layer decides who may
   command what and who hears about it; matching.ts decides what actually
   happens.
 - **Chats hang off the activity record** (`chats: StoredChat[]` plus
@@ -308,9 +320,10 @@ How the layer is put together (`server/src/live/`):
   `chat:line`, `chat:peer-typing`, `chat:ended`), never a snapshot.
 - **Teacher commands live on teacher sockets only.** `chat:start`,
   `match:pair-everyone`, `chat:remove`, `settings:update`, and
-  `queue:remove` are registered inside the teacher branch of the
-  connection handler — a student socket has no listener to reach, which
-  is a stronger boundary than a role check inside each handler. Every
+  `queue:remove` are registered by `registerTeacherHandlers`
+  (`handlers/teacher.ts`), which the connection dispatch reaches only for
+  a teacher socket — a student socket has no listener to reach, which is a
+  stronger boundary than a role check inside each handler. Every
   one of them is idempotent, and the snapshot that follows repairs any
   divergence.
 - **The auto-match timer is the one piece of scheduled server

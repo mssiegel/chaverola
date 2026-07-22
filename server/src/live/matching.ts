@@ -81,6 +81,35 @@ export function matchedStudentIds(activity: StoredActivity): Set<string> {
   return ids;
 }
 
+/** The chat a student is actively seated in right now, if any. */
+export function findActiveChatOf(
+  record: StoredActivity,
+  studentId: string
+): StoredChat | undefined {
+  return record.chats.find(
+    (chat) =>
+      chat.status === "active" &&
+      activeMembers(chat).some((m) => m.studentId === studentId)
+  );
+}
+
+/** A wrappingUp seat's ended chat — the most recent one that ended around
+ *  them (they're still an active member of it; only leavers go inactive).
+ *  A reaped-from-chat returner never resolves here — their new studentId is
+ *  in no chat; their resume replays through seat.reapedFromChat instead. */
+export function findEndedChatOf(
+  record: StoredActivity,
+  studentId: string
+): StoredChat | undefined {
+  return [...record.chats]
+    .reverse()
+    .find(
+      (chat) =>
+        chat.status === "ended" &&
+        activeMembers(chat).some((m) => m.studentId === studentId)
+    );
+}
+
 /**
  * The one matchable pool: seats not matched, not wrappingUp, connected, in
  * joinedAt order. This enforces unmatchable-while-reconnecting server-side.

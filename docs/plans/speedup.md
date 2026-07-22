@@ -85,7 +85,7 @@ prompt 2 (its browser pass runs on the new harness).
 - [x] Prompt 4 — DECISIONS.md becomes an index
 - [x] Prompt 5 — AGENTS.md becomes a router
 - [x] Prompt 6 — One implementation of the matching rules
-- [ ] Prompt 7 — lobby.ts becomes a composition root
+- [x] Prompt 7 — lobby.ts becomes a composition root
 - [ ] Prompt 8 — The student page splits by stage
 
 Repo rules that apply (details in `AGENTS.md`): run `pnpm format`

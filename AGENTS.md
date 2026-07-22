@@ -106,7 +106,7 @@ Load-bearing — trip over them before you break one:
 
 **Wire protocol change**
 
-- Files: `shared/src/socket.ts` / `shared/src/api.ts` (the contract) → `server/src/store/projections.ts` (a field-by-field literal, never a spread) → the owning handler in `server/src/live/lobby.ts` → client registration in `useLobbyPresence.ts` (student) or `useHostActivityLive.ts` (teacher).
+- Files: `shared/src/socket.ts` / `shared/src/api.ts` (the contract) → `server/src/store/projections.ts` (a field-by-field literal, never a spread) → the owning handler module in `server/src/live/handlers/` (`teacher.ts`, or `studentSession.ts` / `studentChat.ts`) → client registration in `useLobbyPresence.ts` (student) or `useHostActivityLive.ts` (teacher).
 - Invariants: characterIds-only wire — add the allowlist pin in `projections.test.ts` (mandatory).
 - **Deploy race:** `shared/` is in both deploy triggers, so one push races two pipelines and Socket.IO drops an unhandled event **silently**. Poll `/healthz` for the new server commit before testing; split a client-ahead-of-server window into separate pushes (see Working Rules).
 - Decisions: [backend-api.md](docs/decisions/backend-api.md).
@@ -114,7 +114,7 @@ Load-bearing — trip over them before you break one:
 
 **Server lobby / matching / chat logic**
 
-- Files: `server/src/live/lobby.ts` (the socket handlers), `seats.ts` (pure, io-free seat lifecycle), `matching.ts` (pure chat rules), `server/src/store/`.
+- Files: `server/src/live/lobby.ts` (composition root — wires the pieces), `lobbyContext.ts` (shared io/broadcast/timer helpers), `auth.ts` (connection middleware + seating), `autoMatch.ts` (the auto-match timer), `handlers/teacher.ts` + `handlers/studentSession.ts` + `handlers/studentChat.ts` (the socket handlers), `seats.ts` (pure, io-free seat lifecycle), `matching.ts` (pure chat rules), `server/src/store/`.
 - Invariants: characterIds-only projection · 120s grace incl. matched seats · teacher-gated auto-match · `pausedAt` dual role.
 - Decisions: [backend-api.md](docs/decisions/backend-api.md), [teacher-live.md](docs/decisions/teacher-live.md), [chat-behavior.md](docs/decisions/chat-behavior.md).
 - Verify: `pnpm --filter @chaverola/server test`; scratch `socket.io-client` drivers in `tools/verify/scratch/` (importing `../lib.mjs`) for behavior beyond the suite.
