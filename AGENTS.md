@@ -491,8 +491,10 @@ Run from the repo root:
   This does **not** apply to code, comments, or internal docs — only copy a user reads.
 - **Record product/UX decisions.** When a choice is made about how the product behaves
   or why a screen works a certain way — especially anything non-obvious or that looks like
-  a bug but is intentional — add it to [DECISIONS.md](DECISIONS.md) with its reasoning, so
-  future agents don't "fix" it. Record the decision, not just the change.
+  a bug but is intentional — record it so future agents don't "fix" it. It's a two-touch
+  change made together: add the entry to the top of the matching `docs/decisions/<area>.md`
+  file, and its one-line link to the [DECISIONS.md](DECISIONS.md) index. Record the decision,
+  not just the change.
 - **The demo flows are product — every feature must show up in them.** The demo
   activity (join code `1234`, reached from the homepage demo section and the `/demo`
   redirect URLs) is a permanent sales surface: teachers self-serve it and the founder

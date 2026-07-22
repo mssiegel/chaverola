@@ -28,9 +28,9 @@ automatically via Vercel).
 > [Shared_Project_Context.md](Shared_Project_Context.md)
 > for the full brief and [docs/plans/](docs/plans/) for the current feature plan.
 
-> **AI agents:** read [AGENTS.md](AGENTS.md) before doing any work, and check
-> [DECISIONS.md](DECISIONS.md) for the area you're touching — behavior that looks like a
-> bug or an oversight is often an intentional, recorded decision.
+> **AI agents:** read [AGENTS.md](AGENTS.md) before doing any work, and check the
+> [DECISIONS.md](DECISIONS.md) index for the area you're touching — behavior that looks like
+> a bug or an oversight is often an intentional, recorded decision.
 
 ## Repository structure
 
@@ -41,10 +41,10 @@ chaverola/
 ├─ client/     # the app — React 19 + TypeScript + Vite + Tailwind v4 + ShadCN
 ├─ server/     # the API — Express 5 + TypeScript, in-memory store
 ├─ shared/     # the wire contract both sides import (types + constants)
-├─ docs/       # technical docs: architecture, API contract, feature plans
+├─ docs/       # technical docs: architecture, API contract, feature plans, decisions/
 ├─ Shared_Project_Context.md          # the source-of-truth project brief
 ├─ AGENTS.md                          # guidance for AI agents / contributors
-└─ DECISIONS.md                       # product/UX decisions and their reasoning
+└─ DECISIONS.md                       # index of product/UX decisions (bodies in docs/decisions/)
 ```
 
 ## Getting started
@@ -132,9 +132,10 @@ Read in this order:
    The source of truth for requirements.
 2. [AGENTS.md](AGENTS.md) — how to work in this repo: current status, commands,
    architecture, conventions, and working rules for AI agents and contributors.
-3. [DECISIONS.md](DECISIONS.md) — product, UX, and business decisions with their
-   reasoning, grouped by area. Check it before changing behavior that looks odd, and add
-   an entry when a new decision is made.
+3. [DECISIONS.md](DECISIONS.md) — the index of product, UX, and business decisions with
+   their reasoning; the entries themselves live in per-area files under
+   [docs/decisions/](docs/decisions/). Check it before changing behavior that looks odd; to
+   add a decision, put the entry atop its area file and a line in the index, in one change.
 4. [docs/architecture.md](docs/architecture.md) and [docs/api.md](docs/api.md) — the
    technical docs: how the packages fit together and the canonical API contract.
    Feature plans live in [docs/plans/](docs/plans/).
