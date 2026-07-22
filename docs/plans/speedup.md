@@ -83,7 +83,7 @@ prompt 2 (its browser pass runs on the new harness).
 - [x] Prompt 2 — The verify harness lives in the repo
 - [x] Prompt 3 — The verify skill tells the new story
 - [x] Prompt 4 — DECISIONS.md becomes an index
-- [ ] Prompt 5 — AGENTS.md becomes a router
+- [x] Prompt 5 — AGENTS.md becomes a router
 - [ ] Prompt 6 — One implementation of the matching rules
 - [ ] Prompt 7 — lobby.ts becomes a composition root
 - [ ] Prompt 8 — The student page splits by stage

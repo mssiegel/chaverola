@@ -37,6 +37,90 @@ the workspace layout: Vercel's automatic monorepo detection rebuilt the
 client on a server-only push, so an explicit Ignored Build Step does it by
 paths (see Deploy topology).
 
+## Client component geography
+
+Where the client's shared machinery lives and which files are tied
+together. The surface-by-surface map (which page owns which flow) is in
+[AGENTS.md](../AGENTS.md) → Task router; this section is the cross-cutting
+pieces those surfaces share.
+
+- **The chatbox engine contract.** The chatbox shell
+  ([client/src/components/Student/Chatbox/](../client/src/components/Student/Chatbox/)
+  `index.tsx`) is **presentational** — driven entirely by props: the room
+  as one `chat: ChatRoomState` object plus the action callbacks its parent
+  mediates. The contract (`ChatRoomState` and `ChatRoomActions`) lives in
+  [client/src/types/chat.ts](../client/src/types/chat.ts); the mock
+  "engine"
+  ([client/src/components/chat/useChatDemo.ts](../client/src/components/chat/useChatDemo.ts)
+  — under `chat/` because the homepage hero uses it too) explicitly
+  implements it (`ChatDemo extends ChatRoomState, ChatRoomActions` plus
+  dev-only triggers), so swapping in a real data source is a type-checked
+  replacement, not a re-plumbing. The same conventions back the Teacher
+  view, whose host dashboard takes an injected `HostEngine`
+  (`Teacher/HostActivity/hostEngine.ts`) with `useHostActivityLive.ts`
+  (real keys) and `useHostActivityDemo.ts` + `hostWorld.ts` (`1234`) as
+  its two implementations. `LiveChatStage` is a component split beside the
+  demo's `ChatStage.tsx`, never a conditional hook (an invariant — see
+  AGENTS.md).
+- **Shared chat pieces**
+  ([client/src/components/chat/](../client/src/components/chat/)): the card
+  chrome (`ChatFrame` / `CHAT_FRAME_CLASS`), the gradient "You're X … with
+  Y" header (`ChatHeader`), the message-line renderer
+  (`ConversationLines`), the conversation feed (`Conversation`, with
+  `PeerIsTyping` and `PeerReconnectBanner`), and the message input
+  (`MessageComposer`, with `LazyEmojiPicker` / `EmojiPickerPopover` — also
+  the setup form's emoji slots, always inside the `ui/popover` primitive)
+  are shared by the student chatbox, the homepage hero chatbox, and the
+  teacher chat cards
+  ([client/src/components/Teacher/ChatCard/](../client/src/components/Teacher/ChatCard/)).
+  Character display labels come from `characterLabel` / `peerListLabel`
+  ([client/src/lib/characterLabel.ts](../client/src/lib/characterLabel.ts)).
+  Every confirmation step renders through
+  [`ui/confirm-dialog`](../client/src/components/ui/confirm-dialog.tsx) —
+  `EndChatConfirmationModal` is a thin wrapper over it, and the host page's
+  remove/end-all confirmations use it directly (copy in
+  `Teacher/HostActivity/confirmCopy.ts`).
+- **Demo-engine helpers** live in
+  [client/src/lib/random.ts](../client/src/lib/random.ts) (`nextId`,
+  `randInt`, `randomFrom`, `shuffled`) — both engines import them; don't
+  re-declare per-engine copies. The reserved notice sender id
+  (`NOTICE_SENDER_ID`) lives in
+  [client/src/types/chat.ts](../client/src/types/chat.ts).
+- **Navbar ↔ homepage contract:** `HERO_JOIN_CTA_ID`
+  ([client/src/lib/useHeroCtaPassed.ts](../client/src/lib/useHeroCtaPassed.ts))
+  ties two files together — `HomePage` puts the id on the hero's Join CTA,
+  and `AppLayout` watches that element to swap the mobile navbar mode.
+- **Hook inventory.** A hook lives next to the components it drives
+  (`components/chat/useChatDemo.ts`,
+  `components/Teacher/HostActivity/useHostActivityDemo.ts` — whose pure
+  simulation rules live beside it in `hostWorld.ts`); generic
+  cross-cutting hooks live in `lib/`: `usePageTitle` (prepends the
+  "Chaverola | " brand prefix itself — callers pass just the page name),
+  `useHeroCtaPassed`, `useBackGuard`, `useLatestRef` (the
+  ref-mirrors-latest-value idiom for timer callbacks — don't hand-roll
+  it), `useSecondCountdown`, `useWarmUpServer` (the fire-and-forget
+  `/healthz` ping that wakes the free-tier server), `useActivityLookup`,
+  and the hooks inside `locale.ts` / `studentSession.ts`. The live
+  lobby/host sockets are `pages/student/useLobbyPresence.ts` (student —
+  stays mounted through the chat and ended stages) and
+  `Teacher/HostActivity/useHostActivityLive.ts` (teacher), both through
+  the factory in `lib/socket.ts`.
+- **Mock data** lives only in
+  [client/src/mockData/](../client/src/mockData/) (the one barrel file in
+  the client). The demo join code `1234` always works, fully client
+  simulated.
+- **Sticky-grid gotchas.** Two are load-bearing:
+  - The setup-page form grid must **not** get `items-start`, or the sticky
+    `LobbyPreview` rail loses its track (there's a code comment on it).
+  - Chrome insets `position: sticky` offsets by the scroll container's own
+    padding, so a `sticky top-0` child rests below the container's clip
+    line and scrolled content peeks through the gap above it. Keep the
+    scroller's top padding at zero (move it onto the first child) so
+    pinned elements sit flush — done for the host page's pairing rail
+    (`Teacher/HostActivity/index.tsx`). The chat feed's pause/reconnect
+    banner (`chat/Conversation.tsx`, `py-3` scroller) still carries the
+    minor 12px version of this gap.
+
 ## Deploy topology
 
 ```text
@@ -59,7 +143,7 @@ paths (see Deploy topology).
   requires an absolute URL, because the value once arrived with a leading
   UTF-8 BOM that turned every prod call into a relative-path 404 (caught
   by the feature-1 prod pass — the gotcha and the safe way to set env
-  vars are in AGENTS.md → Reading production logs).
+  vars are in [operations.md](operations.md) → Setting Vercel env vars).
 - **Render** runs the server (service `chaverola-api`, live since
   2026-07-18; build filters keep client-only pushes from deploying it). The
   build command installs with pnpm and runs `tsc --noEmit` as the deploy

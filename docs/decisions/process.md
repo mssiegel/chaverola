@@ -5,6 +5,34 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
+### AGENTS.md is a router: a status table, invariants, and a task router, not a narrative
+
+_2026-07-22_
+
+**Decision:** `AGENTS.md` is a lean router (~200 lines), not a running
+history. It carries a preamble, a status TABLE (one cell per feature —
+completion flips the cell, replacing the old per-feature narrative), a docs
+map that gives every fact one home, the overview and commands, an
+architecture core, the invariants block, a task router ("I'm touching X" →
+files, invariants, decisions file, verify steps), the conventions, and the
+working rules. Operational runbooks moved to
+[operations.md](../operations.md); the client component geography moved to
+[architecture.md](../architecture.md); the per-feature narrative and any
+prose that merely restated a decision entry were deleted, with the router
+pointing at the decision instead. The per-feature doc tax is now: the plan
+doc (frozen at completion), a decisions entry only if a decision was made,
+`api.md` only if the wire changed, `architecture.md` only if topology or
+geography changed, and one status-table cell.
+
+**Why:** Product-owner call. At nearly 600 lines AGENTS.md had become a
+reading assignment every feature paid twice — once to load, once to
+rewrite — and its status narrative duplicated facts whose real home was a
+decision entry or a plan doc. A router an agent can load per task, where
+every fact has exactly one home, cuts both: the file stops growing with
+each feature (a cell flips instead of a paragraph appended), and "I'm
+touching X" resolves to the files, invariants, and decisions for X without
+reading the whole file.
+
 ### DECISIONS.md is an index; entries live in docs/decisions/ per area
 
 _2026-07-22_
@@ -251,8 +279,8 @@ _2026-07-19_
 **Decision:** Agent access to the production server's logs goes through
 the official Render CLI (`render logs`, non-interactive with
 `RENDER_API_KEY` read from the gitignored `.env.local`) rather than
-Render's hosted MCP server. The exact commands live in AGENTS.md →
-"Reading production logs".
+Render's hosted MCP server. The exact commands live in
+[docs/operations.md](../operations.md) → "Reading production logs".
 
 **Why:** Render API keys are broadly scoped — they grant access to every
 service the account can reach — so where the key lives matters more than

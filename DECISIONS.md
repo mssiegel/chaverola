@@ -202,6 +202,7 @@ git: `git log -- DECISIONS.md`.
   - [Transcripts wait: feature 1 only stores the teacher's email](docs/decisions/backend-api.md#transcripts-wait-feature-1-only-stores-the-teachers-email)
   - [Considered and rejected for the backend: TanStack Query, dotenv, a hostKey stash, an npm conversion](docs/decisions/backend-api.md#considered-and-rejected-for-the-backend-tanstack-query-dotenv-a-hostkey-stash-an-npm-conversion)
 - [Process & tooling](docs/decisions/process.md)
+  - [AGENTS.md is a router: a status table, invariants, and a task router, not a narrative](docs/decisions/process.md#agentsmd-is-a-router-a-status-table-invariants-and-a-task-router-not-a-narrative)
   - [DECISIONS.md is an index; entries live in docs/decisions/ per area](docs/decisions/process.md#decisionsmd-is-an-index-entries-live-in-docsdecisions-per-area)
   - [The per-feature prod pass trims to cold-wake, a smoke, and one network leg](docs/decisions/process.md#the-per-feature-prod-pass-trims-to-cold-wake-a-smoke-and-one-network-leg)
   - [No CI; the local pre-push typecheck and test are the gate](docs/decisions/process.md#no-ci-the-local-pre-push-typecheck-and-test-are-the-gate)
