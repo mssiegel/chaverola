@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Loader2, Timer, UserPlus, UsersRound, WifiOff } from "lucide-react";
 
+import { listNames } from "@chaverola/shared";
+
 import { DemoControlsPanel, EventButton } from "@/components/demo/DemoControls";
 import { AccentIconChip } from "@/components/Teacher/ActivitySetup/FormSection";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -13,7 +15,6 @@ import { CompletedChatsSection } from "./CompletedChatsSection";
 import { confirmCopy, type PendingAction } from "./confirmCopy";
 import type { HostDemoTriggers, HostEngine } from "./hostEngine";
 import { HostHeader } from "./HostHeader";
-import { listNames } from "./hostWorld";
 import { JoiningInstructions } from "./JoiningInstructions";
 import { LiveSettingsPanel } from "./LiveSettingsPanel";
 import { PairingPanel } from "./PairingPanel";

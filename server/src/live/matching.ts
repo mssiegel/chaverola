@@ -4,8 +4,8 @@ import {
   CHAT_TRANSCRIPT_MAX_LINES,
   activeMembersBy,
   dealCast,
+  pairEveryonePlan,
   pickAutoMatchPair,
-  splitOddPool,
 } from "@chaverola/shared";
 
 import type { StoredActivity } from "../store/activityStore";
@@ -20,22 +20,23 @@ import type { Seat } from "./seats";
   The genuinely-pure rules are ONE implementation in @chaverola/shared —
   `activeMembersBy` (active-membership filtering, behind `activeMembers`
   below), `dealCast` (a chat of N takes the roster's first N characters,
-  shuffled), and `splitOddPool` (planPairEveryone's odd-count rule) — imported
-  by both this layer and hostWorld.ts's demo. A neutral zero-dep module, not a
-  server dependency on client code, so the old "mirror, never import" tripwire
+  shuffled), `pickAutoMatchPair` (auto-match's fresh-first pick, behind
+  `findAutoMatchPair`), and `pairEveryonePlan` (pair-everyone's whole
+  fresh-first plan, behind `planPairEveryone` below) — imported by both this
+  layer and hostWorld.ts's demo. A neutral zero-dep module, not a server
+  dependency on client code, so the old "mirror, never import" tripwire
   doesn't apply: it guarded against the demo's simulation transitions running
   on real students, and shared/ has none of those. The precedent is
   LOBBY_GRACE_SECONDS.
 
-  What deliberately diverges (named, not drifted): the server now tracks
-  one-round last-partner memory (createChat maintains `activity.lastPartners`),
-  and `findAutoMatchPair` runs it through the shared fresh-first rule
-  (`pickAutoMatchPair`) — no exact rerun is auto-formed. `planPairEveryone` is
-  the one rule that still ignores the memory (greedy in queue order), pending
-  feature 9 prompt 3. Chats end two ways (the teacher's endChat, and
-  markInactive's below-2 rule); the whole class pauses as one switch
-  (pauseChats/resumeChats); ids are minted with randomUUID, not the demo's
-  counter.
+  What deliberately diverges (named, not drifted): the server tracks one-round
+  last-partner memory (createChat maintains `activity.lastPartners`, and
+  pair-everyone parks an unrepairable exact pair/trio in
+  `activity.rematchNotice`) — otherwise the pairing DECISIONS, auto-match and
+  pair-everyone alike, are the shared rules, so no exact rerun is formed either
+  way. Chats end two ways (the teacher's endChat, and markInactive's below-2
+  rule); the whole class pauses as one switch (pauseChats/resumeChats); ids are
+  minted with randomUUID, not the demo's counter.
 */
 
 /** One stored transcript line. Deliberately lean: no characterId, no name
@@ -180,27 +181,30 @@ export function createChat(
 }
 
 /**
- * Pair the whole queue at once — the demo's pairEveryoneIn minus rematch
- * memory: adjacent pairs in queue order; an odd count seats the last three
- * as a trio when the activity has a 3rd character, otherwise the newest
- * joiner stays first in line as the leftover. Null under 2 eligible (the
- * existing leftover highlight stays untouched).
+ * Pair the whole queue at once through the shared `pairEveryonePlan`:
+ * fresh-first greedy in queue order, swap-repair around exact reruns, an odd
+ * count seating a trailing trio (a 3rd character exists) or marking the newest
+ * joiner the leftover. `stuckStudentIds` is an exact pair/trio the plan
+ * couldn't repair — the caller turns it into the rail notice. Null under 2
+ * eligible (the existing leftover/notice stay untouched). Pure: reads the
+ * pre-round memory; createChat writes it after.
  */
-export function planPairEveryone(
-  activity: StoredActivity
-): { groups: string[][]; leftoverStudentId: string | null } | null {
-  const pool = eligibleWaiting(activity).map((seat) => seat.studentId);
-  if (pool.length < 2) return null;
-
-  const { leftover, trio } = splitOddPool(pool, activity.characters.length);
-
-  const groups: string[][] = [];
-  for (let i = 0; i + 1 < pool.length; i += 2) {
-    // Both indexes are within bounds — the loop condition guarantees i + 1.
-    groups.push([pool[i]!, pool[i + 1]!]);
-  }
-  if (trio) groups.push(trio);
-  return { groups, leftoverStudentId: leftover };
+export function planPairEveryone(activity: StoredActivity): {
+  groups: string[][];
+  leftoverStudentId: string | null;
+  stuckStudentIds: string[];
+} | null {
+  const plan = pairEveryonePlan(
+    eligibleWaiting(activity).map((seat) => seat.studentId),
+    activity.characters.length,
+    activity.lastPartners
+  );
+  if (!plan) return null;
+  return {
+    groups: plan.groups,
+    leftoverStudentId: plan.leftoverId,
+    stuckStudentIds: plan.stuckIds,
+  };
 }
 
 /** Auto-match's pick: eligible students past the wait threshold, in queue

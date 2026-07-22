@@ -28,6 +28,7 @@ function makeActivity(): StoredActivity {
     chats: [],
     lastPartners: {},
     leftoverStudentId: null,
+    rematchNotice: null,
     pausedAt: null,
   };
 }

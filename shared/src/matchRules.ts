@@ -126,3 +126,123 @@ export function pickAutoMatchPair(
   }
   return null;
 }
+
+/** "A and B" / "A, B, and C" — shared by the heads-up and the rail notice. */
+export function listNames(names: string[]): string {
+  if (names.length <= 2) return names.join(" and ");
+  return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]}`;
+}
+
+/** Pair-everyone's rail notice for an exact pair/trio it left in line. Unlike
+ *  the heads-up this isn't gated on the rematchWarning setting — it explains
+ *  why the button visibly skipped them. */
+export function stuckInLineNotice(names: string[]): string {
+  return `${listNames(names)} just chatted ${
+    names.length === 2 ? "with each other" : "together"
+  }, so they're still in line.`;
+}
+
+/**
+ * Pair-everyone's decision, ids only — the pure half both engines share.
+ * Greedy in queue order, preferring fully fresh partners, then anyone who
+ * wouldn't be rerunning their own previous chat exactly. An exact rematch is
+ * never grouped: a stranded pair is repaired by one swap with a pairing
+ * already made (or a trio/leftover seat), and only when the queue IS exactly
+ * that pair (or an exact trio) do they stay in line as `stuckIds`. An odd
+ * pool sheds a trailing trio when a 3rd character exists, otherwise the
+ * newest joiner is the `leftoverId`. The caller passes an already-filtered
+ * pool (connected, eligible) in queue order and maps the ids back to its own
+ * seat shape; null under 2 (nothing to plan — the existing leftover/notice
+ * stay untouched).
+ */
+export function pairEveryonePlan(
+  ids: string[],
+  characterCount: number,
+  lastPartners: Record<string, string[]>
+): {
+  groups: string[][];
+  leftoverId: string | null;
+  stuckIds: string[];
+} | null {
+  const pool = [...ids];
+  if (pool.length < 2) return null;
+
+  // Odd count sheds a trailing trio (a 3rd character exists) or the newest
+  // joiner as the leftover (two-character roster) — the shared split rule.
+  // Both stay reassignable: the swap-repair below trades trio/leftover seats.
+  let { leftover, trio } = splitOddPool(pool, characterCount);
+
+  const pairs: [string, string][] = [];
+  while (pool.length >= 2) {
+    const a = pool.shift()!;
+    let index = pool.findIndex((b) => isFreshPair(lastPartners, a, b));
+    if (index === -1) {
+      index = pool.findIndex((b) => !isExactRematchIn(lastPartners, [a, b]));
+    }
+    if (index === -1) {
+      // Exactness is mutual and one round deep, so a can only be exact with
+      // one student — the pool is down to a's previous 1:1 partner.
+      pool.unshift(a);
+      break;
+    }
+    pairs.push([a, pool.splice(index, 1)[0]!]);
+  }
+
+  // A stranded pair's memories are pinned to each other, so seating either
+  // of them with ANYONE else can't be an exact rerun — one swap always fixes
+  // it. Only a queue of exactly these two has nobody to swap with.
+  let stuck: string[] = [];
+  if (pool.length === 2) {
+    const [x, y] = pool as [string, string];
+    const donor = pairs.pop();
+    if (donor) {
+      const [p, q] = donor;
+      const freshCount = (m: [string, string][]) =>
+        m.filter(([s, t]) => isFreshPair(lastPartners, s, t)).length;
+      const straight: [string, string][] = [
+        [x, p],
+        [y, q],
+      ];
+      const crossed: [string, string][] = [
+        [x, q],
+        [y, p],
+      ];
+      pairs.push(
+        ...(freshCount(crossed) > freshCount(straight) ? crossed : straight)
+      );
+    } else if (trio) {
+      // Trade a trio seat: the trio takes x, and the traded member pairs
+      // with y — neither result can be an exact rerun.
+      const traded = trio.pop()!;
+      trio.push(x);
+      pairs.push([traded, y]);
+    } else if (leftover) {
+      const seated = isFreshPair(lastPartners, x, leftover) ? x : y;
+      const waits = seated === x ? y : x;
+      pairs.push([seated, leftover]);
+      leftover = waits;
+    } else {
+      stuck = [x, y];
+    }
+  }
+
+  if (trio && isExactRematchIn(lastPartners, trio)) {
+    const donor = pairs.pop();
+    if (donor) {
+      // Swapping any one member breaks the trio's exactness, and the traded
+      // member's two-person memory can't exactly match a pair.
+      const [p, q] = donor;
+      const traded = trio.pop()!;
+      trio.push(p);
+      pairs.push([q, traded]);
+    } else {
+      stuck = trio;
+      trio = null;
+    }
+  }
+
+  const groups: string[][] = [...pairs];
+  if (trio) groups.push(trio);
+
+  return { groups, leftoverId: leftover ?? null, stuckIds: stuck };
+}

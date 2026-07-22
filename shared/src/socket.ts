@@ -109,6 +109,10 @@ export interface ServerToClientEvents {
     // teacher-room only; feeds the rematch heads-up. `?? {}` on the client
     // tolerates an older server during a deploy.
     lastPartners: Record<string, string[]>;
+    // Pair-everyone left an exact pair/trio in line — the dismissible rail
+    // notice (teacher truth, so a second host device stays coherent). `?? null`
+    // on the client tolerates an older server during a deploy.
+    rematchNotice: string | null;
   }) => void;
   /** Student only, targeted; re-sent on every resume while matched, and
    *  replayed once for a chat the recipient was reaped out of (immediately
@@ -200,9 +204,15 @@ export interface ClientToServerEvents {
   /** Teacher only. Filtered to eligible students, clamped to the server
    *  roster; no-ops below 2 eligible. */
   "chat:start": (payload: { studentIds: string[] }) => void;
-  /** Teacher only. Greedy pairs in queue order; odd count seats a trailing
-   *  trio when the roster has a 3rd character, else marks the leftover. */
+  /** Teacher only. Fresh-first pairs in queue order, repairing around exact
+   *  reruns; odd count seats a trailing trio when the roster has a 3rd
+   *  character, else marks the leftover. An exact pair/trio it can't repair
+   *  stays in line, carried back as rematchNotice on the next chats:snapshot. */
   "match:pair-everyone": () => void;
+  /** Teacher only; idempotent — dismisses the pair-everyone rematch notice
+   *  server-side so broadcastState can't resurrect it and a second host device
+   *  stays coherent. A no-op when there is no notice. */
+  "match:dismiss-rematch-notice": () => void;
   /** Teacher only. Quiet exit; ends the chat when <2 active would remain. */
   "chat:remove": (payload: { chatId: string; studentId: string }) => void;
   /** Teacher only; idempotent — an already-ended or unknown chat is a

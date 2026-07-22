@@ -88,6 +88,7 @@ export interface LobbyContext {
     leftoverStudentId: string | null;
     paused: boolean;
     lastPartners: Record<string, string[]>;
+    rematchNotice: string | null;
   };
   broadcastState(record: StoredActivity): void;
   sendPeerConnection(
@@ -131,6 +132,7 @@ export function createLobbyContext(io: LobbyServer, log: Logger): LobbyContext {
       leftoverStudentId: record.leftoverStudentId,
       paused: record.pausedAt !== null,
       lastPartners: toRematchPartners(record),
+      rematchNotice: record.rematchNotice,
     };
   }
 

@@ -42,6 +42,7 @@ function makeActivity(characters: Character[]): StoredActivity {
     chats: [],
     lastPartners: {},
     leftoverStudentId: null,
+    rematchNotice: null,
     pausedAt: null,
   };
 }
@@ -181,6 +182,43 @@ describe("planPairEveryone (the odd-count branch)", () => {
     expect(plan).not.toBeNull();
     expect(plan!.leftoverStudentId).toBe(seats[2]!.studentId);
     expect(plan!.groups).toEqual([[seats[0]!.studentId, seats[1]!.studentId]]);
+  });
+});
+
+describe("planPairEveryone (rematch avoidance)", () => {
+  it("parks an unrepairable exact pair, but swap-repairs one that has an out", () => {
+    // Just the exact pair is waiting — nobody to swap with, so they stay in
+    // line as stuckStudentIds and no group forms.
+    const stuck = makeActivity(ROSTER);
+    const a = addSeat(stuck);
+    const b = addSeat(stuck);
+    stuck.lastPartners = {
+      [a.studentId]: [b.studentId],
+      [b.studentId]: [a.studentId],
+    };
+    const stuckPlan = planPairEveryone(stuck);
+    expect(stuckPlan!.groups).toEqual([]);
+    expect([...stuckPlan!.stuckStudentIds].sort()).toEqual(
+      [a.studentId, b.studentId].sort()
+    );
+
+    // A fresh pair ahead of a stranded exact pair (x+y just chatted): one
+    // swap fixes it, so nobody is stuck and no group re-forms the exact pair.
+    const repairable = makeActivity(ROSTER);
+    addSeat(repairable); // p
+    addSeat(repairable); // q
+    const x = addSeat(repairable);
+    const y = addSeat(repairable);
+    repairable.lastPartners = {
+      [x.studentId]: [y.studentId],
+      [y.studentId]: [x.studentId],
+    };
+    const repairedPlan = planPairEveryone(repairable);
+    expect(repairedPlan!.stuckStudentIds).toEqual([]);
+    expect(repairedPlan!.groups).toHaveLength(2);
+    for (const group of repairedPlan!.groups) {
+      expect([...group].sort()).not.toEqual([x.studentId, y.studentId].sort());
+    }
   });
 });
 

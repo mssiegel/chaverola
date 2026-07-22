@@ -1,10 +1,9 @@
 import {
   activeMembersBy,
   dealCast,
-  isExactRematchIn,
-  isFreshPair,
+  pairEveryonePlan,
   pickAutoMatchPair,
-  splitOddPool,
+  stuckInLineNotice,
 } from "@chaverola/shared";
 import type { LobbyConnectionState } from "@chaverola/shared";
 
@@ -109,12 +108,6 @@ export function activeChatMembers(chat: HostedChat): Participant[] {
     chat.inactiveStudentIds,
     (p) => p.id
   );
-}
-
-/** "A and B" / "A, B, and C" — shared by the heads-up and the rail notice. */
-export function listNames(names: string[]): string {
-  if (names.length <= 2) return names.join(" and ");
-  return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]}`;
 }
 
 /**
@@ -232,126 +225,39 @@ export function findAutoMatchPair(
 }
 
 /**
- * Pair the whole queue at once: greedy in queue order, preferring fully fresh
- * partners, then anyone who wouldn't be rerunning their own previous chat
- * exactly. An exact rematch is never created — a stranded pair gets repaired
- * by one swap with a pairing already made, and only when the queue IS exactly
- * that pair (or an exact trio) do they stay in line, with `rematchNotice`
- * saying why. An odd queue seats the last three as a group when the activity
- * has a 3rd character; otherwise the newest joiner stays first in line as
- * `leftoverStudentId`.
+ * Pair the whole connected queue at once through the shared `pairEveryonePlan`
+ * (fresh-first greedy, swap-repair around exact reruns, the odd-count trio /
+ * leftover). An exact pair/trio the plan couldn't repair stays in line with a
+ * dismissible `rematchNotice`; the odd one out becomes `leftoverStudentId`.
  */
 export function pairEveryoneIn(
   w: HostWorld,
   activity: HostedActivity
 ): HostWorld {
-  const lp = w.lastPartners;
-  // Reconnecting students stay in line, untouched — unmatchable while
-  // their seat rides out the grace window.
+  // Reconnecting students stay in line, untouched — unmatchable while their
+  // seat rides out the grace window. The decision itself (fresh-first
+  // greedy, swap-repair, the stuck pair/trio) is the shared plan; this just
+  // maps its ids back to seats and folds createChat over the groups.
   const pool = w.queue.filter((s) => s.connection === "connected");
-  if (pool.length < 2) return w;
-  // Odd count sheds a trailing trio (a 3rd character exists) or the newest
-  // joiner as the leftover (two-character roster) — the shared split rule.
-  // Both stay reassignable: the swap-repair below trades trio/leftover seats.
-  let { leftover, trio } = splitOddPool(pool, activity.characters.length);
-
-  const pairs: [WaitingStudent, WaitingStudent][] = [];
-  while (pool.length >= 2) {
-    const a = pool.shift()!;
-    let index = pool.findIndex((b) => isFreshPair(lp, a.id, b.id));
-    if (index === -1) {
-      index = pool.findIndex((b) => !isExactRematchIn(lp, [a.id, b.id]));
-    }
-    if (index === -1) {
-      // Exactness is mutual and one round deep, so a can only be exact with
-      // one student — the pool is down to a's previous 1:1 partner.
-      pool.unshift(a);
-      break;
-    }
-    pairs.push([a, pool.splice(index, 1)[0]!]);
-  }
-
-  // A stranded pair's memories are pinned to each other, so seating either
-  // of them with ANYONE else can't be an exact rerun — one swap always fixes
-  // it. Only a queue of exactly these two has nobody to swap with.
-  let stuck: WaitingStudent[] = [];
-  if (pool.length === 2) {
-    const [x, y] = pool as [WaitingStudent, WaitingStudent];
-    const donor = pairs.pop();
-    if (donor) {
-      const [p, q] = donor;
-      const freshCount = (m: [WaitingStudent, WaitingStudent][]) =>
-        m.filter(([s, t]) => isFreshPair(lp, s.id, t.id)).length;
-      const straight: [WaitingStudent, WaitingStudent][] = [
-        [x, p],
-        [y, q],
-      ];
-      const crossed: [WaitingStudent, WaitingStudent][] = [
-        [x, q],
-        [y, p],
-      ];
-      pairs.push(
-        ...(freshCount(crossed) > freshCount(straight) ? crossed : straight)
-      );
-    } else if (trio) {
-      // Trade a trio seat: the trio takes x, and the traded member pairs
-      // with y — neither result can be an exact rerun.
-      const traded = trio.pop()!;
-      trio.push(x);
-      pairs.push([traded, y]);
-    } else if (leftover) {
-      const seated = isFreshPair(lp, x.id, leftover.id) ? x : y;
-      const waits = seated === x ? y : x;
-      pairs.push([seated, leftover]);
-      leftover = waits;
-    } else {
-      stuck = [x, y];
-    }
-  }
-
-  if (
-    trio &&
-    isExactRematchIn(
-      lp,
-      trio.map((s) => s.id)
-    )
-  ) {
-    const donor = pairs.pop();
-    if (donor) {
-      // Swapping any one member breaks the trio's exactness, and the traded
-      // member's two-person memory can't exactly match a pair.
-      const [p, q] = donor;
-      const traded = trio.pop()!;
-      trio.push(p);
-      pairs.push([q, traded]);
-    } else {
-      stuck = trio;
-      trio = null;
-    }
-  }
+  const plan = pairEveryonePlan(
+    pool.map((s) => s.id),
+    activity.characters.length,
+    w.lastPartners
+  );
+  if (!plan) return w;
 
   let next = w;
-  for (const [a, b] of pairs) {
-    next = createChat(next, [a.id, b.id], activity);
-  }
-  if (trio) {
-    next = createChat(
-      next,
-      trio.map((s) => s.id),
-      activity
-    );
+  for (const group of plan.groups) {
+    next = createChat(next, group, activity);
   }
 
+  const nameOf = (id: string) => pool.find((s) => s.id === id)?.realName ?? "";
   return {
     ...next,
-    leftoverStudentId: leftover?.id ?? null,
-    // Unlike the heads-up, this isn't gated on the rematchWarning setting:
-    // it explains why the button visibly left students in line.
+    leftoverStudentId: plan.leftoverId,
     rematchNotice:
-      stuck.length > 0
-        ? `${listNames(stuck.map((s) => s.realName))} just chatted ${
-            stuck.length === 2 ? "with each other" : "together"
-          }, so they're still in line.`
+      plan.stuckIds.length > 0
+        ? stuckInLineNotice(plan.stuckIds.map(nameOf))
         : null,
   };
 }

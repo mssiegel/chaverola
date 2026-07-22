@@ -94,8 +94,6 @@ function activeParticipantsOf(chat: HostedChat) {
   );
 }
 
-const noop = () => {};
-
 /**
  * Live presence + matching for the host page. Mount only for REAL
  * activities — the `1234` demo renders through useHostActivityDemo and
@@ -133,6 +131,7 @@ export function useHostActivityLive({
   const [lastPartners, setLastPartners] = useState<Record<string, string[]>>(
     {}
   );
+  const [rematchNotice, setRematchNotice] = useState<string | null>(null);
   const socketRef = useRef<LobbySocket | null>(null);
   const onActivityGoneRef = useLatestRef(onActivityGone);
   const onSettingsSyncRef = useLatestRef(onSettingsSync);
@@ -153,10 +152,12 @@ export function useHostActivityLive({
     socket.on("chats:snapshot", (payload) => {
       setChats(payload.chats.map(toHostedChat));
       setLeftoverStudentId(payload.leftoverStudentId);
-      // `=== true` / `?? {}` tolerate the deploy window where an older
-      // server's snapshot has no paused / lastPartners field yet.
+      // `=== true` / `?? {}` / `?? null` tolerate the deploy window where an
+      // older server's snapshot has no paused / lastPartners / rematchNotice
+      // field yet.
       setPaused(payload.paused === true);
       setLastPartners(payload.lastPartners ?? {});
+      setRematchNotice(payload.rematchNotice ?? null);
     });
     socket.on("chat:transcript-line", ({ chatId, line }) => {
       // The one delta on the teacher wire (message lines only — a snapshot
@@ -217,6 +218,7 @@ export function useHostActivityLive({
       setConnection("connected");
       setPaused(false);
       setLastPartners({});
+      setRematchNotice(null);
     };
   }, [hostKey, onActivityGoneRef, onSettingsSyncRef]);
 
@@ -293,11 +295,12 @@ export function useHostActivityLive({
     ),
     characterIdsInUse,
     leftoverStudentId,
-    // rematchNotice / dismiss are still stubbed — Pair-everyone's notice
-    // lands in feature 9 prompt 3. isExactRematch reads the server's
-    // one-round lastPartners, projected on chats:snapshot.
-    rematchNotice: null,
-    dismissRematchNotice: noop,
+    // rematchNotice and isExactRematch both read server truth from
+    // chats:snapshot; dismissing is a real server round-trip so a second host
+    // device stays coherent (the server won't resurrect a dismissed notice).
+    rematchNotice,
+    dismissRematchNotice: () =>
+      socketRef.current?.emit("match:dismiss-rematch-notice"),
     isExactRematch: (ids) => isExactRematchIn(lastPartners, ids),
     startChat,
     pairEveryone,

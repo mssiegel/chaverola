@@ -164,6 +164,28 @@ const chatsSnapshotWhere = (
     };
     socket.on("chats:snapshot", handler);
   });
+/** Like chatsSnapshotWhere, but surfaces the rematch notice the
+ *  pair-everyone test below asserts on. */
+const rematchSnapshotWhere = (
+  socket: ClientSocket,
+  predicate: (payload: {
+    chats: ChatSnapshot[];
+    rematchNotice: string | null;
+  }) => boolean
+) =>
+  new Promise<{ chats: ChatSnapshot[]; rematchNotice: string | null }>(
+    (resolve) => {
+      const handler = (payload: {
+        chats: ChatSnapshot[];
+        rematchNotice: string | null;
+      }) => {
+        if (!predicate(payload)) return;
+        socket.off("chats:snapshot", handler);
+        resolve(payload);
+      };
+      socket.on("chats:snapshot", handler);
+    }
+  );
 /** Queue snapshots also fire on every join — wait for the one that matters. */
 const snapshotWhere = (
   socket: ClientSocket,
@@ -210,6 +232,54 @@ describe("the live lobby", () => {
     // The occupancy-mystery rule: students never see the queue.
     await sleep(100);
     expect(studentSnapshots).toEqual([]);
+  });
+
+  it("parks an exact pair in line with a dismissible rematch notice", async () => {
+    const teacher = connect({ role: "teacher", hostKey: activity.hostKey });
+    await nextSnapshot(teacher); // the initial empty queue
+
+    const studentA = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Ana",
+      nonce: "n-a",
+    });
+    const studentB = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Boaz",
+      nonce: "n-b",
+    });
+    const welcomeA = await nextWelcome(studentA);
+    const welcomeB = await nextWelcome(studentB);
+
+    // They just chatted — seed the one-round memory directly so pair-everyone
+    // must leave them in line rather than rerun the pair.
+    activity.lastPartners = {
+      [welcomeA.studentId]: [welcomeB.studentId],
+      [welcomeB.studentId]: [welcomeA.studentId],
+    };
+
+    const parked = rematchSnapshotWhere(
+      teacher,
+      (p) => p.rematchNotice !== null
+    );
+    teacher.emit("match:pair-everyone");
+    const parkedSnapshot = await parked;
+    // Nobody was paired, and the notice names both — the exact pair stays.
+    expect(parkedSnapshot.chats).toEqual([]);
+    expect(parkedSnapshot.rematchNotice).toContain("Ana");
+    expect(parkedSnapshot.rematchNotice).toContain("Boaz");
+
+    // Dismiss is server-side: the next snapshot has it cleared and it does
+    // not resurrect.
+    const cleared = rematchSnapshotWhere(
+      teacher,
+      (p) => p.rematchNotice === null
+    );
+    teacher.emit("match:dismiss-rematch-notice");
+    const clearedSnapshot = await cleared;
+    expect(clearedSnapshot.rematchNotice).toBeNull();
   });
 
   it("a 4-digit code structurally cannot open a teacher socket", async () => {

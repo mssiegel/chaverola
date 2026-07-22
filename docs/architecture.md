@@ -286,10 +286,11 @@ How the layer is put together (`server/src/live/`):
   four call sites. `createChat` filters, clamps, deals characters
   (the shared `dealCast` — one Fisher–Yates for both engines, in
   `@chaverola/shared` alongside `activeMembersBy` and the odd-count
-  `splitOddPool`), `planPairEveryone` is the demo's `pairEveryoneIn` minus
-  rematch memory, `findAutoMatchPair` runs the ready pool through the
-  shared fresh-first rule (`pickAutoMatchPair`, no exact rerun),
-  `markInactive` owns the below-2 ending, and
+  `splitOddPool`), `planPairEveryone` and `findAutoMatchPair` run the
+  eligible pool through the shared rematch-aware rules (`pairEveryonePlan`
+  and `pickAutoMatchPair` — no exact rerun formed either way, a stuck
+  exact pair/trio parked in `rematchNotice`), `markInactive` owns the
+  below-2 ending, and
   `appendLine` owns the transcript (membership guard, id minting, the
   200-line cap). The split is the payoff: the lobby layer decides who may
   command what and who hears about it; matching.ts decides what actually

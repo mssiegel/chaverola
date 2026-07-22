@@ -46,6 +46,12 @@ export interface StoredActivity {
   /** Pair-everyone's odd one out — lazily nulled at snapshot build once
    *  that seat stops waiting. */
   leftoverStudentId: string | null;
+  /** Pair-everyone left an exact pair/trio in line: the dismissible rail
+   *  notice, projected on chats:snapshot. Set by match:pair-everyone, cleared
+   *  by a manual chat:start or match:dismiss-rematch-notice. Server truth so a
+   *  second host device stays coherent. Mirrors the demo's
+   *  HostWorld.rematchNotice. */
+  rematchNotice: string | null;
   /** The teacher's world-level pause: set = paused, and the timestamp is
    *  the freeze anchor — snapshots clock against it, and resumeChats shifts
    *  the stored clocks forward by (now - pausedAt). */
@@ -160,6 +166,7 @@ export function createActivity(
     chats: [],
     lastPartners: {},
     leftoverStudentId: null,
+    rematchNotice: null,
     pausedAt: null,
   };
   if (input.scenario !== undefined) record.scenario = input.scenario;

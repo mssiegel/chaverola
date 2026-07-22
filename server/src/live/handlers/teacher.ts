@@ -1,3 +1,5 @@
+import { stuckInLineNotice } from "@chaverola/shared";
+
 import { activitySettingsSchema } from "../../schemas/activity";
 import { getByHostKey } from "../../store/activityStore";
 import { armAutoMatch, releaseAutoMatch } from "../autoMatch";
@@ -96,6 +98,9 @@ export function registerTeacherHandlers(
     if (!current) return;
     const chat = createChat(current, ids, Date.now());
     if (!chat) return; // fewer than 2 eligible — a visible no-op
+    // A manual pairing clears any stale pair-everyone rematch notice: the
+    // teacher moved on (mirrors the demo's startChat).
+    current.rematchNotice = null;
     log.info(
       {
         joinCode: data.joinCode,
@@ -119,10 +124,32 @@ export function registerTeacherHandlers(
       if (chat) sendChatStarted(current, chat);
     }
     current.leftoverStudentId = plan.leftoverStudentId;
+    // An exact pair/trio the plan couldn't repair stays in line — the rail
+    // notice explains the visible skip (names resolved off the seats). Cleared
+    // by a manual chat:start or the notice's X.
+    current.rematchNotice =
+      plan.stuckStudentIds.length > 0
+        ? stuckInLineNotice(
+            plan.stuckStudentIds.map(
+              (id) => current.seats.byId.get(id)?.name ?? ""
+            )
+          )
+        : null;
     log.info(
       { joinCode: data.joinCode, groups: plan.groups.length },
       "paired everyone"
     );
+    broadcastState(current);
+  });
+
+  socket.on("match:dismiss-rematch-notice", () => {
+    const current = getByHostKey(data.hostKey);
+    if (!current) return;
+    if (current.rematchNotice === null) return; // idempotent — nothing to clear
+    // Server-side so the next broadcastState can't resurrect it and a second
+    // host device stays coherent.
+    current.rematchNotice = null;
+    log.info({ joinCode: data.joinCode }, "rematch notice dismissed");
     broadcastState(current);
   });
 
