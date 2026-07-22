@@ -139,6 +139,9 @@ export function useLobbyPresence({
   onChatLine?: (payload: { chatId: string; line: ChatLine }) => void;
   onChatEnded?: (payload: {
     reason: "teacher" | "peer-timeout" | "self-timeout";
+    // The name reveal — present only when the teacher's reveal setting was on
+    // at end time (the one sanctioned exception to the characterIds-only wire).
+    reveal?: { characterId: string; name: string }[];
   }) => void;
   onPeerTyping?: (payload: { chatId: string; characterId: string }) => void;
   onPeerConnection?: (payload: {

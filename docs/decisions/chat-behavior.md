@@ -299,6 +299,46 @@ _Implemented in [seats.ts](../../server/src/live/seats.ts) (the seat's
 [LiveChatStage](../../client/src/components/Student/LiveChatStage.tsx) (the
 neutral ended screen and its back CTA)._
 
+_Superseded in part (the reveal) by
+[The live name reveal fires at chat-end, per the teacher's setting](#the-live-name-reveal-fires-at-chat-end-per-the-teachers-setting)
+— feature 10, 2026-07-22. The tap-to-return half still holds._
+
+### The live name reveal fires at chat-end, per the teacher's setting
+
+_2026-07-22_
+
+**Decision:** On a real activity, when the teacher's "Reveal names when a chat
+ends" setting is on, a chat's end reveals each student's peers by real name on
+the ended screen — the same panel the demo has always shown. The reveal is
+decided **per chat-end, from the setting's value at that moment**: for an
+end-of-class reveal a teacher flips the setting on, then ends the chats. Chats
+that already ended stay as they were — no retroactive reveal to students back
+in the lobby, and no separate "reveal now" control (extending
+[No reveal-names control in Chats in progress](teacher-live.md#no-reveal-names-control-in-chats-in-progress)).
+Every ending reveals — teacher-ended, round-closed, and the connection-loss
+endings (`peer-timeout`, `self-timeout`) alike — and the list is everyone ever
+in the room, including a member who dropped or was removed earlier (their name
+was captured at chat start). A refresh on the ended screen keeps the reveal:
+the resume replay re-reads the setting.
+
+**Why:** Founder calls, 2026-07-22. Per-chat-end keeps the change to a single
+sanctioned exception to the characterIds-only student wire — `chat:ended`
+carries the names only when the setting is on, pinned by `toChatEnded`'s
+allowlist test — instead of a new whole-class reveal channel that would have to
+reach students who already moved on. Revealing on every ending and listing
+everyone-ever both match the long-standing demo, so a teacher learns no new
+behavior.
+
+_Implemented in [projections.ts](../../server/src/store/projections.ts)
+(`toChatEnded`'s gated `reveal`), the three `chat:ended` emit sites
+([lobbyContext.ts](../../server/src/live/lobbyContext.ts),
+[studentSession.ts](../../server/src/live/handlers/studentSession.ts)), and the
+client reveal path
+([liveMatchState.ts](../../client/src/pages/student/join/liveMatchState.ts)
+`applyReveal`,
+[LiveChatStage](../../client/src/components/Student/LiveChatStage.tsx)). See
+[feature-10](../plans/feature-10-name-reveal.md)._
+
 ### In a group the student leaves; only a 2-person chat can be ended
 
 _2026-07-16_

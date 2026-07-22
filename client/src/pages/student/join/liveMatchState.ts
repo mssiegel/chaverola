@@ -336,3 +336,28 @@ export function clearReturnedFlash(
     ? { ...prev, returnedFlashId: null }
     : prev;
 }
+
+/** chat:ended's name reveal — the OTHER members' real names, present only
+ *  when the teacher's reveal setting was on at end time. Keyed by characterId
+ *  (a live participant's id IS their characterId). */
+export type RevealEntry = { characterId: string; name: string };
+
+/** Stamp the revealed real names onto the room. Both `peers` and `everPeers`,
+ *  so the ended screen — which reveals `everPeers` — shows every partner,
+ *  including one who dropped earlier (their name was captured at chat start).
+ *  A characterId with no match is left a mystery rather than crashing; a
+ *  non-live match is a no-op. */
+export function applyReveal(
+  prev: ActiveMatch | null,
+  reveal: RevealEntry[]
+): ActiveMatch | null {
+  if (prev?.kind !== "live") return prev;
+  const names = new Map(reveal.map((entry) => [entry.characterId, entry.name]));
+  const stamp = (p: Participant): Participant =>
+    names.has(p.id) ? { ...p, realName: names.get(p.id)! } : p;
+  return {
+    ...prev,
+    peers: prev.peers.map(stamp),
+    everPeers: prev.everPeers.map(stamp),
+  };
+}

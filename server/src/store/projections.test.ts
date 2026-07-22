@@ -8,6 +8,7 @@ import type { Seat } from "../live/seats";
 import type { StoredActivity } from "./activityStore";
 import {
   toActivity,
+  toChatEnded,
   toChatSnapshot,
   toChatStarted,
   toHostedActivity,
@@ -244,5 +245,31 @@ describe("toPeerTyping (the student typing signal)", () => {
     const typing = toPeerTyping(fullChat, "student-1");
     expect(Object.keys(typing).sort()).toEqual(["characterId", "chatId"]);
     expect(typing.characterId).toBe("brutus");
+  });
+});
+
+describe("toChatEnded (the one sanctioned name-reveal exception)", () => {
+  it("carries NO reveal — no real name reaches a peer — when the setting is off", () => {
+    const recordOff: StoredActivity = {
+      ...fullRecord,
+      settings: { ...fullRecord.settings, revealNames: false },
+    };
+    const ended = toChatEnded(fullChat, recordOff, "student-1");
+    // Exactly `reason` — the reveal key never appears, so a real name can't
+    // ride the ended wire unless the teacher asked for it.
+    expect(Object.keys(ended)).toEqual(["reason"]);
+  });
+
+  it("reveals every OTHER member — everyone ever in the room, never self — when the setting is on", () => {
+    // fullRecord uses DEFAULT_ACTIVITY_SETTINGS (revealNames on).
+    const ended = toChatEnded(fullChat, fullRecord, "student-1");
+    expect(Object.keys(ended).sort()).toEqual(["reason", "reveal"]);
+    // Rachel (student-1) is the recipient — her own name is never in her
+    // reveal. Both peers are listed, including the INACTIVE Dana (name
+    // captured at chat start survives her departure).
+    expect(ended.reveal).toEqual([
+      { characterId: "caesar", name: "Noa" },
+      { characterId: "cicero", name: "Dana" },
+    ]);
   });
 });

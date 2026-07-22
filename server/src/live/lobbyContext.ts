@@ -279,7 +279,7 @@ export function createLobbyContext(io: LobbyServer, log: Logger): LobbyContext {
         if (seat.connected) {
           io.sockets.sockets
             .get(seat.currentSocketId)
-            ?.emit("chat:ended", toChatEnded(chat));
+            ?.emit("chat:ended", toChatEnded(chat, record, member.studentId));
         } else {
           clearSeatTimers(seat);
           armSeatTimers(record, seat, timing.graceMs);

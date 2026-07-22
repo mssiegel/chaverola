@@ -77,6 +77,7 @@ git: `git log -- DECISIONS.md`.
   - [The server never inspects what students write](docs/decisions/chat-behavior.md#the-server-never-inspects-what-students-write)
   - [Leaving a live chat means leaving the activity (until messaging ships)](docs/decisions/chat-behavior.md#leaving-a-live-chat-means-leaving-the-activity-until-messaging-ships)
   - [The live ended screen returns to the lobby only on a tap, and shows no reveal](docs/decisions/chat-behavior.md#the-live-ended-screen-returns-to-the-lobby-only-on-a-tap-and-shows-no-reveal)
+  - [The live name reveal fires at chat-end, per the teacher's setting](docs/decisions/chat-behavior.md#the-live-name-reveal-fires-at-chat-end-per-the-teachers-setting)
   - [In a group the student leaves; only a 2-person chat can be ended](docs/decisions/chat-behavior.md#in-a-group-the-student-leaves-only-a-2-person-chat-can-be-ended)
   - [The composer's emoji picker stays open across inserts](docs/decisions/chat-behavior.md#the-composers-emoji-picker-stays-open-across-inserts)
   - [Every chat end explains itself](docs/decisions/chat-behavior.md#every-chat-end-explains-itself)

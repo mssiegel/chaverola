@@ -183,6 +183,13 @@ export interface ServerToClientEvents {
    *  reason stays "peer-timeout" — the survivor's perspective). */
   "chat:ended": (payload: {
     reason: "teacher" | "peer-timeout" | "self-timeout";
+    // The name reveal — present ONLY when the teacher's revealNames setting is
+    // on at end time. The single sanctioned exception to the characterIds-only
+    // student wire: each OTHER member's real name, keyed by the characterId the
+    // student already knows (name captured at chat start, so a departed member
+    // still resolves). Absent means no reveal — also what an older server sends
+    // during the deploy window, read as `?? undefined` on the client.
+    reveal?: { characterId: string; name: string }[];
   }) => void;
   /** Student only, targeted at every connected seat — chat members, lobby
    *  waiters, and wrappingUp alike (the pause is activity-wide). Connect-time

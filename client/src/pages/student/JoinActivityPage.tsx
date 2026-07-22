@@ -131,6 +131,7 @@ export function JoinActivityPage() {
     chatEnded,
     setChatEnded,
     liveEndReason,
+    revealed,
     startMatch,
     backToLobby,
     presence,
@@ -305,6 +306,7 @@ export function JoinActivityPage() {
             returnedFlashId={match.returnedFlashId}
             isEnded={chatEnded}
             endReason={liveEndReason}
+            revealNames={revealed}
             isPaused={livePaused}
             onSend={sendChatMessage}
             onTyping={sendTyping}

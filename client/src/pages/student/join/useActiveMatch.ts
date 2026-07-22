@@ -15,6 +15,7 @@ import {
   applyPeerDropped,
   applyPeerReturned,
   applyPeerTyping,
+  applyReveal,
   clearReturnedFlash,
   clearTypingPeer,
 } from "./liveMatchState";
@@ -68,6 +69,12 @@ export function useActiveMatch({
   const [liveEndReason, setLiveEndReason] = useState<
     "teacher" | "peer-timeout" | "self-timeout" | null
   >(null);
+  // Whether the ended chat revealed real names (the teacher's reveal setting
+  // was on at end time). Beside liveEndReason — it describes the ending and
+  // resets on the same edges. The names themselves land on the match's
+  // peers/everPeers via applyReveal; this flag flips the ended screen into its
+  // reveal branch.
+  const [revealed, setRevealed] = useState(false);
 
   // The typing indicator's TTL: re-armed on every relayed heartbeat, so it
   // runs from the LAST one. No cleanup effect on purpose: a stray
@@ -96,6 +103,7 @@ export function useActiveMatch({
     setMatch(null);
     setChatEnded(false);
     setLiveEndReason(null);
+    setRevealed(false);
   };
 
   // The live seat. Active through the whole seated life of a real activity
@@ -133,16 +141,18 @@ export function useActiveMatch({
       liveChatIdRef.current = null;
       setMatch(null);
       setChatEnded(false);
+      setRevealed(false);
     },
     onEnded,
     onChatStarted: (payload) => {
       if (!session) return;
       liveChatIdRef.current = payload.chatId;
       setChatEnded(false);
-      // Any held reason is stale: for an active chat there's no ending to
-      // name, and the reaped-returner replay's own chat:ended follows in
-      // order and re-sets it.
+      // Any held reason/reveal is stale: for an active chat there's no ending
+      // to name, and the reaped-returner replay's own chat:ended follows in
+      // order and re-sets them.
       setLiveEndReason(null);
+      setRevealed(false);
       setMatch((prev) =>
         applyChatStarted(
           prev,
@@ -193,6 +203,14 @@ export function useActiveMatch({
       if (liveChatIdRef.current !== null) {
         setChatEnded(true);
         setLiveEndReason(payload.reason);
+        // Names arrive only when the teacher's reveal setting was on at end
+        // time. Stamp them onto the room and flip the ended screen to reveal.
+        // Captured to a const so the setMatch closure keeps the narrowing.
+        const reveal = payload.reveal;
+        if (reveal !== undefined) {
+          setRevealed(true);
+          setMatch((prev) => applyReveal(prev, reveal));
+        }
       } else {
         // No chat:started this connection (a survivor's cold refresh onto
         // a wrappingUp seat): there's no chat to show an ended screen for
@@ -207,6 +225,7 @@ export function useActiveMatch({
     chatEnded,
     setChatEnded,
     liveEndReason,
+    revealed,
     startMatch,
     backToLobby,
     presence,

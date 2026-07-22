@@ -306,9 +306,15 @@ export interface ServerToClientEvents {
    *  from lobby:leave — stays "teacher". "self-timeout" exists only on
    *  the wire, never in the store: the per-recipient reason a reaped
    *  student hears on their return (the stored 1:1 reason stays
-   *  "peer-timeout" — the survivor's perspective). */
+   *  "peer-timeout" — the survivor's perspective).
+   *  `reveal` is the name reveal (feature 10): present ONLY when the
+   *  teacher's revealNames setting is on at end time — the one sanctioned
+   *  exception to the characterIds-only student wire. Each OTHER member's
+   *  real name, keyed by a characterId the student already knows; absent
+   *  means no reveal (also the older-server deploy default). */
   "chat:ended": (payload: {
     reason: "teacher" | "peer-timeout" | "self-timeout";
+    reveal?: { characterId: string; name: string }[];
   }) => void;
   /** Teacher room minus the sender — keeps a second host device coherent. */
   "settings:changed": (payload: { settings: ActivitySettings }) => void;
@@ -534,8 +540,9 @@ below.
   zod-validated against the same schema `POST /activities` uses and
   replaces the stored settings wholesale; the server echoes
   `settings:changed` to the teacher's **other** devices (the room minus
-  the sender). Invalid payloads are logged and dropped. `revealNames` is
-  stored but still acts on nothing. Character,
+  the sender). Invalid payloads are logged and dropped. `revealNames` now
+  acts (feature 10): while it is on, a chat's `chat:ended` reveals each
+  peer's real name, read live at end time. Character,
   scenario, and host-name edits stay local to the teacher's page —
   they'd have to reach students' lobbies, which is a bigger feature than
   a settings echo.
@@ -610,13 +617,17 @@ Matching extends the same rule to chats, and this is the load-bearing
 one: **the student wire carries characterIds and nothing else.** A
 student learns their own `selfCharacterId` and their peers as bare
 `{ characterId }` objects — never a peer's real name, never a peer's
-studentId, not even at the end (there is no reveal yet). Messages follow
-the same split: a `ChatLine` attributes its sender by `characterId` only,
-even though the server stores the line under the sender's studentId. The
-who-am-I-talking-to mystery is the product, so it is pinned structurally:
-`toChatStarted`'s peers, everPeers, and lines are all allowlist-tested
-(`["characterId"]` for peers; `["characterId","id","sentAt","text"]` for
-lines). Real names live only on `ChatSnapshot` and `ChatTranscriptLine`,
+studentId. Messages follow the same split: a `ChatLine` attributes its
+sender by `characterId` only, even though the server stores the line under
+the sender's studentId. The who-am-I-talking-to mystery is the product, so
+it is pinned structurally: `toChatStarted`'s peers, everPeers, and lines are
+all allowlist-tested (`["characterId"]` for peers;
+`["characterId","id","sentAt","text"]` for lines). The **one** sanctioned
+exception is the name reveal (feature 10): when the teacher's `revealNames`
+setting is on, `chat:ended` carries each peer's real name at chat end —
+`toChatEnded` is allowlist-tested both ways (`["reason"]` when off,
+`["reason","reveal"]` when on), so a real name reaches a peer only when the
+teacher asked for it. Real names live only on `ChatSnapshot` and `ChatTranscriptLine`,
 which go to the teacher's **room** and nowhere else — the same
 teacher-only surface as `QueueEntry`, and pinned by a socket test: a
 student socket hears neither `chats:snapshot` nor `chat:transcript-line`.

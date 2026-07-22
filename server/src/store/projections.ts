@@ -303,13 +303,33 @@ export function toChatUpdate(
   };
 }
 
-export function toChatEnded(chat: StoredChat): {
+export function toChatEnded(
+  chat: StoredChat,
+  activity: StoredActivity,
+  studentId: string
+): {
   reason: "teacher" | "peer-timeout";
+  reveal?: { characterId: string; name: string }[];
 } {
+  // The stored reason is the truth — which is also what makes the
+  // wrappingUp resume re-delivery honest for free. The fallback keeps
+  // the projector total if it's ever called on a not-yet-ended chat.
+  const reason = chat.endReason ?? "teacher";
+  // The name reveal — the ONE sanctioned exception to the characterIds-only
+  // student wire. Names leave the server only when the teacher's revealNames
+  // setting is on at end time, and only the OTHER members' (the recipient
+  // knows their own). Omitted entirely when off, so a real name never reaches
+  // a peer unasked-for — pinned by projections.test.ts.
+  if (!activity.settings.revealNames) {
+    return { reason };
+  }
   return {
-    // The stored reason is the truth — which is also what makes the
-    // wrappingUp resume re-delivery honest for free. The fallback keeps
-    // the projector total if it's ever called on a not-yet-ended chat.
-    reason: chat.endReason ?? "teacher",
+    reason,
+    reveal: chat.members
+      .filter((member) => member.studentId !== studentId)
+      .map((member) => ({
+        characterId: member.characterId,
+        name: member.name,
+      })),
   };
 }

@@ -84,12 +84,26 @@ export function registerStudentSession(
           toChatStarted(chat, record, reaped.studentId, Date.now())
         );
       }
-      socket.emit("chat:ended", { reason: "self-timeout" });
+      socket.emit(
+        "chat:ended",
+        // The reveal rides along when the setting is on — the returner learns
+        // who they were really with too. `chat` can be gone (record swept);
+        // then there's nothing to reveal. The reason stays the per-recipient
+        // "self-timeout", never toChatEnded's stored one.
+        chat
+          ? {
+              ...toChatEnded(chat, record, reaped.studentId),
+              reason: "self-timeout",
+            }
+          : { reason: "self-timeout" }
+      );
     } else {
       const endedChat = findEndedChatOf(record, data.studentId);
       socket.emit(
         "chat:ended",
-        endedChat ? toChatEnded(endedChat) : { reason: "teacher" }
+        endedChat
+          ? toChatEnded(endedChat, record, data.studentId)
+          : { reason: "teacher" }
       );
     }
   }

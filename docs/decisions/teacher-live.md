@@ -482,6 +482,10 @@ host-name edits remain local-only exactly as recorded in
 [The live-settings panel stays on real activities, editing the teacher's local view](#the-live-settings-panel-stays-on-real-activities-editing-the-teachers-local-view)
 — that entry's settings half retires when this ships.
 
+_Update (2026-07-22): the `revealNames` half no longer holds — feature 10
+reveals names at chat-end when the setting is on, see
+[The live name reveal fires at chat-end, per the teacher's setting](chat-behavior.md#the-live-name-reveal-fires-at-chat-end-per-the-teachers-setting)._
+
 **Why:** Real auto-match forces the question: the switch and its seconds
 must reach the server or the rail lies. Syncing the whole settings object is
 one event and stops the panel silently reverting on refresh; syncing only

@@ -9,7 +9,8 @@ import type { ChatMessage, ChatRoomState, Participant } from "@/types/chat";
 interface LiveChatStageProps {
   /** The student's own seat in the room (realName from the session). */
   self: Participant;
-  /** Peers still in the room. Characters only — realName stays "". */
+  /** Peers still in the room. Characters only during the chat — realName is
+   *  "" until the reveal stamps it at end time (when revealNames is on). */
   peers: Participant[];
   /** Everyone ever in the room — keeps colors stable across a drop. */
   everPeers: Participant[];
@@ -31,6 +32,11 @@ interface LiveChatStageProps {
    *  student's own (the 📶 wrap-up on their return), "teacher" everything
    *  else. Null while the chat is going. */
   endReason: "teacher" | "peer-timeout" | "self-timeout" | null;
+  /** Whether this ended chat revealed real names — true only when the
+   *  teacher's "Reveal names when a chat ends" setting was on at end time.
+   *  The names ride chat:ended and are already stamped onto `everPeers`; this
+   *  flag flips the ended screen from the secret box to the reveal card. */
+  revealNames: boolean;
   /** The teacher's activity-wide pause (activity:paused / lobby:welcome).
    *  Chatbox freezes the room: banner, locked composer. Ended wins. */
   isPaused: boolean;
@@ -60,10 +66,12 @@ interface LiveChatStageProps {
  * page hands this stage the offline map and the stage ticks the countdown.
  * The ending tells the truth as well — chat:ended's reason renders the 🔌
  * wrap-up when a 1:1 partner's grace ran out (and the 📶 one when it was
- * this student's own, replayed on their return), not the teacher's 🎓. Still
- * quiet on the rest, on purpose: no name reveal (its own later feature).
- * Exits are honest too: walking out mid-chat leaves the whole activity, and
- * the confirm says so.
+ * this student's own, replayed on their return), not the teacher's 🎓. The
+ * name reveal is real too (feature 10): when the teacher's "Reveal names when
+ * a chat ends" setting is on, chat:ended carries each peer's real name and the
+ * ended screen names who the student was really with — otherwise the neutral
+ * secret box holds. Exits are honest too: walking out mid-chat leaves the
+ * whole activity, and the confirm says so.
  */
 export function LiveChatStage({
   self,
@@ -75,6 +83,7 @@ export function LiveChatStage({
   returnedFlashId,
   isEnded,
   endReason,
+  revealNames,
   isPaused,
   onSend,
   onTyping,
@@ -153,7 +162,7 @@ export function LiveChatStage({
     <div className="h-[min(70dvh,620px)] w-full animate-in duration-500 fade-in slide-in-from-bottom-4 motion-reduce:animate-none">
       <Chatbox
         chat={chat}
-        revealNames={false}
+        revealNames={revealNames}
         onSend={onSend}
         onTyping={onTyping}
         onEndChat={onLeaveActivity}

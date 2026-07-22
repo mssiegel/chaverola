@@ -461,8 +461,10 @@ describe("the live lobby", () => {
     teacher.emit("chat:end", { chatId: chat.id });
 
     const [payloadA, payloadB] = await Promise.all([endedAtA, endedAtB]);
-    expect(payloadA).toEqual({ reason: "teacher" });
-    expect(payloadB).toEqual({ reason: "teacher" });
+    // Reason only — the default settings reveal names, so chat:ended also
+    // carries the reveal here (its exact shape is pinned in projections.test).
+    expect(payloadA.reason).toBe("teacher");
+    expect(payloadB.reason).toBe("teacher");
     await endedSnapshot;
 
     expect(chat.status).toBe("ended");
@@ -518,7 +520,7 @@ describe("the live lobby", () => {
     );
     teacher.emit("chats:end-all");
     for (const payload of await allEnded) {
-      expect(payload).toEqual({ reason: "teacher" });
+      expect(payload.reason).toBe("teacher");
     }
     await bothEndedSnapshot;
     expect(first.status).toBe("ended");
@@ -661,7 +663,7 @@ describe("the live lobby", () => {
       nextChatEnded(resumed),
     ]);
     expect(welcome.studentId).toBe(welcomeA.studentId);
-    expect(ended).toEqual({ reason: "teacher" });
+    expect(ended.reason).toBe("teacher");
   });
 
   it("measures the chat:send cap in code points, not UTF-16 units", async () => {
@@ -1033,7 +1035,7 @@ describe("the live lobby", () => {
       order.push("started");
       started = p;
     });
-    const ended = await new Promise((resolve) => {
+    const ended = await new Promise<{ reason: string }>((resolve) => {
       resumed.once("chat:ended", (p) => {
         order.push("ended");
         resolve(p);
@@ -1055,7 +1057,7 @@ describe("the live lobby", () => {
     expect(started!.selfCharacterId).toBe(memberA.characterId);
     expect(started!.peers).toEqual([{ characterId: memberB.characterId }]);
     expect(started!.lines.map((l) => l.text)).toEqual(["Et tu?"]);
-    expect(ended).toEqual({ reason: "self-timeout" });
+    expect(ended.reason).toBe("self-timeout");
 
     // Off the queue until their own tap.
     const newSeat = activity.seats.byId.get(welcome!.studentId)!;
