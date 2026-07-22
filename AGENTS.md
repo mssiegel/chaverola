@@ -92,7 +92,7 @@ Load-bearing — trip over them before you break one:
 
 **Student join / lobby**
 
-- Files: [client/src/pages/student/JoinActivityPage.tsx](client/src/pages/student/JoinActivityPage.tsx) (code → name → lobby → chatting → ended, one URL), `pages/student/useLobbyPresence.ts` (the live seat), `components/Student/`, `lib/studentSession.ts`, `lib/useActivityLookup.ts`, `lib/useBackGuard.ts`.
+- Files: [client/src/pages/student/JoinActivityPage.tsx](client/src/pages/student/JoinActivityPage.tsx) (the shell: stage machine + render dispatch, code → name → lobby → chatting → ended, one URL) over `pages/student/join/` (stage cards, `useActiveMatch`/`useDemoLobby`, and the pure `liveMatchState.ts` socket reducers), `pages/student/useLobbyPresence.ts` (the live seat), `components/Student/`, `lib/studentSession.ts`, `lib/useActivityLookup.ts`, `lib/useBackGuard.ts`.
 - Invariants: characterIds-only wire · 120s grace · `LiveChatStage` is a split, not a hook · `scaledMs` is demo-only.
 - Decisions: [student-join.md](docs/decisions/student-join.md), [chat-behavior.md](docs/decisions/chat-behavior.md).
 - Verify: `verify:up --scale 10` + a two-tab live flow (or `?fast=10` for the demo), desktop and phone widths.
@@ -106,7 +106,8 @@ Load-bearing — trip over them before you break one:
 
 **Wire protocol change**
 
-- Files: `shared/src/socket.ts` / `shared/src/api.ts` (the contract) → `server/src/store/projections.ts` (a field-by-field literal, never a spread) → the owning handler module in `server/src/live/handlers/` (`teacher.ts`, or `studentSession.ts` / `studentChat.ts`) → client registration in `useLobbyPresence.ts` (student) or `useHostActivityLive.ts` (teacher).
+- Files: `shared/src/socket.ts` / `shared/src/api.ts` (the contract) → `server/src/store/projections.ts` (a field-by-field literal, never a spread) → the owning handler module in `server/src/live/handlers/` (`teacher.ts`, or `studentSession.ts` / `studentChat.ts`) → client registration in `useLobbyPresence.ts` (student) or `useHostActivityLive.ts` (teacher) → a student reducer in `pages/student/join/liveMatchState.ts` wired in `join/useActiveMatch.ts`.
+- HOWTO: the seven touch points worked end to end (with `chat:peer-connection` as the example) — [docs/adding-a-wire-event.md](docs/adding-a-wire-event.md).
 - Invariants: characterIds-only wire — add the allowlist pin in `projections.test.ts` (mandatory).
 - **Deploy race:** `shared/` is in both deploy triggers, so one push races two pipelines and Socket.IO drops an unhandled event **silently**. Poll `/healthz` for the new server commit before testing; split a client-ahead-of-server window into separate pushes (see Working Rules).
 - Decisions: [backend-api.md](docs/decisions/backend-api.md).
