@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import { CHAT_TRANSCRIPT_MAX_LINES } from "@chaverola/shared";
+import { CHAT_TRANSCRIPT_MAX_LINES, activeMembersBy } from "@chaverola/shared";
 import type {
   ActivitySettings,
   ChatSnapshot,
@@ -79,12 +79,14 @@ function toHostedChat(snapshot: ChatSnapshot): HostedChat {
   };
 }
 
-/** The members still actually in the room. A local copy of hostWorld's
- *  activeChatMembers on purpose — the tripwire above forbids importing
- *  simulation code here. */
+/** The members still actually in the room — the shared rule, not a copy of
+ *  hostWorld's simulation. It's `@chaverola/shared`, not `hostWorld.ts`, so
+ *  the types-only tripwire above still holds. */
 function activeParticipantsOf(chat: HostedChat) {
-  return chat.participants.filter(
-    (p) => !chat.inactiveStudentIds.includes(p.id)
+  return activeMembersBy(
+    chat.participants,
+    chat.inactiveStudentIds,
+    (p) => p.id
   );
 }
 

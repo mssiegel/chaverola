@@ -5,6 +5,43 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
+### One implementation of the pure matching rules, shared by both engines
+
+_2026-07-22_
+
+**Decision:** The genuinely-identical pure matching primitives live once in
+`@chaverola/shared`, and both the server's `matching.ts` and the client's
+`hostWorld.ts` demo import them instead of keeping mirrored copies:
+`activeMembersBy` (active-membership filtering), `dealCast` (a chat of N takes
+the roster's first N characters, shuffled), and `splitOddPool` (pair-everyone's
+odd-count trio/leftover rule). `shuffled` (Fisher–Yates) moves to `shared/`
+too. What stays divergent is named, not drifted: the server's
+`findAutoMatchPair` is greedy in queue order while the demo prefers fresh
+partners (rematch memory is client-only, its own later feature), the
+pair-everyone pairing loop with its swap-repair and `rematchNotice` stays in
+the demo, and id minting stays split (`randomUUID` server, a counter client).
+`tickWorld`, `seedWorld`, and the rest of the simulation stay in `hostWorld.ts`.
+
+**Why:** Speedup planning (2026-07-21). The "mirror, never import" rule guarded
+two real hazards — the demo's simulation transitions running against real
+students, and a server dependency on client code — and a neutral, zero-dep
+module in `shared/` (already imported by both sides, buildless) triggers
+neither. The precedent is `LOBBY_GRACE_SECONDS`, which already retired the
+demo's mirror of the grace window. Keeping four byte-identical copies in
+lockstep by prose was the cost being paid; the extraction removes the copies,
+and naming the divergences keeps the deliberate differences from reading as
+drift. The invariant "the live engine imports only types from `hostWorld`" is
+untouched — `useHostActivityLive` now takes `activeMembersBy` from `shared/`,
+not from the simulation.
+
+_Implemented in [matchRules.ts](../../shared/src/matchRules.ts) and
+[random.ts](../../shared/src/random.ts) (the shared primitives),
+[matching.ts](../../server/src/live/matching.ts) (server wrappers + the
+rewritten header naming what's shared and what diverges), and
+[hostWorld.ts](../../client/src/components/Teacher/HostActivity/hostWorld.ts) plus
+[useHostActivityLive.ts](../../client/src/components/Teacher/HostActivity/useHostActivityLive.ts)
+(client wrappers)._
+
 ### Localhost real flows compress through a server-side time-scale knob; production is pinned to 1
 
 _2026-07-21_

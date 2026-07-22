@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 
-import { CHAT_TRANSCRIPT_MAX_LINES } from "@chaverola/shared";
+import {
+  CHAT_TRANSCRIPT_MAX_LINES,
+  activeMembersBy,
+  dealCast,
+  splitOddPool,
+} from "@chaverola/shared";
 
 import type { StoredActivity } from "../store/activityStore";
 import type { Seat } from "./seats";
@@ -9,12 +14,25 @@ import type { Seat } from "./seats";
   The matching layer, pure and io-free (seats.ts's charter): every state
   transition on an activity's chats lives here, testable without a socket in
   sight. lobby.ts owns the io server, the emits, and the auto-match timer;
-  this module owns the chat records and the pairing rules. The rules mirror
-  hostWorld.ts's demo simulation (read, never import) minus rematch memory —
-  chats end two ways (the teacher's endChat, and markInactive's below-2
-  rule) and the whole class pauses as one switch (pauseChats/resumeChats),
-  but the server still tracks no last-partners, so pairing stays greedy in
-  queue order. Rematch memory is its own later feature.
+  this module owns the chat records and the pairing rules.
+
+  The genuinely-pure rules are ONE implementation in @chaverola/shared —
+  `activeMembersBy` (active-membership filtering, behind `activeMembers`
+  below), `dealCast` (a chat of N takes the roster's first N characters,
+  shuffled), and `splitOddPool` (planPairEveryone's odd-count rule) — imported
+  by both this layer and hostWorld.ts's demo. A neutral zero-dep module, not a
+  server dependency on client code, so the old "mirror, never import" tripwire
+  doesn't apply: it guarded against the demo's simulation transitions running
+  on real students, and shared/ has none of those. The precedent is
+  LOBBY_GRACE_SECONDS.
+
+  What deliberately diverges (named, not drifted): `findAutoMatchPair` is
+  greedy in queue order — the demo prefers fresh partners via last-partner
+  memory, which the server doesn't track (rematch memory is its own later
+  feature). Chats end two ways (the teacher's endChat, and markInactive's
+  below-2 rule); the whole class pauses as one switch
+  (pauseChats/resumeChats); ids are minted with randomUUID, not the demo's
+  counter.
 */
 
 /** One stored transcript line. Deliberately lean: no characterId, no name
@@ -46,8 +64,10 @@ export interface StoredChat {
 
 /** The members still actually in the room. */
 export function activeMembers(chat: StoredChat): StoredChat["members"] {
-  return chat.members.filter(
-    (m) => !chat.inactiveStudentIds.includes(m.studentId)
+  return activeMembersBy(
+    chat.members,
+    chat.inactiveStudentIds,
+    (m) => m.studentId
   );
 }
 
@@ -78,22 +98,6 @@ export function eligibleWaiting(activity: StoredActivity): Seat[] {
 }
 
 /**
- * Seat students on the activity's characters: a chat of N always uses the
- * roster's first N characters (the setup form's promise about characters 3
- * and 4), and WHO gets WHICH is random. A local Fisher–Yates — never import
- * client code for it.
- */
-function shuffled<T>(items: readonly T[]): T[] {
-  const copy = [...items];
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    // Both indexes are within bounds by construction.
-    [copy[i], copy[j]] = [copy[j]!, copy[i]!];
-  }
-  return copy;
-}
-
-/**
  * Start a chat: filter to eligible students, clamp to min(4, roster length)
  * — a teacher's locally-edited roster can diverge, so leftovers visibly stay
  * in the queue — and no-op under 2. Consuming the leftover clears the
@@ -110,7 +114,7 @@ export function createChat(
   const seated = requested.slice(0, Math.min(4, activity.characters.length));
   if (seated.length < 2) return null;
 
-  const cast = shuffled(activity.characters.slice(0, seated.length));
+  const cast = dealCast(activity.characters, seated.length);
   const chat: StoredChat = {
     id: randomUUID(),
     members: seated.map((seat, index) => ({
@@ -148,15 +152,7 @@ export function planPairEveryone(
   const pool = eligibleWaiting(activity).map((seat) => seat.studentId);
   if (pool.length < 2) return null;
 
-  let leftover: string | null = null;
-  let trio: string[] | null = null;
-  if (pool.length % 2 === 1) {
-    if (activity.characters.length >= 3) {
-      trio = pool.splice(pool.length - 3, 3);
-    } else {
-      leftover = pool.pop() ?? null;
-    }
-  }
+  const { leftover, trio } = splitOddPool(pool, activity.characters.length);
 
   const groups: string[][] = [];
   for (let i = 0; i + 1 < pool.length; i += 2) {

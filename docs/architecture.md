@@ -272,8 +272,9 @@ How the layer is put together (`server/src/live/`):
   not wrapping up, in join order) and every path funnels through it, so
   "reconnecting students are unmatchable" is enforced once instead of at
   four call sites. `createChat` filters, clamps, deals characters
-  (a local Fisher–Yates — client code is read for the rules, never
-  imported), `planPairEveryone` is the demo's `pairEveryoneIn` minus
+  (the shared `dealCast` — one Fisher–Yates for both engines, in
+  `@chaverola/shared` alongside `activeMembersBy` and the odd-count
+  `splitOddPool`), `planPairEveryone` is the demo's `pairEveryoneIn` minus
   rematch memory, `findAutoMatchPair` picks the two longest waiting past
   the threshold, `markInactive` owns the below-2 ending, and
   `appendLine` owns the transcript (membership guard, id minting, the

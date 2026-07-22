@@ -1,7 +1,11 @@
 /*
   Shared helpers for the demo engines (useChatDemo, useHostActivityDemo):
   session-unique ids and the random picks that keep the simulations varied.
+  `shuffled` lives in @chaverola/shared now (one Fisher–Yates for both engines)
+  and is re-exported here so the client keeps one random surface.
 */
+
+export { shuffled } from "@chaverola/shared";
 
 let idSeq = 0;
 
@@ -20,15 +24,4 @@ export function randInt(min: number, max: number): number {
 export function randomFrom<T>(items: readonly T[]): T {
   // Callers always pass non-empty arrays, and the index is < items.length.
   return items[Math.floor(Math.random() * items.length)]!;
-}
-
-/** A shuffled copy (Fisher–Yates); the input stays untouched. */
-export function shuffled<T>(items: readonly T[]): T[] {
-  const result = [...items];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    // Both indexes are within bounds by construction.
-    [result[i], result[j]] = [result[j]!, result[i]!];
-  }
-  return result;
 }

@@ -1,6 +1,7 @@
+import { activeMembersBy, dealCast, splitOddPool } from "@chaverola/shared";
 import type { LobbyConnectionState } from "@chaverola/shared";
 
-import { nextId, randInt, shuffled } from "@/lib/random";
+import { nextId, randInt } from "@/lib/random";
 import { HOST_SEED_CHATS, HOST_STUDENT_NAMES } from "@/mockData";
 import type { HostedActivity } from "@/types/activity";
 import type {
@@ -96,8 +97,10 @@ export interface HostWorld {
 
 /** The members still actually in the room. */
 export function activeChatMembers(chat: HostedChat): Participant[] {
-  return chat.participants.filter(
-    (p) => !chat.inactiveStudentIds.includes(p.id)
+  return activeMembersBy(
+    chat.participants,
+    chat.inactiveStudentIds,
+    (p) => p.id
   );
 }
 
@@ -157,7 +160,7 @@ function assignCharacters(
   students: RosterStudent[],
   activity: HostedActivity
 ): Participant[] {
-  const cast = shuffled(activity.characters.slice(0, students.length));
+  const cast = dealCast(activity.characters, students.length);
   return students.map((student, index) => ({
     id: student.id,
     realName: student.realName,
@@ -286,18 +289,10 @@ export function pairEveryoneIn(
   // their seat rides out the grace window.
   const pool = w.queue.filter((s) => s.connection === "connected");
   if (pool.length < 2) return w;
-  let leftover: WaitingStudent | null = null;
-  let trio: WaitingStudent[] | null = null;
-  if (pool.length % 2 === 1) {
-    if (activity.characters.length >= 3) {
-      // Odd count with a 3rd character: the last three form a group so
-      // nobody sits out.
-      trio = pool.splice(pool.length - 3, 3);
-    } else {
-      // Only two characters: the newest joiner stays first in line.
-      leftover = pool.pop() ?? null;
-    }
-  }
+  // Odd count sheds a trailing trio (a 3rd character exists) or the newest
+  // joiner as the leftover (two-character roster) — the shared split rule.
+  // Both stay reassignable: the swap-repair below trades trio/leftover seats.
+  let { leftover, trio } = splitOddPool(pool, activity.characters.length);
 
   const pairs: [WaitingStudent, WaitingStudent][] = [];
   while (pool.length >= 2) {
