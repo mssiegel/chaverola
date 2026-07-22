@@ -508,6 +508,13 @@ queue order, no `lastPartners`); the client's live engine keeps the stubs
 [useHostActivityLive](../../client/src/components/Teacher/HostActivity/useHostActivityLive.ts),
 so the notices have somewhere to land when ending ships._
 
+**Superseded 2026-07-22 by [feature 9](../plans/feature-9-rematch-memory.md).**
+The premise no longer holds: ending shipped (feature 6), so an exact rerun is
+reachable. The server now tracks one-round `lastPartners` (maintained in
+`createChat`) and projects it on `chats:snapshot`, so the live rematch heads-up
+fires (prompt 1); auto-match and Pair-everyone stop re-pairing the same group,
+and the left-in-line notice fires (prompts 2–3).
+
 ### A dropped student keeps their seat for 2 minutes, marked and unmatchable
 
 _2026-07-19_

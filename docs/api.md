@@ -245,6 +245,7 @@ export interface ServerToClientEvents {
     chats: ChatSnapshot[];
     leftoverStudentId: string | null; // pair-everyone's odd one out
     paused: boolean; // the world-level pause — keeps a second host device coherent
+    lastPartners: Record<string, string[]>; // waiting seats' previous partners — feeds the rematch heads-up (teacher room only)
   }) => void;
   /** Student only, targeted; re-sent on every resume while matched.
    *  `lines` is the transcript backlog (authoritative on every delivery);

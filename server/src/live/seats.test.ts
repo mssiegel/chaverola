@@ -26,6 +26,7 @@ function makeActivity(): StoredActivity {
     lastSeenAt: 0,
     seats: createSeatState(),
     chats: [],
+    lastPartners: {},
     leftoverStudentId: null,
     pausedAt: null,
   };

@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
-import { CHAT_TRANSCRIPT_MAX_LINES, activeMembersBy } from "@chaverola/shared";
+import {
+  CHAT_TRANSCRIPT_MAX_LINES,
+  activeMembersBy,
+  isExactRematchIn,
+} from "@chaverola/shared";
 import type {
   ActivitySettings,
   ChatSnapshot,
@@ -126,6 +130,9 @@ export function useHostActivityLive({
   const [connection, setConnection] =
     useState<LobbyConnectionState>("connected");
   const [paused, setPaused] = useState(false);
+  const [lastPartners, setLastPartners] = useState<Record<string, string[]>>(
+    {}
+  );
   const socketRef = useRef<LobbySocket | null>(null);
   const onActivityGoneRef = useLatestRef(onActivityGone);
   const onSettingsSyncRef = useLatestRef(onSettingsSync);
@@ -146,9 +153,10 @@ export function useHostActivityLive({
     socket.on("chats:snapshot", (payload) => {
       setChats(payload.chats.map(toHostedChat));
       setLeftoverStudentId(payload.leftoverStudentId);
-      // `=== true` tolerates the deploy window where an older server's
-      // snapshot has no paused field yet.
+      // `=== true` / `?? {}` tolerate the deploy window where an older
+      // server's snapshot has no paused / lastPartners field yet.
       setPaused(payload.paused === true);
+      setLastPartners(payload.lastPartners ?? {});
     });
     socket.on("chat:transcript-line", ({ chatId, line }) => {
       // The one delta on the teacher wire (message lines only — a snapshot
@@ -208,6 +216,7 @@ export function useHostActivityLive({
       setLeftoverStudentId(null);
       setConnection("connected");
       setPaused(false);
+      setLastPartners({});
     };
   }, [hostKey, onActivityGoneRef, onSettingsSyncRef]);
 
@@ -284,12 +293,12 @@ export function useHostActivityLive({
     ),
     characterIdsInUse,
     leftoverStudentId,
-    // No rematch memory server-side: the server tracks no last-partners.
-    // Now that chats end, exact-rematch is reachable — its own later
-    // feature (see DECISIONS).
+    // rematchNotice / dismiss are still stubbed — Pair-everyone's notice
+    // lands in feature 9 prompt 3. isExactRematch reads the server's
+    // one-round lastPartners, projected on chats:snapshot.
     rematchNotice: null,
     dismissRematchNotice: noop,
-    isExactRematch: () => false,
+    isExactRematch: (ids) => isExactRematchIn(lastPartners, ids),
     startChat,
     pairEveryone,
     endChat,

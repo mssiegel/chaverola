@@ -39,6 +39,7 @@ function makeActivity(characters: Character[]): StoredActivity {
     lastSeenAt: 0,
     seats: createSeatState(),
     chats: [],
+    lastPartners: {},
     leftoverStudentId: null,
     pausedAt: null,
   };
@@ -134,6 +135,26 @@ describe("createChat", () => {
       "caesar",
       "cicero",
     ]);
+  });
+
+  it("writes one-round lastPartners and overwrites on the next chat", () => {
+    const activity = makeActivity(ROSTER);
+    const a = addSeat(activity);
+    const b = addSeat(activity);
+    const c = addSeat(activity);
+
+    const first = createChat(activity, [a.studentId, b.studentId], 10_000);
+    expect(activity.lastPartners[a.studentId]).toEqual([b.studentId]);
+    expect(activity.lastPartners[b.studentId]).toEqual([a.studentId]);
+
+    // End it so A is matchable again, then pair A with C: A's memory is
+    // overwritten — A+B is no longer A's previous round (the
+    // Bob→Rachel→Shlomo reset the whole heads-up depends on).
+    endChat(activity, first!.id);
+    createChat(activity, [a.studentId, c.studentId], 20_000);
+    expect(activity.lastPartners[a.studentId]).toEqual([c.studentId]);
+    expect(activity.lastPartners[c.studentId]).toEqual([a.studentId]);
+    expect(activity.lastPartners[b.studentId]).toEqual([a.studentId]);
   });
 });
 

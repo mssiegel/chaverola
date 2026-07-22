@@ -16,6 +16,7 @@ import {
   toChatStarted,
   toChatUpdate,
   toPeerConnection,
+  toRematchPartners,
 } from "../store/projections";
 import {
   activeMembers,
@@ -86,6 +87,7 @@ export interface LobbyContext {
     chats: ChatSnapshot[];
     leftoverStudentId: string | null;
     paused: boolean;
+    lastPartners: Record<string, string[]>;
   };
   broadcastState(record: StoredActivity): void;
   sendPeerConnection(
@@ -128,6 +130,7 @@ export function createLobbyContext(io: LobbyServer, log: Logger): LobbyContext {
       chats: record.chats.map((chat) => toChatSnapshot(chat, record, now)),
       leftoverStudentId: record.leftoverStudentId,
       paused: record.pausedAt !== null,
+      lastPartners: toRematchPartners(record),
     };
   }
 

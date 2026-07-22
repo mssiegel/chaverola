@@ -9,7 +9,7 @@ import type {
   QueueEntry,
 } from "@chaverola/shared";
 
-import { activeMembers } from "../live/matching";
+import { activeMembers, eligibleWaiting } from "../live/matching";
 import type { StoredChat, StoredChatLine } from "../live/matching";
 import { timing } from "../live/timing";
 import type { Seat } from "../live/seats";
@@ -47,6 +47,21 @@ export function toHostedActivity(stored: StoredActivity): HostedActivity {
     activity.teacherEmail = stored.teacherEmail;
   }
   return activity;
+}
+
+/** Waiting seats' previous partners, for the teacher's rematch heads-up:
+ *  `lastPartners` scoped to the currently-selectable (eligibleWaiting) pool,
+ *  so the payload never carries departed students' stale keys. Teacher-room
+ *  only. */
+export function toRematchPartners(
+  activity: StoredActivity
+): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+  for (const seat of eligibleWaiting(activity)) {
+    const partners = activity.lastPartners[seat.studentId];
+    if (partners !== undefined) result[seat.studentId] = partners;
+  }
+  return result;
 }
 
 /** A drop reads "reconnecting" only past the broadcast delay — a refresh

@@ -1,4 +1,9 @@
-import { activeMembersBy, dealCast, splitOddPool } from "@chaverola/shared";
+import {
+  activeMembersBy,
+  dealCast,
+  isExactRematchIn,
+  splitOddPool,
+} from "@chaverola/shared";
 import type { LobbyConnectionState } from "@chaverola/shared";
 
 import { nextId, randInt } from "@/lib/random";
@@ -122,26 +127,6 @@ function isFreshPair(
     !wereLastPartnersIn(lastPartners, aId, bId) &&
     !wereLastPartnersIn(lastPartners, bId, aId)
   );
-}
-
-/**
- * True only when EVERY member's previous chat was exactly this group. A
- * partial overlap — Bob's last chat was Rachel, but Rachel has chatted since —
- * doesn't count: nobody would be rerunning their own last round.
- */
-export function isExactRematchIn(
-  lastPartners: Record<string, string[]>,
-  ids: string[]
-): boolean {
-  if (ids.length < 2) return false;
-  return ids.every((id) => {
-    const last = lastPartners[id];
-    return (
-      last !== undefined &&
-      last.length === ids.length - 1 &&
-      ids.every((other) => other === id || last.includes(other))
-    );
-  });
 }
 
 /** "A and B" / "A, B, and C" — shared by the heads-up and the rail notice. */

@@ -55,3 +55,23 @@ export function splitOddPool<T>(
   }
   return { leftover, trio };
 }
+
+/**
+ * True only when EVERY member's previous chat was exactly this group. A
+ * partial overlap — Bob's last chat was Rachel, but Rachel has chatted since —
+ * doesn't count: nobody would be rerunning their own last round.
+ */
+export function isExactRematchIn(
+  lastPartners: Record<string, string[]>,
+  ids: string[]
+): boolean {
+  if (ids.length < 2) return false;
+  return ids.every((id) => {
+    const last = lastPartners[id];
+    return (
+      last !== undefined &&
+      last.length === ids.length - 1 &&
+      ids.every((other) => other === id || last.includes(other))
+    );
+  });
+}

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { isExactRematchIn } from "@chaverola/shared";
+
 import { DEFAULT_ACTIVITY_SETTINGS } from "@/lib/activitySetup";
 import type { ActivitySettings, HostedActivity } from "@/types/activity";
 
@@ -7,7 +9,6 @@ import {
   AUTO_MATCH_GAP_SECONDS,
   createChat,
   findAutoMatchPair,
-  isExactRematchIn,
   pairEveryoneIn,
   tickWorld,
   type HostWorld,

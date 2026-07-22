@@ -36,6 +36,7 @@ const fullRecord: StoredActivity = {
   lastSeenAt: 1_000,
   seats: createSeatState(),
   chats: [],
+  lastPartners: {},
   leftoverStudentId: null,
   pausedAt: null,
 };

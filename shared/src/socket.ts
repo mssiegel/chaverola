@@ -105,6 +105,10 @@ export interface ServerToClientEvents {
     chats: ChatSnapshot[];
     leftoverStudentId: string | null; // pair-everyone's odd one out
     paused: boolean; // the world-level pause — keeps a second host device coherent
+    // Waiting seats' previous partners (studentId → prior chat's others),
+    // teacher-room only; feeds the rematch heads-up. `?? {}` on the client
+    // tolerates an older server during a deploy.
+    lastPartners: Record<string, string[]>;
   }) => void;
   /** Student only, targeted; re-sent on every resume while matched, and
    *  replayed once for a chat the recipient was reaped out of (immediately

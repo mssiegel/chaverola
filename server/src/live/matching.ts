@@ -27,9 +27,10 @@ import type { Seat } from "./seats";
   LOBBY_GRACE_SECONDS.
 
   What deliberately diverges (named, not drifted): `findAutoMatchPair` is
-  greedy in queue order — the demo prefers fresh partners via last-partner
-  memory, which the server doesn't track (rematch memory is its own later
-  feature). Chats end two ways (the teacher's endChat, and markInactive's
+  still greedy in queue order — the server now tracks one-round last-partner
+  memory (createChat maintains `activity.lastPartners`, powering the rematch
+  heads-up), but auto-match and pair-everyone don't consult it yet (feature 9,
+  prompts 2–3). Chats end two ways (the teacher's endChat, and markInactive's
   below-2 rule); the whole class pauses as one switch
   (pauseChats/resumeChats); ids are minted with randomUUID, not the demo's
   counter.
@@ -159,6 +160,14 @@ export function createChat(
     endReason: null,
   };
   activity.chats.push(chat);
+  // Rematch memory is one round deep: starting a chat overwrites each
+  // member's previous partners with this room (mirrors the demo's createChat
+  // in hostWorld.ts, which stays the reference).
+  for (const member of chat.members) {
+    activity.lastPartners[member.studentId] = chat.members
+      .filter((other) => other.studentId !== member.studentId)
+      .map((other) => other.studentId);
+  }
   if (
     activity.leftoverStudentId !== null &&
     chat.members.some((m) => m.studentId === activity.leftoverStudentId)

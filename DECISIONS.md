@@ -113,7 +113,6 @@ git: `git log -- DECISIONS.md`.
   - [Auto-match runs on the server, and only while the teacher is connected](docs/decisions/teacher-live.md#auto-match-runs-on-the-server-and-only-while-the-teacher-is-connected)
   - [Mid-chat, drops show and Remove works — nothing happens automatically](docs/decisions/teacher-live.md#mid-chat-drops-show-and-remove-works--nothing-happens-automatically)
   - [Settings edits sync for real; characters, scenario, and host name stay local](docs/decisions/teacher-live.md#settings-edits-sync-for-real-characters-scenario-and-host-name-stay-local)
-  - [Server pairing keeps no rematch memory this feature](docs/decisions/teacher-live.md#server-pairing-keeps-no-rematch-memory-this-feature)
   - [A dropped student keeps their seat for 2 minutes, marked and unmatchable](docs/decisions/teacher-live.md#a-dropped-student-keeps-their-seat-for-2-minutes-marked-and-unmatchable)
   - [When the teacher's connection drops, the queue dims under a reconnecting banner](docs/decisions/teacher-live.md#when-the-teachers-connection-drops-the-queue-dims-under-a-reconnecting-banner)
   - [A rematch only counts when it's an exact rerun for everyone in it](docs/decisions/teacher-live.md#a-rematch-only-counts-when-its-an-exact-rerun-for-everyone-in-it)
@@ -138,6 +137,7 @@ git: `git log -- DECISIONS.md`.
   - [Unknown host links get a friendly not-found, and the demo redirect is gone](docs/decisions/teacher-live.md#unknown-host-links-get-a-friendly-not-found-and-the-demo-redirect-is-gone)
   - [The copyable student link carries the current origin, and is never printed](docs/decisions/teacher-live.md#the-copyable-student-link-carries-the-current-origin-and-is-never-printed)
   - _Superseded_
+    - [Server pairing keeps no rematch memory this feature](docs/decisions/teacher-live.md#server-pairing-keeps-no-rematch-memory-this-feature)
     - [The chat sections hide entirely on real activities until matching ships](docs/decisions/teacher-live.md#the-chat-sections-hide-entirely-on-real-activities-until-matching-ships)
     - [Real host pages show an honest placeholder instead of pairing controls](docs/decisions/teacher-live.md#real-host-pages-show-an-honest-placeholder-instead-of-pairing-controls)
     - [Real activities hide the live-settings panel until edit sync ships](docs/decisions/teacher-live.md#real-activities-hide-the-live-settings-panel-until-edit-sync-ships)

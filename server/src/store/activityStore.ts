@@ -38,6 +38,11 @@ export interface StoredActivity {
   /** Every chat ever started, in creation order (feature 3: chats never
    *  expire — the activity's lifecycle owns them). */
   chats: StoredChat[];
+  /** studentId → everyone in their previous chat, overwritten each time a
+   *  chat starts (one round deep). Powers the rematch heads-up and (feature
+   *  9, prompts 2–3) the fresh-partner preference; in-memory only — a deploy
+   *  wipes it, like chats and seats. Mirrors the demo's HostWorld.lastPartners. */
+  lastPartners: Record<string, string[]>;
   /** Pair-everyone's odd one out — lazily nulled at snapshot build once
    *  that seat stops waiting. */
   leftoverStudentId: string | null;
@@ -153,6 +158,7 @@ export function createActivity(
     lastSeenAt: now,
     seats: createSeatState(),
     chats: [],
+    lastPartners: {},
     leftoverStudentId: null,
     pausedAt: null,
   };
