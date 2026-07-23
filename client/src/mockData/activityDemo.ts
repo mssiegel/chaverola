@@ -21,9 +21,13 @@ export const DEMO_STUDENT_NAME = "Rachel";
 export const demoActivity: Activity = {
   joinCode: DEMO_JOIN_CODE,
   hostName: "Ms. Cohen",
+  // 19 words on purpose: the scene counter appears at 16 and turns red at
+  // the 20-word cap, so this sits one under — the demo shows the counter
+  // working instead of a seeded scene that reads as an error. Keep any
+  // rewrite at 16-19 words.
   scenario:
-    "Rome, 44 BC, the night before the Ides of March. A rumor is going " +
-    "around the forum, and nobody knows who to trust.",
+    "Rome, on the Ides of March. A rumor is going around the forum, and " +
+    "nobody knows who to trust.",
   characters: [
     { id: "caesars-ghost", name: "Caesar's ghost", emoji: "👻" },
     { id: "brutus", name: "Brutus", emoji: "🔪" },
