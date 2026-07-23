@@ -324,3 +324,30 @@ and the dead `"reconnecting"` state leaves the codebase.
 drops off" → banner; "Partner comes back" → straight to 🎉, no spinner;
 pause with a partner out → the countdown keeps ticking. Prod pass (a
 client-only push), `pnpm format`, one commit, checkbox ticked.
+
+---
+
+## Pass record — 2026-07-23 (the real-handset legs)
+
+Both queued real-device asks ran against production — a phone on cellular
+(wifi off), a laptop student, the teacher page in view — and passed in
+full. The entries in docs/pending-manual-tests.md are deleted.
+
+**The peer-drop banner (prompt 1's deferred leg).** Airplane mode on a
+locked-radio phone surfaced the laptop's "«character» lost connection…"
+banner via real ping-cycle detection, countdown ticking once a second; the
+return inside the window flipped it to the 🎉 flash and cleared, with the
+missed lines resuming on the phone; a 2–3s screen-off blip showed nothing
+at all; the banner named the character only, and the teacher's page showed
+its own reconnecting tag with no student-banner artifact.
+
+**The self-timeout screen (the reaped return, shipped in the follow-on
+prompts above).** A full three minutes of airplane mode — past detection
+plus the whole real 120s grace — gave the laptop survivor the 🔌 wrap-up
+when the grace ran out; the returning phone, same tab, landed on the 📶
+"You lost connection" screen with the transcript readable above it, stayed
+hidden from the teacher's queue until its own "Back to the lobby" tap
+re-queued it with a fresh wait clock, and the survivor's screen never
+reacted to the return. The dead-radio reconnect with stale credentials —
+the leg the scripted passes structurally couldn't reach — behaved exactly
+as shipped.

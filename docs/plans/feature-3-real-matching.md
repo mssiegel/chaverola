@@ -633,6 +633,13 @@ cannot lose its connection the way a phone does, which is exactly how the
 original bug hid. If the client half is ever silently broken, the symptom is
 a partner freed in 120s instead of instantly, not a stranded one.
 
+**The confirming handset run happened — 2026-07-23, passed.** Phone on
+cellular (wifi off), a full minute in airplane mode so the socket genuinely
+gave up, End tapped while still offline, then airplane mode off: the laptop
+partner landed on the ended screen right away and the teacher's card moved
+to Completed. The real-radio gap the two scripted halves left open is
+closed; the queued entry in docs/pending-manual-tests.md is deleted.
+
 **Deferred, deliberately:** the partner sees nothing while they wait out the
 grace — the "lost connection" tag is teacher-only. That needs peer connection
 state on `ChatPeer` (allowlist-pinned to `characterId` today) plus new copy,
