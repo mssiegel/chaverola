@@ -5,6 +5,38 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
+### The teacher's email syncs live; the rest of the roster still doesn't
+
+_2026-07-23_
+
+**Decision:** Editing "Your email" in the live settings panel now reaches the
+server (`activity:update-email`), which validates it and stores it on the
+activity — or deletes it when the teacher empties the field. It is the second
+thing that syncs from that panel, and the list stops there: characters, the
+scene, and the host name stay local to the teacher's page. The event has no
+echo: a second host device is not told, so last write wins. An edit made while
+the socket is down is lost, exactly like a settings edit.
+
+**Why:** Feature 11 makes the email do something — the server mails every
+transcript there when the activity ends, quite possibly after the teacher has
+closed the tab. So the value that matters is the server's, and an edit that
+only ever lived in React state would silently mail the address from setup (or
+nothing at all, for the teacher who took the panel's "No email yet. Add yours
+to get every chat sent to you afterward" nudge). That nudge had been writing
+to a dead end since the panel shipped. No echo because the settings echo
+exists for controls that live in three places at once (the rail's switch,
+End-all's hold, the panel); the email lives in exactly one field the teacher
+is looking at, and a mid-typing overwrite from another device would be worse
+than a stale copy.
+
+_Implemented in the `activity:update-email` handler in
+[handlers/teacher.ts](../../server/src/live/handlers/teacher.ts) (validated by
+`teacherEmailUpdateSchema`, which is the create request's email rules plus an
+explicit null for clearing) and the same `onActivityChange` wrapper in
+[HostActivityPage](../../client/src/pages/teacher/HostActivityPage.tsx) that
+already catches every settings commit. Extends
+[Settings edits sync for real; characters, scenario, and host name stay local](#settings-edits-sync-for-real-characters-scenario-and-host-name-stay-local)._
+
 ### Chats show no timer or clock — the teacher ends them by hand
 
 _2026-07-22_
@@ -485,6 +517,10 @@ host-name edits remain local-only exactly as recorded in
 _Update (2026-07-22): the `revealNames` half no longer holds — feature 10
 reveals names at chat-end when the setting is on, see
 [The live name reveal fires at chat-end, per the teacher's setting](chat-behavior.md#the-live-name-reveal-fires-at-chat-end-per-the-teachers-setting)._
+
+_Update (2026-07-23): the teacher's email joined the synced side — see
+[The teacher's email syncs live; the rest of the roster still doesn't](#the-teachers-email-syncs-live-the-rest-of-the-roster-still-doesnt).
+Characters, scenario, and host name are still local-only._
 
 **Why:** Real auto-match forces the question: the switch and its seconds
 must reach the server or the rail lies. Syncing the whole settings object is

@@ -247,6 +247,11 @@ export interface ClientToServerEvents {
   "chats:resume-all": () => void;
   /** Teacher only; zod-validated, replaces the stored settings. */
   "settings:update": (payload: { settings: ActivitySettings }) => void;
+  /** Teacher only; zod-validated. Sets where this activity's transcripts get
+   *  emailed, or clears it with null (the teacher opted out). Deliberately
+   *  has no echo event: the email is one field on the teacher's own form, so
+   *  last write wins and a second host device keeps the copy it fetched. */
+  "activity:update-email": (payload: { teacherEmail: string | null }) => void;
   /** Student: the ended screen's Back-to-the-lobby tap — returns a
    *  wrappingUp seat to waiting with a fresh clock. Otherwise a no-op. */
   "lobby:back": () => void;

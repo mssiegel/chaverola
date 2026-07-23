@@ -176,11 +176,13 @@ function HostActivityChrome({
   that changes them also emits settings:update through the engine (one
   interception point below catches the rail's auto-match switch, End-all's
   auto-match hold, and the panel's commits), the server validates and keeps
-  them, and the teacher's other devices hear settings:changed.
-  Characters/scenario/hostName edits stay local-only until edit-sync ships
-  (students' lobbies keep the server's copy, refresh reverts — founder call;
-  see DECISIONS.md). On the demo everything is local because the whole
-  class is client-side.
+  them, and the teacher's other devices hear settings:changed. The TEACHER'S
+  EMAIL syncs through the same wrapper (activity:update-email, no echo
+  event) — the server is what sends the transcripts, so a local-only edit
+  would silently mail the old address. Characters/scenario/hostName edits
+  stay local-only until edit-sync ships (students' lobbies keep the server's
+  copy, refresh reverts — founder call; see DECISIONS.md). On the demo
+  everything is local because the whole class is client-side.
 */
 
 function DemoHostActivityView({
@@ -247,7 +249,7 @@ function ConnectedHostActivityView({
       setActivity((prev) => ({ ...prev, settings })),
   });
 
-  // The one interception point for settings reaching the server: the rail's
+  // The one interception point for edits reaching the server: the rail's
   // auto-match switch, End-all's auto-match hold, and the settings panel's
   // debounced commits all arrive here as a whole next activity.
   const handleActivityChange = (next: HostedActivity) => {
@@ -256,6 +258,14 @@ function ConnectedHostActivityView({
       Object.keys(next.settings) as (keyof ActivitySettings)[]
     ).some((key) => prev[key] !== next.settings[key]);
     if (settingsChanged) engine.updateSettings(next.settings);
+    // The email syncs beside the settings — it decides where the transcripts
+    // land, and the send happens on the server long after this tab may be
+    // gone. An emptied field arrives as `undefined` and travels as an
+    // explicit null. Only valid values get here: the panel holds its commit
+    // while the draft has a problem, so a half-typed address never emits.
+    if (activity.teacherEmail !== next.teacherEmail) {
+      engine.updateTeacherEmail(next.teacherEmail ?? null);
+    }
     setActivity(next);
   };
 

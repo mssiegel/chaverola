@@ -103,6 +103,7 @@ git: `git log -- DECISIONS.md`.
   - [Character rows lead with the emoji avatar](docs/decisions/teacher-setup.md#character-rows-lead-with-the-emoji-avatar)
   - [Setup sections each carry one brand accent; settings stays the quiet one](docs/decisions/teacher-setup.md#setup-sections-each-carry-one-brand-accent-settings-stays-the-quiet-one)
 - [Teacher live activity page](docs/decisions/teacher-live.md)
+  - [The teacher's email syncs live; the rest of the roster still doesn't](docs/decisions/teacher-live.md#the-teachers-email-syncs-live-the-rest-of-the-roster-still-doesnt)
   - [Chats show no timer or clock — the teacher ends them by hand](docs/decisions/teacher-live.md#chats-show-no-timer-or-clock--the-teacher-ends-them-by-hand)
   - [Pausing ships end to end; the grace window keeps running through it](docs/decisions/teacher-live.md#pausing-ships-end-to-end-the-grace-window-keeps-running-through-it)
   - [Ending ships for real; pausing keeps the placeholder seam](docs/decisions/teacher-live.md#ending-ships-for-real-pausing-keeps-the-placeholder-seam)

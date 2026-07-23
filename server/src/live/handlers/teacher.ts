@@ -1,6 +1,9 @@
 import { stuckInLineNotice } from "@chaverola/shared";
 
-import { activitySettingsSchema } from "../../schemas/activity";
+import {
+  activitySettingsSchema,
+  teacherEmailUpdateSchema,
+} from "../../schemas/activity";
 import { getByHostKey } from "../../store/activityStore";
 import { armAutoMatch, releaseAutoMatch } from "../autoMatch";
 import { room } from "../lobbyContext";
@@ -257,6 +260,29 @@ export function registerTeacherHandlers(
     socket.to(room(data.joinCode)).emit("settings:changed", {
       settings: parsed.data,
     });
+  });
+
+  socket.on("activity:update-email", (payload) => {
+    const parsed = teacherEmailUpdateSchema.safeParse(payload?.teacherEmail);
+    if (!parsed.success) {
+      log.warn({ joinCode: data.joinCode }, "invalid activity:update-email");
+      return;
+    }
+    const current = getByHostKey(data.hostKey);
+    if (!current) return;
+    if (parsed.data === null) {
+      delete current.teacherEmail;
+    } else {
+      current.teacherEmail = parsed.data;
+    }
+    // No echo back: unlike settings, the email lives on one form field the
+    // teacher is looking at, so last write wins. The address itself stays
+    // out of the log — it's the teacher's, and the boolean is what we'd
+    // actually debug with.
+    log.info(
+      { joinCode: data.joinCode, set: parsed.data !== null },
+      "transcript email updated by teacher"
+    );
   });
 
   socket.on("disconnect", (reason) => {

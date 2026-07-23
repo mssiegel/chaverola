@@ -37,6 +37,11 @@ export interface HostEngine {
    *  to the server (settings sync is real); the demo's world reads
    *  activity.settings directly, so its engine no-ops. */
   updateSettings: (settings: ActivitySettings) => void;
+  /** Where this activity's transcripts get emailed — null clears it. The live
+   *  engine sends it to the server (the send happens there, long after this
+   *  tab may be gone); the demo's world reads activity.teacherEmail directly,
+   *  so its engine no-ops, exactly like updateSettings. */
+  updateTeacherEmail: (email: string | null) => void;
   /** The teacher's own link to the class. The demo is always "connected";
    *  the live page goes amber (banner + dimmed queue) while "reconnecting". */
   connection: LobbyConnectionState;

@@ -437,6 +437,11 @@ export interface ClientToServerEvents {
   "chats:resume-all": () => void;
   /** Teacher only; zod-validated, replaces the stored settings. */
   "settings:update": (payload: { settings: ActivitySettings }) => void;
+  /** Teacher only; zod-validated. Sets where this activity's transcripts get
+   *  emailed, or clears it with null (the teacher opted out). Deliberately
+   *  has no echo event: the email is one field on the teacher's own form, so
+   *  last write wins and a second host device keeps the copy it fetched. */
+  "activity:update-email": (payload: { teacherEmail: string | null }) => void;
   /** Student: the ended screen's Back-to-the-lobby tap — returns a
    *  wrappingUp seat to waiting with a fresh clock. Otherwise a no-op. */
   "lobby:back": () => void;
@@ -457,8 +462,8 @@ structural boundary, not a per-event role check, is what keeps a student
 from starting chats or rewriting settings. Two cases are pinned by tests:
 a 4-digit join code cannot open a teacher socket at all, and a student
 socket emitting `queue:remove`, `chat:start`, `chat:remove`, `chat:end`,
-`chats:end-all`, `chats:pause-all`, `chats:resume-all`, or
-`settings:update` is silently ignored.
+`chats:end-all`, `chats:pause-all`, `chats:resume-all`, `settings:update`,
+or `activity:update-email` is silently ignored.
 
 Teacher commands are also **idempotent and self-correcting**: a command
 naming a student who just dropped, a chat that just ended, or a seat that
@@ -553,6 +558,16 @@ below.
   scenario, and host-name edits stay local to the teacher's page —
   they'd have to reach students' lobbies, which is a bigger feature than
   a settings echo.
+- **The teacher's email syncs too, on its own event.**
+  `activity:update-email` (feature 11) sets `teacherEmail` on the stored
+  record, or deletes it when the payload is `null` — the teacher cleared
+  the field and opted out of the transcript email. Validated against the
+  same length and pattern the create request uses, blank strings
+  rejected; invalid payloads are logged and dropped, and the address
+  never reaches the log. There is no echo event and no room broadcast:
+  the email is one field on the teacher's own form, so last write wins
+  and a second host device keeps the copy it fetched. Nothing about it
+  reaches a student socket.
 - **Chats outlive their students.** A chat record keeps everyone who was
   ever in it (with the name captured at chat start), so a card still
   reads correctly after a member's seat is gone.

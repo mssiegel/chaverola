@@ -194,11 +194,11 @@ export function HostActivityDashboard({
 
       <JoiningInstructions joinCode={activity.joinCode} />
 
-      {/* On real activities too — founder call. Settings edits now sync to
-          the server (the page's onActivityChange wrapper emits them);
-          characters/scenario/hostName edits stay local-only until edit-sync
-          ships; see DECISIONS.md → "The live-settings panel stays on real
-          activities". */}
+      {/* On real activities too — founder call. Settings edits and the
+          teacher's email now sync to the server (the page's onActivityChange
+          wrapper emits them); characters/scenario/hostName edits stay
+          local-only until edit-sync ships; see DECISIONS.md → "The
+          live-settings panel stays on real activities". */}
       <LiveSettingsPanel
         activity={activity}
         characterIdsInUse={engine.characterIdsInUse}

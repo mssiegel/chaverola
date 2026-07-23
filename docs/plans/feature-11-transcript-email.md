@@ -54,7 +54,7 @@ all new user-facing copy (the email body counts). The prompts are sequential
 (3 and 4 need 2's mailer; 3's confirm copy reads the email 1 keeps fresh) but
 each leaves the app fully working.
 
-- [ ] Prompt 1 — teacherEmail live edits reach the server
+- [x] Prompt 1 — teacherEmail live edits reach the server
 - [ ] Prompt 2 — Mailer + transcript formatter (server-only, invisible)
 - [ ] Prompt 3 — End activity, end to end
 - [ ] Prompt 4 — The 10-minute fallback send

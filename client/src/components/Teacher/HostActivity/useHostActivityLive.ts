@@ -28,8 +28,8 @@ import type { HostedChat, WaitingStudent } from "./hostWorld";
   per-message `chat:transcript-line` deltas keeping transcripts live
   between snapshots — the matching commands (chat:start,
   match:pair-everyone, chat:remove, chat:end, chats:end-all,
-  chats:pause-all, chats:resume-all, settings:update) emit over the same
-  socket. Ending and pausing are real: the emits are bare, and the flipped
+  chats:pause-all, chats:resume-all, settings:update,
+  activity:update-email) emit over the same socket. Ending and pausing are real: the emits are bare, and the flipped
   state arrives on the handler's own chats:snapshot — no local state to
   reconcile. Deliberately imports nothing from hostWorld.ts beyond types —
   tickWorld runs the SIMULATION's auto-match and must never see a real
@@ -265,6 +265,9 @@ export function useHostActivityLive({
   const updateSettings = (settings: ActivitySettings) => {
     socketRef.current?.emit("settings:update", { settings });
   };
+  const updateTeacherEmail = (teacherEmail: string | null) => {
+    socketRef.current?.emit("activity:update-email", { teacherEmail });
+  };
 
   const chatsInProgress = chats.filter((c) => c.status === "active");
   const completedChats = chats.filter((c) => c.status === "ended");
@@ -301,6 +304,7 @@ export function useHostActivityLive({
     removeFromQueue,
     removeFromChat,
     updateSettings,
+    updateTeacherEmail,
     connection,
   };
 }

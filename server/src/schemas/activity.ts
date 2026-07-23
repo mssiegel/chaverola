@@ -56,6 +56,20 @@ export const activitySettingsSchema = z.object({
     .multipleOf(AUTO_MATCH_SECONDS.step),
 }) satisfies z.ZodType<ActivitySettings>;
 
+/** The socket's activity:update-email validator — the same limits the create
+ *  request's optional field uses, plus an explicit null for "clear it". A
+ *  blank string is rejected on purpose: clearing travels as null, so an empty
+ *  input box can never be mistaken for an address. */
+export const teacherEmailUpdateSchema = z.union([
+  z.null(),
+  z
+    .string()
+    .trim()
+    .min(1, "Send null instead of a blank email.")
+    .max(EMAIL_MAX_CHARS, "That email address is too long.")
+    .regex(EMAIL_PATTERN, "That doesn't look like an email address."),
+]);
+
 export const createActivityRequestSchema = z.object({
   hostName: z
     .string()

@@ -380,7 +380,7 @@ describe("the live lobby", () => {
     await emptyQueue;
   });
 
-  it("ignores every teacher command from a student socket — chat:start, settings:update, chat:remove, chat:end, chats:end-all, and the pause pair", async () => {
+  it("ignores every teacher command from a student socket — chat:start, settings:update, activity:update-email, chat:remove, chat:end, chats:end-all, and the pause pair", async () => {
     const studentA = connect({
       role: "student",
       joinCode: activity.joinCode,
@@ -405,9 +405,14 @@ describe("the live lobby", () => {
     studentA.emit("settings:update", {
       settings: { ...DEFAULT_ACTIVITY_SETTINGS, autoMatch: false },
     });
+    // Feature 11 makes this one bite: the stored email is where every
+    // transcript gets mailed, so a student who could rewrite it would have
+    // the whole class's chats sent to them.
+    studentA.emit("activity:update-email", { teacherEmail: "them@evil.test" });
     await sleep(100);
     expect(activity.chats).toEqual([]);
     expect(activity.settings).toEqual(DEFAULT_ACTIVITY_SETTINGS);
+    expect(activity.teacherEmail).toBeUndefined();
     expect(started).toEqual([]);
 
     // `!` — both members are eligible; the chat just built above them.

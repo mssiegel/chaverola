@@ -166,7 +166,11 @@ empty-transcript hint on live cards.
 - `getByText("Live")` substring-matches the `Your activity is live` h1 —
   always card-scope it.
 - `Edit activity settings` is `defaultOpen={false}` and its content stays
-  mounted but `inert`; click the header before touching the stepper.
+  mounted but `inert`; click the header before touching the stepper. A
+  collapsed section's inputs read **visible AND editable** to Playwright, and
+  `fill()` on one silently no-ops — no throw, just a field that never changes
+  (cost a run 2026-07-23). Gate the open-click on the header's
+  `aria-expanded`, never on the input's actionability.
 
 ## Timing & network notes for driver authors
 
