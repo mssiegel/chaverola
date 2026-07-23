@@ -39,6 +39,9 @@ export interface ChatboxProps {
    * promise a feature that isn't there.
    */
   endedSecretLine?: string;
+  /** Sending drops focus on phones, closing the keyboard — the demo's way of
+   *  handing back the steering panel its own keyboard hides. */
+  releaseKeyboardOnSend?: boolean;
 }
 
 /**
@@ -59,6 +62,7 @@ export function Chatbox({
   endConfirmOpen,
   onEndConfirmOpenChange,
   endedSecretLine,
+  releaseKeyboardOnSend,
 }: ChatboxProps) {
   const {
     self,
@@ -195,6 +199,7 @@ export function Chatbox({
           onTyping={onTyping}
           selfCharacterLabel={characterLabel(self)}
           disabled={isPaused}
+          releaseKeyboardOnSend={releaseKeyboardOnSend}
         />
       )}
 

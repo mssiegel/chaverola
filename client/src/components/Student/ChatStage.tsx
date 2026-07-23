@@ -82,6 +82,11 @@ export function ChatStage({
           onBackToLobby={onBackToLobby}
           endConfirmOpen={confirmOpen}
           onEndConfirmOpenChange={setConfirmOpen}
+          // Sending on a phone gives the keyboard back, which is what puts
+          // the steering panel below back within reach. LiveChatStage's
+          // silence here is the other half: nothing is hidden below a real
+          // chat, so it holds the keyboard for the next message.
+          releaseKeyboardOnSend
         />
       </div>
 

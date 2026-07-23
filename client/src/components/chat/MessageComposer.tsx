@@ -36,6 +36,15 @@ interface MessageComposerProps {
    * copy, the only locked state a room has today.
    */
   disabledPlaceholder?: string;
+  /**
+   * Sending lets go of the field instead of holding it, closing the keyboard.
+   * The demo passes it: on a phone the steering panel below the composer is
+   * hidden while this field has focus, and send is the natural moment to give
+   * it back (see DECISIONS.md → "While a student types on a phone, the
+   * world's chrome gets out of the way"). Live rooms don't — nothing is
+   * hidden below them, so the keyboard stays for the next message.
+   */
+  releaseKeyboardOnSend?: boolean;
 }
 
 /**
@@ -50,6 +59,7 @@ export function MessageComposer({
   selfCharacterLabel,
   disabled = false,
   disabledPlaceholder = "Paused. Hang tight…",
+  releaseKeyboardOnSend = false,
 }: MessageComposerProps) {
   const [value, setValue] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -104,7 +114,14 @@ export function MessageComposer({
     onSend(trimmed);
     setValue("");
     setPickerOpen(false);
-    requestAnimationFrame(() => textareaRef.current?.focus());
+    // Only phones hand the keyboard back: `max-sm` IS `not (min-width:
+    // 640px)`, so this is the same line the chrome-collapse rules draw, read
+    // the way JoinGateCard already reads it. At send time, so rotating works.
+    const release =
+      releaseKeyboardOnSend && !window.matchMedia("(min-width: 640px)").matches;
+    requestAnimationFrame(() =>
+      release ? textareaRef.current?.blur() : textareaRef.current?.focus()
+    );
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {

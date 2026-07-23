@@ -75,6 +75,15 @@ student world's only `<textarea>` — not React state, and it's scoped to phones
 so a desktop click into the input changes nothing. Extends
 [On phones the chat fills the screen and hugs the keyboard](#on-phones-the-chat-fills-the-screen-and-hugs-the-keyboard-desktop-keeps-the-fixed-card).
 
+**And in the demo, sending a message hands the keyboard back.** The composer
+drops focus on send, so the steering panel this collapse just hid comes back
+under the card on its own — otherwise the only way to reach the thing that
+drives the demo is to guess that tapping a blank scrap of the page is what
+returns it. A live chat holds the keyboard instead: nothing is hidden below it
+to come back to, and sending two messages in a row is the whole point. Phones
+only, on both counts — above `sm` nothing was hidden, so there is nothing to
+hand back and a lost caret would just cost a click per message.
+
 **Why:** Two founder screenshots (2026-07-23). In the demo, focusing the input
 threw the chat card off the top of the screen entirely: the steering panel sits
 _below_ the composer, so with the keyboard open the document was still ~750px
@@ -94,7 +103,11 @@ _Implemented in
 (the `group` hook and both collapses),
 [DemoBanner](../../client/src/components/demo/DemoBanner.tsx) (the `onWorld`
 variant), and [ChatStage](../../client/src/components/Student/ChatStage.tsx)
-(the steering panel)._
+(the steering panel). The keyboard hand-back lives in
+[MessageComposer](../../client/src/components/chat/MessageComposer.tsx)
+(`releaseKeyboardOnSend`), which only ChatStage opts into —
+[LiveChatStage](../../client/src/components/Student/LiveChatStage.tsx)'s
+silence is the keep-typing half._
 
 ### A student's own leave ends a 1:1 as "peer", and the survivor's screen names their character
 
