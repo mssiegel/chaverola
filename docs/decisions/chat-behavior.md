@@ -5,6 +5,40 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
+### On phones the chat fills the screen and hugs the keyboard; desktop keeps the fixed card
+
+_2026-07-23_
+
+**Decision:** Below the `sm` breakpoint the student chat card stretches to
+fill the world — top chrome to screen bottom, ~8px from every edge, with a
+tighter composer bar — instead of the desktop's centered `min(70dvh,620px)`
+card, which stays as-is on `sm+`. The keyboard is handled by layout, not
+script: `interactive-widget=resizes-content` in the viewport meta makes the
+Android keyboard shrink the viewport (so the composer lands on the keys),
+and iOS relies on Safari's default pan-to-input — good enough once the
+composer is the last thing in the document. No `visualViewport` JS and no
+body overflow lock for V1; the hook is the known follow-up only if a real
+iPhone still shows a gap. The feed re-pins to the newest line whenever its
+own size changes, so the keyboard opening never strands new messages below
+the fold.
+
+**Why:** On phones the floating-card look put the input mid-screen with a
+purple void between it and the keyboard — the browser was panning the page
+and exposing the empty 30% below the card (founder screenshot, 2026-07-23).
+Students chat on small screens; every row of pixels should be conversation,
+which is also why the margins shrank. A keyboard-watching script that
+stretches the card only while typing was rejected as moving parts for the
+same result; a body overflow lock was rejected because the demo stage must
+scroll to its controls.
+
+_Implemented in [ChatStage](../../client/src/components/Student/ChatStage.tsx),
+[LiveChatStage](../../client/src/components/Student/LiveChatStage.tsx),
+[Chatbox](../../client/src/components/Student/Chatbox/index.tsx),
+[StudentWorldLayout](../../client/src/components/layout/StudentWorldLayout.tsx),
+[MessageComposer](../../client/src/components/chat/MessageComposer.tsx),
+[Conversation](../../client/src/components/chat/Conversation.tsx), and
+[index.html](../../client/index.html)._
+
 ### A timed-out student returns to their ended chat, never silently to the lobby
 
 _2026-07-21_

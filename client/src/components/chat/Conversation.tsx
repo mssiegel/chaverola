@@ -57,6 +57,21 @@ export function Conversation({
     el?.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [messages, typingPeerId]);
 
+  // Re-pin when the feed itself changes size: on phones the keyboard shrinks
+  // the chat card, which would otherwise strand the newest lines below the
+  // fold. Instant, not smooth — this fires mid-keyboard-animation.
+  // Unconditional on purpose (no "was I at the bottom?" bookkeeping): chats
+  // here are short, and snapping to newest is what messaging apps do.
+  useEffect(() => {
+    const el = feedRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => {
+      el.scrollTo({ top: el.scrollHeight });
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   const typingName = typingPeerId
     ? (byId.get(typingPeerId)?.character.name ?? null)
     : null;
@@ -68,7 +83,12 @@ export function Conversation({
   return (
     <div
       ref={feedRef}
-      className="scroll-soft relative flex-1 overflow-y-auto px-3 py-3 text-[15px] leading-6 sm:px-4"
+      // h-0 + flex-auto (basis auto, so the explicit height is the flex
+      // base): the feed grows to whatever space the frame has but contributes
+      // nothing to intrinsic sizing. With flex-1 (basis 0%) a full feed's
+      // content size leaks up and grows the phone chat card — and the page —
+      // past the keyboard-shrunk viewport instead of scrolling.
+      className="scroll-soft relative h-0 flex-auto overflow-y-auto px-3 py-3 text-[15px] leading-6 sm:px-4"
     >
       {(isPaused || peerState !== "connected") && (
         <div className="sticky top-0 z-10 -mx-3 mb-2 flex flex-col items-center gap-1.5 px-3 sm:-mx-4 sm:px-4">

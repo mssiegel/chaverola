@@ -3,7 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- interactive-widget: the on-screen keyboard resizes the layout viewport
+         (Android Chrome), so dvh-sized screens shrink and inputs land above
+         the keys instead of the browser panning the page. iOS ignores it. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content"
+    />
     <meta name="theme-color" content="#6C4BE0" />
     <meta
       name="description"

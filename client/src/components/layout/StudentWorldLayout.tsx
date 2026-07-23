@@ -24,8 +24,10 @@ export interface StudentWorldOutletContext {
  * The immersive shell for the student join flow: no navbar, a full-viewport
  * purple world with slowly drifting doodles, a floating language pill, and
  * the Chaverola pill (the one link home) above the routed content. The
- * backdrop is `fixed` so lobby scrolling and mobile keyboards slide the
- * content OVER the world rather than dragging the world along.
+ * backdrop is `fixed` so lobby scrolling slides the content OVER the world
+ * rather than dragging the world along. On Android the keyboard resizes the
+ * viewport itself (`interactive-widget` in index.html), so the world — and
+ * the chat card filling it — shrinks to what's visible above the keys.
  */
 export function StudentWorldLayout() {
   // While a chat is on screen the brand pill disappears (one stray tap on it
@@ -57,7 +59,7 @@ export function StudentWorldLayout() {
         <LanguageSwitcher className="pointer-events-auto ms-auto shrink-0 rounded-full bg-white/90 text-foreground shadow-md backdrop-blur-sm hover:bg-white hover:text-foreground" />
       </div>
 
-      <div className="relative z-10 flex flex-1 flex-col items-center gap-6 px-4 pt-20 pb-8">
+      <div className="relative z-10 flex flex-1 flex-col items-center gap-6 px-4 pt-20 pb-2 sm:pb-8">
         <main className="flex w-full flex-1 flex-col items-center">
           <Outlet
             context={{ setChatStudentName } satisfies StudentWorldOutletContext}

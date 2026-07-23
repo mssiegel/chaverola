@@ -134,7 +134,10 @@ export function Chatbox({
   };
 
   return (
-    <ChatFrame className="h-full">
+    // flex-1, not h-full: on phones the stage wrapper's height comes from
+    // flex growth, which a percentage can't resolve against — the frame
+    // must stretch as a flex item of the wrapper's column.
+    <ChatFrame className="min-h-0 flex-1">
       <ChatHeader
         self={self}
         peers={peers}
