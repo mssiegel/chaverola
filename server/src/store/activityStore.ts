@@ -146,6 +146,14 @@ function remove(record: StoredActivity): void {
   activityRemovedListener?.(record);
 }
 
+/** The teacher's explicit End (feature 11 prompt 3) removes the activity
+ *  through the same path the sweep and lazy expiry use, so the whole teardown
+ *  (seat timers, the students' activity:ended, every socket disconnected) is
+ *  reused via onActivityRemoved. */
+export function removeActivity(record: StoredActivity): void {
+  remove(record);
+}
+
 export function createActivity(
   input: NewActivity,
   now = Date.now()

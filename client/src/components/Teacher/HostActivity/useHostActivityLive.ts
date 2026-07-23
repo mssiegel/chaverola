@@ -18,7 +18,7 @@ import { useLatestRef } from "@/lib/useLatestRef";
 
 import type { ChatMessage } from "@/types/chat";
 
-import type { HostEngine } from "./hostEngine";
+import type { HostEnded, HostEngine } from "./hostEngine";
 import type { HostedChat, WaitingStudent } from "./hostWorld";
 
 /*
@@ -130,7 +130,15 @@ export function useHostActivityLive({
     {}
   );
   const [rematchNotice, setRematchNotice] = useState<string | null>(null);
+  const [ended, setEnded] = useState<HostEnded | null>(null);
   const socketRef = useRef<LobbySocket | null>(null);
+  // Set the instant the teacher ends the activity, read inside the mount
+  // effect's socket callbacks (which captured the old `ended` value). Once
+  // ended, the server removes the activity under us and disconnects this
+  // socket; the callbacks must ignore that so the wrapped screen never flips
+  // to not-found. A ref, not the state, because the listeners are registered
+  // once and would otherwise see a stale closure.
+  const endedRef = useRef(false);
   const onActivityGoneRef = useLatestRef(onActivityGone);
   const onSettingsSyncRef = useLatestRef(onSettingsSync);
 
@@ -142,7 +150,25 @@ export function useHostActivityLive({
       setConnection("connected");
     });
     socket.on("disconnect", () => {
+      // Terminal latch: once the teacher ended the activity, the server's
+      // teardown disconnects us on purpose — don't flash "reconnecting" over
+      // the wrapped-up screen.
+      if (endedRef.current) return;
       setConnection("reconnecting");
+    });
+    socket.on("activity:end-result", ({ email }) => {
+      // Settle the optimistic "sending" card. Keep the destination we already
+      // showed, but prefer the server's authoritative `to` when it sent one; a
+      // null result with a known address means a silent class ("empty"), not a
+      // missing email.
+      setEnded((prev) =>
+        prev
+          ? {
+              to: email?.to ?? prev.to,
+              state: email ? email.state : "empty",
+            }
+          : prev
+      );
     });
     socket.on("queue:snapshot", ({ students }) => {
       setWaiting(students.map(toWaitingStudent));
@@ -182,6 +208,10 @@ export function useHostActivityLive({
       onSettingsSyncRef.current(settings);
     });
     socket.on("connect_error", (error) => {
+      // Terminal latch: after End, the server removed the activity, so a
+      // reconnect attempt is rejected with activity_gone — swallow it, or the
+      // page would unmount the wrapped-up screen to not-found.
+      if (endedRef.current) return;
       // "invalid" is structurally unreachable (the page validated the
       // hostKey pattern before mounting us), but if it ever fires, gone is
       // more honest than an amber banner that can never clear.
@@ -217,6 +247,8 @@ export function useHostActivityLive({
       setPaused(false);
       setLastPartners({});
       setRematchNotice(null);
+      setEnded(null);
+      endedRef.current = false;
     };
   }, [hostKey, onActivityGoneRef, onSettingsSyncRef]);
 
@@ -265,6 +297,29 @@ export function useHostActivityLive({
   const updateSettings = (settings: ActivitySettings) => {
     socketRef.current?.emit("settings:update", { settings });
   };
+  const endActivity = (teacherEmail: string | null) => {
+    // Latch first so the teardown the server is about to trigger can't flip us
+    // to not-found (the socket callbacks read endedRef).
+    endedRef.current = true;
+    // The server ends the chats but sends no snapshot back (it's tearing the
+    // activity down), so flip our own copy to ended now — otherwise the
+    // wrapped-up screen's completed-chats list would be missing this whole
+    // final round.
+    setChats((prev) =>
+      prev.map((chat) =>
+        chat.status === "active"
+          ? { ...chat, status: "ended", endReason: "teacher" }
+          : chat
+      )
+    );
+    // Optimistic card: "sending" when there's an address, "empty" (nothing to
+    // send) when there isn't. The server's activity:end-result settles it.
+    setEnded({
+      to: teacherEmail,
+      state: teacherEmail ? "sending" : "empty",
+    });
+    socketRef.current?.emit("activity:end");
+  };
   const updateTeacherEmail = (teacherEmail: string | null) => {
     socketRef.current?.emit("activity:update-email", { teacherEmail });
   };
@@ -306,5 +361,7 @@ export function useHostActivityLive({
     updateSettings,
     updateTeacherEmail,
     connection,
+    endActivity,
+    ended,
   };
 }

@@ -5,6 +5,68 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
+### End activity is the terminal wrap-up, and it emails the class transcript
+
+_2026-07-23_
+
+**Decision:** The live page has an **End activity** button, behind a confirm
+dialog, at the bottom of the chats column below the completed chats. Ending is
+terminal: every chat ends, students land on the existing activity-over screen,
+the join code stops resolving, and the whole class transcript is emailed to the
+teacher's address (or nothing is sent, if they left the email blank). One
+activity ends at most once. It is deliberately a page-level action, kept apart
+from "End all chats" in the chats toolbar: that one closes a round and the class
+keeps going, this one closes the class. The button is disabled while the
+teacher's own connection is down, since the emit couldn't reach the server. The
+confirm copy names the three consequences and where the transcript goes, with a
+live chat count.
+
+**Why:** The email was promised at setup ("We'll email you every chat once it
+wraps up") but never had a moment to fire. A concrete, teacher-driven event is
+the only reliable send point on a free-tier instance that spins down when idle,
+so "send it later" would usually lose the email to a dead process. Ending the
+whole activity by hand is also the honest counterpart to the no-timer decision
+([Chats show no timer or clock](#chats-show-no-timer-or-clock--the-teacher-ends-them-by-hand)):
+the teacher decides when the class is over, and that decision is what sends the
+transcript.
+
+_Implemented as `activity:end` / `activity:end-result` in
+[handlers/teacher.ts](../../server/src/live/handlers/teacher.ts) (reusing the
+prompt-2 `sendTranscriptEmail` guard), the `endActivity` seam across
+[useHostActivityLive](../../client/src/components/Teacher/HostActivity/useHostActivityLive.ts)
+and [useHostActivityDemo](../../client/src/components/Teacher/HostActivity/useHostActivityDemo.ts),
+and the End button + wrapped-up screen in
+[the dashboard](../../client/src/components/Teacher/HostActivity/index.tsx) and
+[WrappedUpCard](../../client/src/components/Teacher/HostActivity/WrappedUpCard.tsx)._
+
+### Ending removes the activity right away; the wrapped-up screen is local to the tab
+
+_2026-07-23_
+
+**Decision:** On End, once the transcript send settles, the activity is removed
+immediately through the store's normal removal path, with no retention machinery
+in V1. The wrapped-up confirmation (sending, then sent / failed / nothing to
+send) lives only in the clicking tab's local state. A refresh after ending shows
+the normal not-found page, and a second host device just sees the activity
+vanish. If the send fails, the activity is still removed and the failure card
+tells the teacher to copy the chats that are still readable below before closing
+the tab. Accepted.
+
+**Why:** Keeping the activity alive to back a durable "you already ended this"
+screen would mean a retention state machine, a way to re-fetch after refresh, and
+a second-device story, for a terminal action a teacher takes once. The tab that
+ended it shows the outcome, and every other path (refresh, second device) resolves
+to the same honest not-found the store already serves for a gone activity. The
+failed-send case leans on the same readable transcripts rather than a retry,
+because the record is already gone.
+
+_Implemented via `removeActivity` in
+[activityStore.ts](../../server/src/store/activityStore.ts) (reusing
+`onActivityRemoved`'s teardown) and the terminal latch in
+[useHostActivityLive](../../client/src/components/Teacher/HostActivity/useHostActivityLive.ts)
+that keeps the wrapped-up screen from flipping to not-found when the server
+removes the activity underneath it._
+
 ### The teacher's email syncs live; the rest of the roster still doesn't
 
 _2026-07-23_

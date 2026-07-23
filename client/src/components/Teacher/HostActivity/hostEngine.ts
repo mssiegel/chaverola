@@ -11,6 +11,14 @@ import type { HostedChat, WaitingStudent } from "./hostWorld";
   the live path never touches the simulation module.
 */
 
+/** The wrapped-up state after a teacher ends the activity — null while live.
+ *  `to` is the email destination (null when none was set); `state` is the
+ *  send's progress, where "empty" means there was nothing to send. */
+export interface HostEnded {
+  to: string | null;
+  state: "sending" | "sent" | "failed" | "empty";
+}
+
 export interface HostEngine {
   waiting: WaitingStudent[];
   chatsInProgress: HostedChat[];
@@ -45,6 +53,14 @@ export interface HostEngine {
   /** The teacher's own link to the class. The demo is always "connected";
    *  the live page goes amber (banner + dimmed queue) while "reconnecting". */
   connection: LobbyConnectionState;
+  /** End the whole activity: every chat ends, the transcript is emailed, and
+   *  the activity is torn down. `teacherEmail` is the send destination the
+   *  wrapped-up card shows optimistically (the live engine settles it against
+   *  the server's result; the demo settles it locally). */
+  endActivity: (teacherEmail: string | null) => void;
+  /** null while the activity is live; set once the teacher ends it, driving
+   *  the wrapped-up screen. See HostEnded. */
+  ended: HostEnded | null;
 }
 
 /** The demo steering panel's triggers — demo engine only, never live. */

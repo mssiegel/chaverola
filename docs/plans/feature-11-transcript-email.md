@@ -56,7 +56,7 @@ each leaves the app fully working.
 
 - [x] Prompt 1 — teacherEmail live edits reach the server
 - [x] Prompt 2 — Mailer + transcript formatter (server-only, invisible)
-- [ ] Prompt 3 — End activity, end to end
+- [x] Prompt 3 — End activity, end to end
 - [ ] Prompt 4 — The 10-minute fallback send
 
 ## Shared context: the send-once guard

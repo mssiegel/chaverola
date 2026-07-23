@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Loader2, UserPlus, UsersRound, WifiOff } from "lucide-react";
+import { Loader2, LogOut, UserPlus, UsersRound, WifiOff } from "lucide-react";
 
 import { listNames } from "@chaverola/shared";
 
 import { DemoControlsPanel, EventButton } from "@/components/demo/DemoControls";
 import { AccentIconChip } from "@/components/Teacher/ActivitySetup/FormSection";
+import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 import type { HostedActivity } from "@/types/activity";
@@ -18,6 +19,7 @@ import { HostHeader } from "./HostHeader";
 import { JoiningInstructions } from "./JoiningInstructions";
 import { LiveSettingsPanel } from "./LiveSettingsPanel";
 import { PairingPanel } from "./PairingPanel";
+import { WrappedUpCard } from "./WrappedUpCard";
 
 interface HostActivityDashboardProps {
   activity: HostedActivity;
@@ -128,6 +130,10 @@ export function HostActivityDashboard({
       );
     } else if (pendingAction.kind === "pause-all") {
       engine.pauseAllChats();
+    } else if (pendingAction.kind === "end-activity") {
+      // The terminal wrap-up — hands off to the engine, which emits and drives
+      // the wrapped-up screen. The optimistic destination is the email we hold.
+      engine.endActivity(activity.teacherEmail ?? null);
     } else {
       // End-all is the round-closer: end every chat, then hold auto-match so
       // nobody gets re-paired into a round the teacher just closed. The
@@ -183,6 +189,27 @@ export function HostActivityDashboard({
       : `${engine.waiting.length} students waiting`;
 
   const reconnecting = engine.connection === "reconnecting";
+  // The demo runs the whole class in the browser and never emails anyone, so
+  // its End copy must not promise a send, whatever a demo teacher typed.
+  const demo = demoTriggers !== undefined;
+
+  // Once the teacher ends the activity, the dashboard is over: swap the whole
+  // live layout for the wrapped-up screen, keeping the completed chats readable
+  // beneath it (the escape hatch if the email failed). The demo flag drives the
+  // card's honest "nothing was actually sent" line.
+  if (engine.ended) {
+    return (
+      <div className="flex flex-col gap-5">
+        <WrappedUpCard ended={engine.ended} demo={demo} />
+        {engine.completedChats.length > 0 && (
+          <CompletedChatsSection
+            chats={engine.completedChats}
+            activity={activity}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -321,6 +348,37 @@ export function HostActivityDashboard({
                 </div>
               </DemoControlsPanel>
             )}
+
+            {/* The terminal wrap-up, deliberately a page-level action at the
+                bottom of the column — not in the chats toolbar beside "End all
+                chats", which only closes a round. Ending emails the transcript
+                and tears the whole activity down. Inside the column (like the
+                demo controls) so the sticky rail stays pinned. */}
+            <div className="rounded-2xl border border-border bg-card px-5 py-4 shadow-sm">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <h2 className="text-sm font-semibold text-foreground">
+                    Wrap up the activity
+                  </h2>
+                  <p className="mt-0.5 text-sm text-muted-foreground">
+                    {demo
+                      ? "Ends every chat. The demo doesn't email anyone."
+                      : activity.teacherEmail
+                        ? `Ends every chat and emails the transcript to ${activity.teacherEmail}.`
+                        : "Ends every chat. No email is set, so nothing will be sent."}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  disabled={reconnecting}
+                  onClick={() => setPendingAction({ kind: "end-activity" })}
+                  className="shrink-0 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <LogOut aria-hidden className="size-4" />
+                  End activity
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -331,7 +389,13 @@ export function HostActivityDashboard({
           if (!open) setPendingAction(null);
         }}
         onConfirm={confirmPendingAction}
-        {...confirmCopy(pendingAction, activity.settings.autoMatch)}
+        {...confirmCopy(
+          pendingAction,
+          activity.settings.autoMatch,
+          activity.teacherEmail ?? null,
+          engine.chatsInProgress.length + engine.completedChats.length,
+          demo
+        )}
       />
     </div>
   );

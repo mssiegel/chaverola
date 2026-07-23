@@ -11,7 +11,7 @@ import { HOST_CHATTER_LINES } from "@/mockData";
 import type { HostedActivity } from "@/types/activity";
 import { NOTICE_SENDER_ID } from "@/types/chat";
 
-import type { HostEngine, HostDemoTriggers } from "./hostEngine";
+import type { HostEnded, HostEngine, HostDemoTriggers } from "./hostEngine";
 import {
   activeChatMembers,
   createChat,
@@ -53,6 +53,7 @@ export function useHostActivityDemo(
   activity: HostedActivity
 ): HostActivityDemo {
   const [world, setWorld] = useState<HostWorld>(() => seedWorld(activity));
+  const [ended, setEnded] = useState<HostEnded | null>(null);
 
   // Refs so timers and actions always read the freshest state — same idiom
   // as useChatDemo. `commit` updates worldRef eagerly so two actions in one
@@ -134,6 +135,20 @@ export function useHostActivityDemo(
     // starts unpaused. (The dashboard separately holds auto-match; that acts
     // on activity settings, a different owner than this world flag.)
     commit({ ...w, paused: false });
+  };
+
+  const endActivity = (teacherEmail: string | null) => {
+    // End every active chat, exactly like endAllChats, so the wrapped-up
+    // screen's completed-chats list carries the whole round.
+    let w = worldRef.current;
+    for (const chat of w.chats.filter((c) => c.status === "active")) {
+      w = endChatIn(w, chat.id, "teacher");
+    }
+    commit({ ...w, paused: false });
+    // No network, and the demo never emails anyone: settle terminal with
+    // nothing sent. WrappedUpCard's demo branch shows the honest demo copy and
+    // never names the address, whatever the demo teacher typed.
+    setEnded({ to: teacherEmail, state: "empty" });
   };
 
   const pauseAllChats = () => {
@@ -295,6 +310,8 @@ export function useHostActivityDemo(
     updateTeacherEmail: () => {},
     // The demo classroom is client-side — the teacher's link never drops.
     connection: "connected",
+    endActivity,
+    ended,
     triggerJoin,
     canTriggerJoin: world.joinPool.length > 0,
     triggerWifiBlip,

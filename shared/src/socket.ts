@@ -217,6 +217,13 @@ export interface ServerToClientEvents {
   "activity:paused": (payload: { paused: boolean }) => void;
   /** Teacher room minus the sender — keeps a second host device coherent. */
   "settings:changed": (payload: { settings: ActivitySettings }) => void;
+  /** To the clicking teacher socket only, never the room — the End-activity
+   *  outcome (feature 11). `email: null` means nothing was sent: no address
+   *  set, or not a single message across every chat. Carries only what the
+   *  teacher typed, so it never touches the student privacy boundary. */
+  "activity:end-result": (payload: {
+    email: { to: string; state: "sent" | "failed" } | null;
+  }) => void;
 }
 
 export interface ClientToServerEvents {
@@ -268,6 +275,12 @@ export interface ClientToServerEvents {
    *  has no echo event: the email is one field on the teacher's own form, so
    *  last write wins and a second host device keeps the copy it fetched. */
   "activity:update-email": (payload: { teacherEmail: string | null }) => void;
+  /** Teacher only; no payload. The terminal wrap-up (feature 11): every chat
+   *  ends, the transcript email is sent, and the activity is removed — one
+   *  activity ends at most once. A repeat while the send is in flight is
+   *  dropped server-side. The clicking socket hears the outcome back on
+   *  activity:end-result; students get the existing activity:ended teardown. */
+  "activity:end": () => void;
   /** Student: the chat room's own exit — End chat in a duo, Leave in a
    *  group — which keeps the seat. A duo ends for both (nobody goes
    *  inactive; the ending records "peer" plus who, and the ender's own

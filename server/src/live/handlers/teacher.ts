@@ -4,8 +4,9 @@ import {
   activitySettingsSchema,
   teacherEmailUpdateSchema,
 } from "../../schemas/activity";
-import { getByHostKey } from "../../store/activityStore";
-import { armAutoMatch, releaseAutoMatch } from "../autoMatch";
+import { sendTranscriptEmail } from "../../email/sendTranscript";
+import { getByHostKey, removeActivity } from "../../store/activityStore";
+import { armAutoMatch, clearAutoMatch, releaseAutoMatch } from "../autoMatch";
 import { room } from "../lobbyContext";
 import type {
   LobbyContext,
@@ -40,6 +41,7 @@ export function registerTeacherHandlers(
   const {
     io,
     log,
+    mailer,
     queuePayload,
     chatsPayload,
     broadcastState,
@@ -283,6 +285,38 @@ export function registerTeacherHandlers(
       { joinCode: data.joinCode, set: parsed.data !== null },
       "transcript email updated by teacher"
     );
+  });
+
+  // The terminal wrap-up: end every chat, mail the transcript, remove the
+  // activity. Async because the send is awaited so the outcome can be reported
+  // back before teardown. A repeat while a send is in flight is dropped by the
+  // send-once guard's "sending" state (set synchronously inside
+  // sendTranscriptEmail before its first await), so a double-click or a second
+  // host device produces exactly one email.
+  socket.on("activity:end", async () => {
+    const current = getByHostKey(data.hostKey);
+    if (!current) return;
+    if (current.transcriptEmail?.state === "sending") return;
+    // Stop auto-match outright, whatever the teacher refcount — otherwise a
+    // second host device would leave the tick armed, and it could pair the
+    // students we just freed into fresh chats during the send await.
+    clearAutoMatch(data.joinCode);
+    // Flip every active chat to ended before the await so the transcript is
+    // frozen for the send. No settleMembershipChange: removal (step below)
+    // boots the students wholesale, and settling here would flash a second
+    // ended screen first.
+    for (const chat of current.chats) endChat(current, chat.id);
+    const result = await sendTranscriptEmail(current, mailer, log);
+    // To the clicking socket only — the room never hears it. If the teacher
+    // already vanished this emit goes nowhere and removal still runs.
+    socket.emit("activity:end-result", { email: result });
+    log.info(
+      { joinCode: data.joinCode, chats: current.chats.length },
+      "activity ended by teacher"
+    );
+    // onActivityRemoved does the whole teardown: seat timers cleared, every
+    // student sent activity:ended, all sockets (this one included) dropped.
+    removeActivity(current);
   });
 
   socket.on("disconnect", (reason) => {

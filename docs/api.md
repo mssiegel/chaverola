@@ -334,6 +334,12 @@ export interface ServerToClientEvents {
   }) => void;
   /** Teacher room minus the sender — keeps a second host device coherent. */
   "settings:changed": (payload: { settings: ActivitySettings }) => void;
+  /** To the clicking teacher socket only — the End-activity outcome (feature
+   *  11). `email: null` means nothing was sent (no address, or no message in
+   *  any chat). */
+  "activity:end-result": (payload: {
+    email: { to: string; state: "sent" | "failed" } | null;
+  }) => void;
 }
 
 export interface QueueEntry {
@@ -457,6 +463,12 @@ export interface ClientToServerEvents {
    *  has no echo event: the email is one field on the teacher's own form, so
    *  last write wins and a second host device keeps the copy it fetched. */
   "activity:update-email": (payload: { teacherEmail: string | null }) => void;
+  /** Teacher only; no payload. The terminal wrap-up (feature 11): every chat
+   *  ends, the transcript is emailed, and the activity is removed — one
+   *  activity ends at most once. A repeat while the send is in flight is
+   *  dropped. The clicking socket hears the outcome on activity:end-result;
+   *  students get the existing activity:ended teardown. */
+  "activity:end": () => void;
   /** Student: the chat room's own exit — End chat in a duo, Leave in a
    *  group — which keeps the seat. A duo ends for both (nobody goes
    *  inactive; the ending records "peer" plus who, and the ender's own
@@ -487,7 +499,7 @@ from starting chats or rewriting settings. Two cases are pinned by tests:
 a 4-digit join code cannot open a teacher socket at all, and a student
 socket emitting `queue:remove`, `chat:start`, `chat:remove`, `chat:end`,
 `chats:end-all`, `chats:pause-all`, `chats:resume-all`, `settings:update`,
-or `activity:update-email` is silently ignored.
+`activity:update-email`, or `activity:end` is silently ignored.
 
 Teacher commands are also **idempotent and self-correcting**: a command
 naming a student who just dropped, a chat that just ended, or a seat that
@@ -602,6 +614,16 @@ below.
   never reaches the log. There is no echo event and no room broadcast:
   the email is one field on the teacher's own form, so last write wins
   and a second host device keeps the copy it fetched. Nothing about it
+  reaches a student socket.
+- **Ending is `activity:end`; it's terminal.** The handler stops
+  auto-match outright, ends every chat, `await`s the transcript send, and
+  reports the outcome back to the clicking socket on
+  `activity:end-result` (`{ to, state }`, or `email: null` when there was
+  nothing to send) before removing the activity through the store's normal
+  removal path — so the whole teardown runs: seat timers cleared, every
+  student sent `activity:ended`, all sockets dropped. The send-once guard
+  makes a double-click or a second host device produce exactly one email;
+  a repeat while a send is in flight is dropped. Nothing about the result
   reaches a student socket.
 - **Chats outlive their students.** A chat record keeps everyone who was
   ever in it (with the name captured at chat start), so a card still
@@ -773,8 +795,9 @@ needs zero env vars: in dev it logs the whole composed email, and in
 production it logs a warning with the recipient and line count only, never
 the student messages. The composer and the send-once guard live in
 `server/src/email/`; the setup steps are in
-[operations.md](operations.md) → "Gmail app password". Nothing sends until
-the teacher ends an activity (feature 11 prompt 3).
+[operations.md](operations.md) → "Gmail app password". The send fires when
+the teacher ends an activity (`activity:end`); a ~10-minute fallback after
+the last teacher socket drops is still to come (feature 11 prompt 4).
 
 ## curl smoke
 

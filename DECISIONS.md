@@ -105,6 +105,8 @@ git: `git log -- DECISIONS.md`.
   - [Character rows lead with the emoji avatar](docs/decisions/teacher-setup.md#character-rows-lead-with-the-emoji-avatar)
   - [Setup sections each carry one brand accent; settings stays the quiet one](docs/decisions/teacher-setup.md#setup-sections-each-carry-one-brand-accent-settings-stays-the-quiet-one)
 - [Teacher live activity page](docs/decisions/teacher-live.md)
+  - [End activity is the terminal wrap-up, and it emails the class transcript](docs/decisions/teacher-live.md#end-activity-is-the-terminal-wrap-up-and-it-emails-the-class-transcript)
+  - [Ending removes the activity right away; the wrapped-up screen is local to the tab](docs/decisions/teacher-live.md#ending-removes-the-activity-right-away-the-wrapped-up-screen-is-local-to-the-tab)
   - [The teacher's email syncs live; the rest of the roster still doesn't](docs/decisions/teacher-live.md#the-teachers-email-syncs-live-the-rest-of-the-roster-still-doesnt)
   - [Chats show no timer or clock — the teacher ends them by hand](docs/decisions/teacher-live.md#chats-show-no-timer-or-clock--the-teacher-ends-them-by-hand)
   - [Pausing ships end to end; the grace window keeps running through it](docs/decisions/teacher-live.md#pausing-ships-end-to-end-the-grace-window-keeps-running-through-it)

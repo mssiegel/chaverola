@@ -7,7 +7,8 @@ export type PendingAction =
   | { kind: "remove-from-queue"; student: WaitingStudent }
   | { kind: "remove-from-chat"; chat: HostedChat; participant: Participant }
   | { kind: "end-all" }
-  | { kind: "pause-all" };
+  | { kind: "pause-all" }
+  | { kind: "end-activity" };
 
 /**
  * The confirmation copy per action — each names what actually happens.
@@ -17,7 +18,10 @@ export type PendingAction =
  */
 export function confirmCopy(
   action: PendingAction | null,
-  autoMatchOn: boolean
+  autoMatchOn: boolean,
+  teacherEmail: string | null,
+  chatCount: number,
+  demo: boolean
 ): {
   title: string;
   description: string;
@@ -58,6 +62,28 @@ export function confirmCopy(
       confirmLabel: "Pause chats",
       cancelLabel: "Never mind",
       confirmVariant: "default",
+    };
+  }
+  if (action?.kind === "end-activity") {
+    // The terminal wrap-up. Names the three consequences, then where the
+    // transcript goes (with a live chat count) or that nothing will be sent.
+    const consequences =
+      "Every chat ends right now and your students see the activity is over. The join code stops working, so nobody else can join.";
+    const emailLine = demo
+      ? "This is the demo, so nothing gets emailed."
+      : !teacherEmail
+        ? "No email is set, so nothing will be emailed. The chats will only be here on this page."
+        : chatCount === 0
+          ? `No chats have happened yet, so there's nothing to email to ${teacherEmail}.`
+          : chatCount === 1
+            ? `We'll email the chat to ${teacherEmail}.`
+            : `We'll email all ${chatCount} chats to ${teacherEmail}.`;
+    return {
+      title: "End the activity for everyone?",
+      description: `${consequences} ${emailLine}`,
+      confirmLabel: "End activity",
+      cancelLabel: "Keep it running",
+      confirmVariant: "destructive",
     };
   }
   return {

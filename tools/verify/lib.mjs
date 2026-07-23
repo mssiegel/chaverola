@@ -66,6 +66,7 @@ export async function createActivity({
   hostName = "Ms. Prod",
   characters = ["Herzl", "Ben-Gurion"],
   settings = {},
+  teacherEmail,
 } = {}) {
   const res = await fetch(`${API}/activities`, {
     method: "POST",
@@ -73,6 +74,7 @@ export async function createActivity({
     body: JSON.stringify({
       hostName,
       characters: characters.map((name) => ({ name, description: "" })),
+      ...(teacherEmail ? { teacherEmail } : {}),
       settings: {
         revealNames: true,
         rematchWarning: true,
