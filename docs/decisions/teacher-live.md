@@ -5,6 +5,60 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
+### The live settings panel only claims the edits that actually travel
+
+_2026-07-23_
+
+**Decision:** Every sentence in the **Edit activity settings** panel is now
+scoped to what the app really does. The lead paragraph says settings and the
+teacher's email save on the typing pause, and that characters, the scene and the
+host name only change this page for now, with students keeping the setup copy and
+a refresh undoing the edit. The old promise that changes reach everyone
+"including what students see mid-chat" is gone, and so is the "the natural time
+to switch up the characters or the scene is between rounds" line that implied a
+cast switch reaches the class. The **Match students 1:1 automatically** row
+admits the hold: while chats are paused it opens with the pairing rail's exact
+sentence, "Auto-match is on hold while chats are paused.", then says what happens
+on resume. It follows the rail's off > paused > on precedence, so a switched-off
+row keeps describing what turning it on will do rather than reporting a hold that
+isn't the reason nothing is pairing. The collapsed hint's email nudge became an
+invitation ("Add your email and we'll send you every chat when the activity wraps
+up") instead of the old "No email yet." assertion. One paragraph serves both
+engines: no `1234` variant.
+
+**Why:** The panel was describing the host page as it worked in July when it was
+client-side, and had kept saying so through the 2026-07-19 founder call that made
+roster, scene and host name local-only. A teacher who renames a character and
+watches nothing happen on any student screen has been told the app is broken by
+the app itself. The auto-match row and the pairing rail sit six inches apart on
+desktop and disagreed outright, which is worse than either one being wrong alone,
+so the row borrows the rail's sentence verbatim rather than saying the same thing
+differently. The email nudge fired off this tab's copy of a value that lives on
+the server and has no echo event
+([The teacher's email syncs live; the rest of the roster still doesn't](#the-teachers-email-syncs-live-the-rest-of-the-roster-still-doesnt)),
+so a second host device kept nudging long after the first one set an address;
+softening it to an invitation drops the claim about state while keeping the nudge
+where a teacher who skipped email at setup will actually meet it (the panel opens
+collapsed). No demo variant because the demo banner already frames the class as
+pretend, and a second paragraph would double the surface every later feature has
+to keep honest.
+
+**This copy is temporary, and it does not widen back to where it started.**
+Features 17 and 18 widen it as their sync ships, to their own narrower scope:
+host name and scene reach everyone live, character edits reach the lobby and
+future chats, and a chat already in progress deliberately keeps its cast. Whoever
+finishes 18 widens the copy to _that_, never back to "what students see
+mid-chat".
+
+_Implemented in
+[LiveSettingsPanel](../../client/src/components/Teacher/HostActivity/LiveSettingsPanel.tsx)
+(the paragraph and the collapsed hint) and the `paused` prop on
+[SettingsSection](../../client/src/components/Teacher/ActivitySetup/SettingsSection.tsx),
+fed `engine.paused` from
+[index.tsx](../../client/src/components/Teacher/HostActivity/index.tsx) — the
+value the rail already had. Presentational only: `paused` never enters the draft,
+so the panel still emits on a settings or email diff and nothing else._
+
 ### A best-effort fallback emails the transcript if the teacher just closes the laptop
 
 _2026-07-23_
@@ -1168,7 +1222,14 @@ the control lives in
 
 ### Live edits propagate after a 1-second pause, and invalid states never do
 
-_2026-07-15_
+_2026-07-15 · Partly superseded 2026-07-23 by
+[The live settings panel only claims the edits that actually travel](#the-live-settings-panel-only-claims-the-edits-that-actually-travel):
+**the "applies everywhere at once" half is retired**, along with the in-UI
+promise that changes reach everyone instantly. It was written when the host page
+was client-side and every surface read one object; since the 2026-07-19 founder
+call only settings and the teacher's email leave the tab. The rest of this entry
+stands: the 1-second debounce, last-valid-wins on an invalid in-between state,
+and re-labeling by stable character id are all unchanged._
 
 **Decision:** The host page's settings panel reuses the setup form's field
 components and validation, and every valid edit applies **everywhere at

@@ -229,6 +229,7 @@ export function HostActivityDashboard({
       <LiveSettingsPanel
         activity={activity}
         characterIdsInUse={engine.characterIdsInUse}
+        paused={engine.paused}
         onActivityChange={onActivityChange}
       />
 

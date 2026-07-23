@@ -59,7 +59,7 @@ progress deliberately keeps its cast. Whoever finishes 18 widens the copy to
 _that_ scope, never back to "what students see mid-chat." Say so in the decision
 entry so the next agent finds it.
 
-- [ ] Prompt — The panel only claims what it can actually do
+- [x] Prompt — The panel only claims what it can actually do
 
 ---
 

@@ -23,6 +23,13 @@ interface SettingsSectionProps {
    * page's live panel provides its own section chrome around them.
    */
   bare?: boolean;
+  /**
+   * Every chat is paused, so auto-match is pairing nobody right now and the
+   * row says so instead of promising pairing. The host page passes
+   * `engine.paused` (the same value the pairing rail gets); the setup form
+   * has no such state and passes nothing.
+   */
+  paused?: boolean;
 }
 
 /**
@@ -35,6 +42,7 @@ export function SettingsSection({
   settings,
   onChange,
   bare,
+  paused,
 }: SettingsSectionProps) {
   const rows = (
     <div className="divide-y divide-border/70">
@@ -60,7 +68,16 @@ export function SettingsSection({
         id="setting-auto-match"
         icon={Zap}
         title="Match students 1:1 automatically"
-        description="Once two students have each waited long enough, they get paired up on their own. Nobody lands right back with their last partner."
+        // Paused only outranks the normal description while the setting is
+        // ON — the same off > paused > on order the pairing rail uses, and
+        // it opens with the rail's own sentence so the two controls can't
+        // read as two different truths. Switched off, the row keeps
+        // describing what turning it on will do.
+        description={
+          paused && settings.autoMatch
+            ? "Auto-match is on hold while chats are paused. When you resume, two students who have each waited long enough get paired up on their own."
+            : "Once two students have each waited long enough, they get paired up on their own. Nobody lands right back with their last partner."
+        }
         checked={settings.autoMatch}
         onCheckedChange={(autoMatch) => onChange({ autoMatch })}
       >

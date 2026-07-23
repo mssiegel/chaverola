@@ -28,6 +28,12 @@ interface LiveSettingsPanelProps {
   activity: HostedActivity;
   /** Characters a live chat is using right now — their rows can't be removed. */
   characterIdsInUse: ReadonlySet<string>;
+  /**
+   * Every chat is paused. Purely presentational here: it reaches the
+   * auto-match row's description and nothing else, so it can never enter the
+   * draft or trigger a commit.
+   */
+  paused: boolean;
   onActivityChange: (activity: HostedActivity) => void;
 }
 
@@ -42,6 +48,7 @@ interface LiveSettingsPanelProps {
 export function LiveSettingsPanel({
   activity,
   characterIdsInUse,
+  paused,
   onActivityChange,
 }: LiveSettingsPanelProps) {
   const [draft, setDraft] = useState<LiveActivityDraft>(() =>
@@ -125,16 +132,28 @@ export function LiveSettingsPanel({
       icon={SlidersHorizontal}
       accent="mint"
       defaultOpen={false}
+      // An invitation, never a claim about whether an email exists: the
+      // address lives on the server and changing it emits no echo, so a
+      // second host device can be looking at a stale empty field long after
+      // the first one set it.
       collapsedHint={
         activity.teacherEmail
           ? "Everything from setup, still editable while the activity runs"
-          : "No email yet. Add yours to get every chat sent to you afterward"
+          : "Add your email and we'll send you every chat when the activity wraps up"
       }
     >
+      {/* Only what actually travels gets promised. Settings and the email
+          reach the server on the 1-second pause; characters, the scene and
+          the host name are still local to this tab (founder call
+          2026-07-19), so students keep the setup copy and a refetch drops
+          the edit. Features 17 and 18 widen this line as their sync ships —
+          to their own scope, never back to "what students see mid-chat".
+          See DECISIONS.md → "The live settings panel only claims the edits
+          that actually travel". */}
       <p className="text-sm leading-relaxed text-muted-foreground">
-        Changes reach everyone the moment you pause typing, including what
-        students see mid-chat. The natural time to switch up the characters or
-        the scene is between rounds.
+        Settings and your email save as soon as you pause typing. Characters,
+        the scene and your name only change this page for now: students still
+        see what you set up, and refreshing undoes those edits.
       </p>
 
       <div className="mt-6 flex flex-col gap-7">
@@ -192,6 +211,7 @@ export function LiveSettingsPanel({
             <SettingsSection
               bare
               settings={draft.settings}
+              paused={paused}
               onChange={patchSettings}
             />
           </div>

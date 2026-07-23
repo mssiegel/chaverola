@@ -105,6 +105,7 @@ git: `git log -- DECISIONS.md`.
   - [Character rows lead with the emoji avatar](docs/decisions/teacher-setup.md#character-rows-lead-with-the-emoji-avatar)
   - [Setup sections each carry one brand accent; settings stays the quiet one](docs/decisions/teacher-setup.md#setup-sections-each-carry-one-brand-accent-settings-stays-the-quiet-one)
 - [Teacher live activity page](docs/decisions/teacher-live.md)
+  - [The live settings panel only claims the edits that actually travel](docs/decisions/teacher-live.md#the-live-settings-panel-only-claims-the-edits-that-actually-travel)
   - [A best-effort fallback emails the transcript if the teacher just closes the laptop](docs/decisions/teacher-live.md#a-best-effort-fallback-emails-the-transcript-if-the-teacher-just-closes-the-laptop)
   - [End activity is the terminal wrap-up, and it emails the class transcript](docs/decisions/teacher-live.md#end-activity-is-the-terminal-wrap-up-and-it-emails-the-class-transcript)
   - [Ending removes the activity right away; the wrapped-up screen is local to the tab](docs/decisions/teacher-live.md#ending-removes-the-activity-right-away-the-wrapped-up-screen-is-local-to-the-tab)
