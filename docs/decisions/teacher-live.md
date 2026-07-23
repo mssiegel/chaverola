@@ -5,6 +5,43 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
+### A best-effort fallback emails the transcript if the teacher just closes the laptop
+
+_2026-07-23_
+
+**Decision:** If a teacher never clicks End and just closes the tab, the server
+sends the transcript on its own about 10 minutes after the last teacher socket
+for that activity disconnects. The "is a teacher really gone?" question is
+answered when the timer fires, not when it is armed: a reconnect, or a second
+host tab that stayed open, means a teacher is still connected at that point, so
+the fallback does nothing. It only emails. It does not end the activity or move
+students off their chats (any open chats keep running until students leave or the
+12h TTL), and it is completely silent in the UI, so teachers are never told the
+net exists. The send-once guard (prompt 2) means a later explicit End cannot
+produce a second email. It is best-effort: if the free-tier instance has spun
+down inside those 10 minutes, nothing sends.
+
+**Why:** The whole point of the transcript email is that a teacher does not have
+to remember to trigger it, but the explicit End button still asks them to. The
+common miss is closing the laptop at the bell, so a fallback catches exactly that
+case. Ten minutes is the balance we can actually keep on a free instance that
+spins down when idle: long enough to absorb a bathroom break or a wifi blip
+(either reconnects and cancels the send), short enough that the process is
+usually still alive to send at all. Email-only, not a full end, because a
+fallback firing means a real ten-minute absence, not necessarily the end of
+class, and quietly nuking a class that is still productively chatting would be
+worse than leaving it be. Silent, because promising a safety net we cannot always
+honor (the spin-down case) would be a worse experience than a net that simply
+works when it can. Keeping the presence check at fire time rather than juggling
+cancel-on-connect and a disconnect-time socket scan puts the whole thing in one
+place and avoids depending on Socket.IO's removal ordering during a disconnect.
+
+_Implemented as [transcriptFallback.ts](../../server/src/live/transcriptFallback.ts),
+armed on teacher disconnect in
+[handlers/teacher.ts](../../server/src/live/handlers/teacher.ts) and cancelled on
+activity removal in [lobby.ts](../../server/src/live/lobby.ts), reusing the
+prompt-2 `sendTranscriptEmail` guard._
+
 ### End activity is the terminal wrap-up, and it emails the class transcript
 
 _2026-07-23_

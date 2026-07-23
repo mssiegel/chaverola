@@ -7,6 +7,7 @@ import type { Config } from "../config";
 import type { Mailer } from "../email/mailer";
 import { onActivityRemoved } from "../store/activityStore";
 import { clearAutoMatch } from "./autoMatch";
+import { cancelTranscriptFallback } from "./transcriptFallback";
 import { createAuthMiddleware } from "./auth";
 import { registerStudentSession } from "./handlers/studentSession";
 import { registerTeacherHandlers } from "./handlers/teacher";
@@ -80,6 +81,9 @@ export function attachLobby(
   onActivityRemoved((record) => {
     clearAllSeatTimers(record);
     clearAutoMatch(record.joinCode);
+    // Covers the explicit End path (End removes the record) and sweep/TTL, so a
+    // pending fallback can never fire against an activity that's already gone.
+    cancelTranscriptFallback(record.joinCode);
     for (const socket of io.sockets.sockets.values()) {
       if (socket.data.joinCode !== record.joinCode) continue;
       if (socket.data.role === "student") socket.emit("activity:ended");

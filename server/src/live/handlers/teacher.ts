@@ -7,6 +7,7 @@ import {
 import { sendTranscriptEmail } from "../../email/sendTranscript";
 import { getByHostKey, removeActivity } from "../../store/activityStore";
 import { armAutoMatch, clearAutoMatch, releaseAutoMatch } from "../autoMatch";
+import { armTranscriptFallback } from "../transcriptFallback";
 import { room } from "../lobbyContext";
 import type {
   LobbyContext,
@@ -322,6 +323,11 @@ export function registerTeacherHandlers(
   socket.on("disconnect", (reason) => {
     clearInterval(keepAlive);
     releaseAutoMatch(data.joinCode);
+    // Arm the best-effort transcript fallback unconditionally: re-arm replaces,
+    // so a second host tab or a reconnect just resets the 10-minute clock, and
+    // whether a teacher is actually still around is settled when the timer
+    // fires (transcriptFallback.ts), not here.
+    armTranscriptFallback(ctx, data.joinCode);
     log.info({ joinCode: data.joinCode, reason }, "teacher disconnected");
   });
 }

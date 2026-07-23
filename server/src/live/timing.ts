@@ -29,6 +29,10 @@ interface Timing {
   /** The breather between auto-match pairings (AUTO_MATCH_GAP_SECONDS,
    *  scaled). */
   autoMatchGapMs: number;
+  /** How long after the last teacher socket drops the best-effort transcript
+   *  fallback waits before sending (feature 11 prompt 4; 10 min, scaled — a
+   *  scaled dev run fires it in ~60s). */
+  transcriptFallbackMs: number;
   /** The auto-match interval's firing rate (1s at scale 1). */
   autoMatchTickMs: number;
   /** engine.io's defaults made explicit so they can scale — the ping cycle
@@ -46,6 +50,7 @@ function derive(scale: number): Timing {
     broadcastDelayMs: scaled(LOBBY_DISCONNECT_BROADCAST_DELAY_MS),
     autoMatchGapMs: scaled(AUTO_MATCH_GAP_SECONDS * 1000),
     autoMatchTickMs: scaled(1000),
+    transcriptFallbackMs: scaled(10 * 60 * 1000),
     pingIntervalMs: scaled(25_000),
     pingTimeoutMs: scaled(20_000),
   };
