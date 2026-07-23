@@ -5,6 +5,40 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
+### A student's own leave ends a 1:1 as "peer", and the survivor's screen names their character
+
+_2026-07-23_
+
+**Decision:** When a student's `lobby:leave` drops a room below two, the
+ending records `"peer"` — not `"teacher"` — and remembers who: the wire
+(`chat:ended`) carries `endedBy`, the leaver's characterId, and the store
+keeps their studentId so the wrappingUp resume re-delivery stays honest.
+The survivor lands on the 🎭 "«Character» ended the chat" wrap-up — the
+founder chose the character name over a generic "Your partner" (matching
+what the demo engine already showed). Teacher-caused endings — `chat:end`,
+`chats:end-all`, `chat:remove` — keep `"teacher"`; a grace expiry keeps
+`"peer-timeout"`. This reverses the lobby:leave clause of
+[A grace expiry ends a 1:1 as "peer-timeout"; the group notice is a client heuristic](#a-grace-expiry-ends-a-11-as-peer-timeout-the-group-notice-is-a-client-heuristic),
+which had kept a student's leave on `"teacher"` as demo semantics.
+
+**Why:** Found on the first real-handset run of the messaging tests
+(2026-07-23): the survivor's screen blamed the teacher for a partner's own
+exit — the same wrong-blame class the `"peer-timeout"` decision fixed for
+grace expiries, and just as misleading in a classroom. The client's
+`"peer"` copy branch already existed (the demo produced it); only the wire
+never did. The id on the wire is a characterId the survivor already knows
+from `chat:started` — the privacy pin holds.
+
+_Implemented in [socket.ts](../../shared/src/socket.ts) (the widened wire),
+[matching.ts](../../server/src/live/matching.ts) (`markInactive` records
+who), [studentSession.ts](../../server/src/live/handlers/studentSession.ts)
+(the `lobby:leave` call site),
+[projections.ts](../../server/src/store/projections.ts) (`toChatEnded`
+projects studentId → characterId), and
+[useActiveMatch](../../client/src/pages/student/join/useActiveMatch.ts) /
+[LiveChatStage](../../client/src/components/Student/LiveChatStage.tsx) (the
+plumbing into the existing 🎭 branch)._
+
 ### On phones the chat fills the screen and hugs the keyboard; desktop keeps the fixed card
 
 _2026-07-23_
@@ -146,7 +180,10 @@ _2026-07-21_
   partner lost connection… Not your fault!" wrap-up instead of the wrong
   🎓 teacher copy. Every teacher-caused ending keeps `"teacher"`:
   `chat:end`, `chats:end-all`, `chat:remove`, and a below-2 ending from
-  `lobby:leave`.
+  `lobby:leave`. _(The `lobby:leave` clause was reversed 2026-07-23 — a
+  student's own leave now ends the room as `"peer"` naming the leaver; see
+  [A student's own leave ends a 1:1 as "peer", and the survivor's screen
+  names their character](#a-students-own-leave-ends-a-11-as-peer-and-the-survivors-screen-names-their-character).)_
 - A group's drop notice is a **client heuristic**: a peer vanishing from
   `chat:update` while marked offline reads "X couldn't get back in and
   left the chat"; otherwise "X left the chat". No reason rides the wire.

@@ -42,7 +42,8 @@ export interface ChatSnapshot {
   messages: ChatTranscriptLine[]; // the whole capped transcript, oldest first
   status: "active" | "ended";
   // "peer-timeout": a below-2 ending caused by a partner's expired grace.
-  endReason: "teacher" | "peer-timeout" | null;
+  // "peer": a student's own leave (lobby:leave) dropped the room below 2.
+  endReason: "teacher" | "peer" | "peer-timeout" | null;
 }
 
 /** Student-facing: characterIds only — never names, never peer studentIds. */
@@ -175,14 +176,20 @@ export interface ServerToClientEvents {
   /** Student only, targeted; re-sent on resume while the seat is wrappingUp
    *  (the resume re-delivery carries the stored reason, so a survivor whose
    *  own socket blipped around the ending still learns the honest one).
-   *  "peer-timeout" is a 1:1 partner's expired grace; every teacher-caused
-   *  ending — chat:end, chats:end-all, chat:remove, and a below-2 ending
-   *  from lobby:leave — stays "teacher". "self-timeout" exists only on the
-   *  wire, never in the store: it's the per-recipient reason a reaped
-   *  student hears when they return to their ended chat (the stored 1:1
-   *  reason stays "peer-timeout" — the survivor's perspective). */
+   *  "peer" is a student's own lobby:leave dropping the room below 2 — the
+   *  survivor's screen names the leaver's character. "peer-timeout" is a
+   *  1:1 partner's expired grace; every teacher-caused ending — chat:end,
+   *  chats:end-all, chat:remove — stays "teacher". "self-timeout" exists
+   *  only on the wire, never in the store: it's the per-recipient reason a
+   *  reaped student hears when they return to their ended chat (the stored
+   *  1:1 reason stays "peer-timeout" — the survivor's perspective). */
   "chat:ended": (payload: {
-    reason: "teacher" | "peer-timeout" | "self-timeout";
+    reason: "teacher" | "peer" | "peer-timeout" | "self-timeout";
+    // The leaver's characterId, present ONLY with reason "peer" — an id the
+    // survivor already knows from chat:started, never a studentId or a name.
+    // Absent from an older server during the deploy window; the client falls
+    // back to its generic "Your partner" copy.
+    endedBy?: string;
     // The name reveal — present ONLY when the teacher's revealNames setting is
     // on at end time. The single sanctioned exception to the characterIds-only
     // student wire: each OTHER member's real name, keyed by the characterId the
@@ -204,8 +211,9 @@ export interface ClientToServerEvents {
   "queue:remove": (payload: { studentId: string }) => void;
   /** Student intentional exit (back-as-reset, sign-out): immediate seat
    *  removal, no 2-minute ghost row. Never fired on refresh/pagehide.
-   *  Mid-chat it drops chat membership first (the peer's emits are exactly
-   *  chat:remove's, minus the tombstone), then releases the seat. */
+   *  Mid-chat it drops chat membership first (like chat:remove, minus the
+   *  tombstone — but a below-2 ending records "peer" plus who, so the
+   *  survivor's screen names the leaver), then releases the seat. */
   "lobby:leave": () => void;
   /** Teacher only. Filtered to eligible students, clamped to the server
    *  roster; no-ops below 2 eligible. */

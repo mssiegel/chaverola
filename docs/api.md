@@ -301,19 +301,23 @@ export interface ServerToClientEvents {
   /** Student only, targeted; re-sent on resume while the seat is wrappingUp
    *  (the re-delivery carries the stored reason, so a survivor whose own
    *  socket blipped around the ending still learns the honest one).
-   *  "peer-timeout" is a 1:1 partner's expired grace; every teacher-caused
-   *  ending — chat:end, chats:end-all, chat:remove, and a below-2 ending
-   *  from lobby:leave — stays "teacher". "self-timeout" exists only on
-   *  the wire, never in the store: the per-recipient reason a reaped
-   *  student hears on their return (the stored 1:1 reason stays
-   *  "peer-timeout" — the survivor's perspective).
+   *  "peer" is a student's own lobby:leave dropping the room below 2 —
+   *  `endedBy` then carries the leaver's characterId (an id the survivor
+   *  already knows; never a studentId, never a name), so the survivor's
+   *  screen names the character. "peer-timeout" is a 1:1 partner's expired
+   *  grace; every teacher-caused ending — chat:end, chats:end-all,
+   *  chat:remove — stays "teacher". "self-timeout" exists only on the
+   *  wire, never in the store: the per-recipient reason a reaped student
+   *  hears on their return (the stored 1:1 reason stays "peer-timeout" —
+   *  the survivor's perspective).
    *  `reveal` is the name reveal (feature 10): present ONLY when the
    *  teacher's revealNames setting is on at end time — the one sanctioned
    *  exception to the characterIds-only student wire. Each OTHER member's
    *  real name, keyed by a characterId the student already knows; absent
    *  means no reveal (also the older-server deploy default). */
   "chat:ended": (payload: {
-    reason: "teacher" | "peer-timeout" | "self-timeout";
+    reason: "teacher" | "peer" | "peer-timeout" | "self-timeout";
+    endedBy?: string; // only with "peer"; absent from an older server
     reveal?: { characterId: string; name: string }[];
   }) => void;
   /** Teacher room minus the sender — keeps a second host device coherent. */
@@ -341,7 +345,8 @@ export interface ChatSnapshot {
   messages: ChatTranscriptLine[]; // the whole capped transcript, oldest first
   status: "active" | "ended";
   // "peer-timeout": a below-2 ending caused by a partner's expired grace.
-  endReason: "teacher" | "peer-timeout" | null;
+  // "peer": a student's own leave (lobby:leave) dropped the room below 2.
+  endReason: "teacher" | "peer" | "peer-timeout" | null;
 }
 
 /** Student-facing: characterIds only — never names, never peer studentIds. */
@@ -504,8 +509,10 @@ below.
   someone, a student left, or a dropped member's grace ran out, a room
   that would drop under two ends — with `endReason: "peer-timeout"` when
   the cause was the expired grace (the survivor's 🔌 "Your partner lost
-  connection" wrap-up), `"teacher"` for everything else. The remaining
-  peer's seat goes **wrapping up**:
+  connection" wrap-up), `"peer"` plus `endedBy` (the leaver's characterId)
+  when the cause was the student's own `lobby:leave` (the survivor's 🎭
+  "«character» ended the chat" wrap-up), and `"teacher"` for a removal.
+  The remaining peer's seat goes **wrapping up**:
   off the queue and unmatchable until their "Back to the lobby" tap emits
   `lobby:back`, which re-queues them with a fresh wait clock. Auto-return
   was rejected — it would show the teacher a "waiting" student who is

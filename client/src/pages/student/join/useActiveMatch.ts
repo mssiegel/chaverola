@@ -61,14 +61,19 @@ export function useActiveMatch({
   // Mirrors the chat engine's ended flag up here so the stage (and with it
   // the page title) can tell chatting from ended.
   const [chatEnded, setChatEnded] = useState(false);
-  // Why the live chat ended, from chat:ended's payload — "peer-timeout" is
-  // a 1:1 partner's expired grace (the 🔌 wrap-up), "self-timeout" the
-  // student's own (the 📶 wrap-up, delivered on their return), "teacher"
-  // everything else. Beside chatEnded rather than on the match state: it
-  // describes the ending, and it resets on the same edges.
+  // Why the live chat ended, from chat:ended's payload — "peer" is a
+  // partner's own leave (the 🎭 wrap-up naming their character),
+  // "peer-timeout" a 1:1 partner's expired grace (the 🔌 wrap-up),
+  // "self-timeout" the student's own (the 📶 wrap-up, delivered on their
+  // return), "teacher" everything else. Beside chatEnded rather than on the
+  // match state: it describes the ending, and it resets on the same edges.
   const [liveEndReason, setLiveEndReason] = useState<
-    "teacher" | "peer-timeout" | "self-timeout" | null
+    "teacher" | "peer" | "peer-timeout" | "self-timeout" | null
   >(null);
+  // Who ended it — the leaver's characterId, riding only with "peer" (null
+  // otherwise, and from an older server: the ended screen then falls back
+  // to "Your partner"). Same edges as liveEndReason.
+  const [liveEndedBy, setLiveEndedBy] = useState<string | null>(null);
   // Whether the ended chat revealed real names (the teacher's reveal setting
   // was on at end time). Beside liveEndReason — it describes the ending and
   // resets on the same edges. The names themselves land on the match's
@@ -103,6 +108,7 @@ export function useActiveMatch({
     setMatch(null);
     setChatEnded(false);
     setLiveEndReason(null);
+    setLiveEndedBy(null);
     setRevealed(false);
   };
 
@@ -152,6 +158,7 @@ export function useActiveMatch({
       // to name, and the reaped-returner replay's own chat:ended follows in
       // order and re-sets them.
       setLiveEndReason(null);
+      setLiveEndedBy(null);
       setRevealed(false);
       setMatch((prev) =>
         applyChatStarted(
@@ -203,6 +210,7 @@ export function useActiveMatch({
       if (liveChatIdRef.current !== null) {
         setChatEnded(true);
         setLiveEndReason(payload.reason);
+        setLiveEndedBy(payload.endedBy ?? null);
         // Names arrive only when the teacher's reveal setting was on at end
         // time. Stamp them onto the room and flip the ended screen to reveal.
         // Captured to a const so the setMatch closure keeps the narrowing.
@@ -225,6 +233,7 @@ export function useActiveMatch({
     chatEnded,
     setChatEnded,
     liveEndReason,
+    liveEndedBy,
     revealed,
     startMatch,
     backToLobby,

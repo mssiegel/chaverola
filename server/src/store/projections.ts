@@ -308,23 +308,32 @@ export function toChatEnded(
   activity: StoredActivity,
   studentId: string
 ): {
-  reason: "teacher" | "peer-timeout";
+  reason: "teacher" | "peer" | "peer-timeout";
+  endedBy?: string;
   reveal?: { characterId: string; name: string }[];
 } {
   // The stored reason is the truth — which is also what makes the
   // wrappingUp resume re-delivery honest for free. The fallback keeps
   // the projector total if it's ever called on a not-yet-ended chat.
   const reason = chat.endReason ?? "teacher";
+  // A "peer" ending names the leaver — as a characterId the survivor
+  // already knows from chat:started, never a studentId, never a name (the
+  // ChatPeer pin). The key is absent entirely on every other reason.
+  const endedBy = chat.members.find(
+    (member) => member.studentId === chat.endedBy
+  )?.characterId;
+  const base: { reason: typeof reason; endedBy?: string } =
+    endedBy === undefined ? { reason } : { reason, endedBy };
   // The name reveal — the ONE sanctioned exception to the characterIds-only
   // student wire. Names leave the server only when the teacher's revealNames
   // setting is on at end time, and only the OTHER members' (the recipient
   // knows their own). Omitted entirely when off, so a real name never reaches
   // a peer unasked-for — pinned by projections.test.ts.
   if (!activity.settings.revealNames) {
-    return { reason };
+    return base;
   }
   return {
-    reason,
+    ...base,
     reveal: chat.members
       .filter((member) => member.studentId !== studentId)
       .map((member) => ({

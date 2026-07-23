@@ -304,3 +304,17 @@ its scripted typing still plays. Any leg blocked by hardware goes into
 `docs/pending-manual-tests.md` rather than evaporating. Push (any hour is
 fine pre-launch), poll `/healthz` for the new server commit, confirm Vercel's
 production deployment is Ready. `pnpm format`, one commit, checkbox ticked.
+
+---
+
+## Pass record — 2026-07-23 (the real-devices leg)
+
+The deferred two-device pass ran on a real phone (cellular, wifi off) with a
+laptop student and the teacher page in view, against production — every leg
+of `docs/pending-manual-tests.md` entry 3 passed: the indicator appeared
+within ~2s of typing and held while typing continued, expired within ~5s of
+stopping, cleared the moment the message landed with no overlap, the
+mid-typing lock killed the partner's indicator within ~5s (the volatile-emit
+leg the entry existed for), the receiver refresh came back absent then
+restored on the next heartbeat, and the teacher's page showed no typing
+artifact at any point. Entry deleted; nothing found.

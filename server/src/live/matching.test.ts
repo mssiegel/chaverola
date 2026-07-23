@@ -102,6 +102,7 @@ describe("createChat", () => {
       startedAt: 0,
       status: "active",
       endReason: null,
+      endedBy: null,
     });
     const requested = [
       eligible.studentId,
@@ -260,7 +261,8 @@ describe("markInactive", () => {
     const [a, b] = [addSeat(activity), addSeat(activity)];
     const chat = createChat(activity, [a.studentId, b.studentId], 10_000)!;
 
-    // No reason passed — chat:remove's and lobby:leave's call shape.
+    // No reason passed — chat:remove's call shape (lobby:leave passes
+    // "peer" now, pinned in lobby.test.ts).
     const result = markInactive(activity, chat.id, a.studentId);
     expect(result).toEqual({ ended: true, chat });
     expect(chat.status).toBe("ended");

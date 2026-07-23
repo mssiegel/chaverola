@@ -83,8 +83,9 @@ function buildStudentAuth(
  * delivery, since every other fan-out skips disconnected seats —
  * `onChatUpdate` is a membership change, `onChatLine` an incoming message
  * (the student's own send echoes back through it too), `onChatEnded` the
- * chat's ending with its honest reason ("teacher"; "peer-timeout" when a
- * 1:1 partner's grace ran out; "self-timeout" when it was this student's
+ * chat's ending with its honest reason ("teacher"; "peer" when a partner's
+ * own leave ended it, naming their character; "peer-timeout" when a 1:1
+ * partner's grace ran out; "self-timeout" when it was this student's
  * own — delivered right after the replayed chat:started on their return)
  * — re-sent on resume while the seat is wrapping up.
  *
@@ -138,7 +139,11 @@ export function useLobbyPresence({
   onChatUpdate?: (payload: { chatId: string; peers: ChatPeer[] }) => void;
   onChatLine?: (payload: { chatId: string; line: ChatLine }) => void;
   onChatEnded?: (payload: {
-    reason: "teacher" | "peer-timeout" | "self-timeout";
+    reason: "teacher" | "peer" | "peer-timeout" | "self-timeout";
+    /** The leaver's characterId, only with reason "peer". Absent from an
+     *  older server during the deploy window — the ended screen then falls
+     *  back to its generic "Your partner" copy. */
+    endedBy?: string;
     // The name reveal — present only when the teacher's reveal setting was on
     // at end time (the one sanctioned exception to the characterIds-only wire).
     reveal?: { characterId: string; name: string }[];

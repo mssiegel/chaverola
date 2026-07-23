@@ -27,11 +27,16 @@ interface LiveChatStageProps {
    *  takes the banner slot; any remaining countdown resumes after. */
   returnedFlashId: string | null;
   isEnded: boolean;
-  /** Why the chat ended (chat:ended's payload): "peer-timeout" is a 1:1
-   *  partner's expired grace — the 🔌 wrap-up — "self-timeout" the
+  /** Why the chat ended (chat:ended's payload): "peer" is a partner's own
+   *  leave — the 🎭 wrap-up naming their character — "peer-timeout" a 1:1
+   *  partner's expired grace (the 🔌 wrap-up), "self-timeout" the
    *  student's own (the 📶 wrap-up on their return), "teacher" everything
    *  else. Null while the chat is going. */
-  endReason: "teacher" | "peer-timeout" | "self-timeout" | null;
+  endReason: "teacher" | "peer" | "peer-timeout" | "self-timeout" | null;
+  /** Who ended it — the leaver's characterId, riding chat:ended only with
+   *  reason "peer" (null otherwise; also null from an older server, which
+   *  falls back to the generic "Your partner" copy). */
+  endedByPeerId: string | null;
   /** Whether this ended chat revealed real names — true only when the
    *  teacher's "Reveal names when a chat ends" setting was on at end time.
    *  The names ride chat:ended and are already stamped onto `everPeers`; this
@@ -64,9 +69,10 @@ interface LiveChatStageProps {
  * chat:peer-typing, feature 5), the teacher's pause is real (feature 7),
  * and so is the peer-drop banner (chat:peer-connection, feature 8): the
  * page hands this stage the offline map and the stage ticks the countdown.
- * The ending tells the truth as well — chat:ended's reason renders the 🔌
- * wrap-up when a 1:1 partner's grace ran out (and the 📶 one when it was
- * this student's own, replayed on their return), not the teacher's 🎓. The
+ * The ending tells the truth as well — chat:ended's reason renders the 🎭
+ * wrap-up naming the leaver's character when a partner ended it, the 🔌 one
+ * when a 1:1 partner's grace ran out (and the 📶 one when it was this
+ * student's own, replayed on their return), not the teacher's 🎓. The
  * name reveal is real too (feature 10): when the teacher's "Reveal names when
  * a chat ends" setting is on, chat:ended carries each peer's real name and the
  * ended screen names who the student was really with — otherwise the neutral
@@ -83,6 +89,7 @@ export function LiveChatStage({
   returnedFlashId,
   isEnded,
   endReason,
+  endedByPeerId,
   revealNames,
   isPaused,
   onSend,
@@ -155,14 +162,14 @@ export function LiveChatStage({
     isEnded,
     isPaused,
     endReason: isEnded ? (endReason ?? "teacher") : null,
-    endedByPeerId: null,
+    endedByPeerId: isEnded ? endedByPeerId : null,
   };
 
   return (
     // Phones: fill the world edge-to-edge (~8px margins) so the composer sits
     // on the keyboard (self-stretch without a width lets -mx-2 widen the box);
     // sm+: today's fixed centered card.
-    <div className="-mx-2 flex min-h-[min(70dvh,620px)] flex-1 flex-col self-stretch animate-in duration-500 fade-in slide-in-from-bottom-4 motion-reduce:animate-none sm:mx-0 sm:h-[min(70dvh,620px)] sm:flex-none">
+    <div className="-mx-2 flex min-h-[min(70dvh,620px)] flex-1 animate-in flex-col self-stretch duration-500 fade-in slide-in-from-bottom-4 motion-reduce:animate-none sm:mx-0 sm:h-[min(70dvh,620px)] sm:flex-none">
       <Chatbox
         chat={chat}
         revealNames={revealNames}

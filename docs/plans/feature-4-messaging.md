@@ -675,3 +675,17 @@ structurally can't close — the real-radio path where both of this project's
 production bugs actually lived. The scripted prod legs above cover the server
 side of both; only the resume across a socket that died without a close frame
 remains unproven.
+
+**Handset pass — 2026-07-23 (the queued leg above, run for real).** Phone on
+cellular (wifi off), a laptop student, the teacher page in view throughout,
+against production. Everything passed: both directions within a beat, the
+emoji message whole, the ~60s lock-screen resume AND the mid-chat refresh
+both restored the missed lines in order (the real-radio resume-backlog leg
+this entry existed for), the pasted over-75 silently didn't send, exactly 10
+of a fast burst landed, and the teacher card stayed coherent throughout —
+live lines with real names, a mid-chat host refresh, the ended card keeping
+its transcript. One bug found, on the leave leg: the survivor of a
+student-initiated leave saw the 🎓 "Your teacher ended the chat" copy.
+Recorded in DECISIONS.md → chat-behavior ("A student's own leave ends a 1:1
+as \"peer\"…") and fixed the same day. The pending-manual-tests entry is
+deleted.

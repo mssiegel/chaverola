@@ -63,7 +63,10 @@ export interface StoredChat {
   lines: StoredChatLine[];
   startedAt: number;
   status: "active" | "ended";
-  endReason: "teacher" | "peer-timeout" | null;
+  endReason: "teacher" | "peer" | "peer-timeout" | null;
+  /** The leaver's studentId, set only with endReason "peer" — persisted so
+   *  the wrappingUp resume re-delivery can still name their character. */
+  endedBy: string | null;
 }
 
 /** The members still actually in the room. */
@@ -161,6 +164,7 @@ export function createChat(
     startedAt: now,
     status: "active",
     endReason: null,
+    endedBy: null,
   };
   activity.chats.push(chat);
   // Rematch memory is one round deep: starting a chat overwrites each
@@ -229,16 +233,17 @@ export function findAutoMatchPair(
  * A member leaves the room (teacher remove, student leave, or grace
  * expiry): mark them inactive; when active membership drops below 2 the
  * chat ends for the remaining peer. `endReason` is what that ending
- * records — "peer-timeout" only from the grace-expiry path; the default
- * keeps chat:remove and lobby:leave on "teacher" (demo semantics — the
- * founder call). Undefined when the chat/member isn't an active match —
- * idempotent.
+ * records — "peer-timeout" only from the grace-expiry path, "peer" only
+ * from the student's own lobby:leave (the ending then remembers WHO in
+ * `endedBy`, so the survivor's screen can name their character); the
+ * default keeps chat:remove on "teacher". Undefined when the chat/member
+ * isn't an active match — idempotent.
  */
 export function markInactive(
   activity: StoredActivity,
   chatId: string,
   studentId: string,
-  endReason: "teacher" | "peer-timeout" = "teacher"
+  endReason: "teacher" | "peer" | "peer-timeout" = "teacher"
 ): { ended: boolean; chat: StoredChat } | undefined {
   const chat = activity.chats.find((c) => c.id === chatId);
   if (!chat || chat.status !== "active") return undefined;
@@ -250,6 +255,7 @@ export function markInactive(
   if (ended) {
     chat.status = "ended";
     chat.endReason = endReason;
+    chat.endedBy = endReason === "peer" ? studentId : null;
   }
   return { ended, chat };
 }

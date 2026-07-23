@@ -136,11 +136,12 @@ const nextTranscriptLine = (socket: ClientSocket) =>
     socket.once("chat:transcript-line", resolve);
   });
 const nextChatEnded = (socket: ClientSocket) =>
-  new Promise<{ reason: "teacher" | "peer-timeout" | "self-timeout" }>(
-    (resolve) => {
-      socket.once("chat:ended", resolve);
-    }
-  );
+  new Promise<{
+    reason: "teacher" | "peer" | "peer-timeout" | "self-timeout";
+    endedBy?: string;
+  }>((resolve) => {
+    socket.once("chat:ended", resolve);
+  });
 const nextPeerConnection = (socket: ClientSocket) =>
   new Promise<{
     chatId: string;
@@ -473,6 +474,48 @@ describe("the live lobby", () => {
     expect(chat.inactiveStudentIds).toEqual([]);
     // Both stay off the matchable pool until their own Back-to-lobby tap.
     expect(activity.seats.byId.get(welcomeA.studentId)!.wrappingUp).toBe(true);
+    expect(activity.seats.byId.get(welcomeB.studentId)!.wrappingUp).toBe(true);
+  });
+
+  it('a student\'s lobby:leave ends the duo as "peer" naming their character', async () => {
+    const studentA = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Rachel",
+      nonce: "nonce-a",
+    });
+    const studentB = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Noa",
+      nonce: "nonce-b",
+    });
+    const welcomeA = await nextWelcome(studentA);
+    const welcomeB = await nextWelcome(studentB);
+    // `!` — both members are eligible; the chat just built above them.
+    const chat = createChat(
+      activity,
+      [welcomeA.studentId, welcomeB.studentId],
+      Date.now()
+    )!;
+    const leaverCharacterId = chat.members.find(
+      (m) => m.studentId === welcomeA.studentId
+    )!.characterId;
+
+    const endedAtB = nextChatEnded(studentB);
+    studentA.emit("lobby:leave");
+
+    // The survivor's screen names the leaver, not the teacher — the
+    // characterId B already knows from chat:started, never a studentId.
+    const payloadB = await endedAtB;
+    expect(payloadB.reason).toBe("peer");
+    expect(payloadB.endedBy).toBe(leaverCharacterId);
+
+    // The store keeps the studentId (projections translate on the way out),
+    // so the wrappingUp resume re-delivery stays honest too.
+    expect(chat.status).toBe("ended");
+    expect(chat.endReason).toBe("peer");
+    expect(chat.endedBy).toBe(welcomeA.studentId);
     expect(activity.seats.byId.get(welcomeB.studentId)!.wrappingUp).toBe(true);
   });
 

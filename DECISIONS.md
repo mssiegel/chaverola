@@ -68,6 +68,7 @@ git: `git log -- DECISIONS.md`.
   - [One page serves both join routes; a wrong code never changes the URL](docs/decisions/student-join.md#one-page-serves-both-join-routes-a-wrong-code-never-changes-the-url)
   - [Student sign-in lives in the tab, and removal sends you to the name step](docs/decisions/student-join.md#student-sign-in-lives-in-the-tab-and-removal-sends-you-to-the-name-step)
 - [Chat behavior](docs/decisions/chat-behavior.md)
+  - [A student's own leave ends a 1:1 as "peer", and the survivor's screen names their character](docs/decisions/chat-behavior.md#a-students-own-leave-ends-a-11-as-peer-and-the-survivors-screen-names-their-character)
   - [On phones the chat fills the screen and hugs the keyboard; desktop keeps the fixed card](docs/decisions/chat-behavior.md#on-phones-the-chat-fills-the-screen-and-hugs-the-keyboard-desktop-keeps-the-fixed-card)
   - [A timed-out student returns to their ended chat, never silently to the lobby](docs/decisions/chat-behavior.md#a-timed-out-student-returns-to-their-ended-chat-never-silently-to-the-lobby)
   - [Students see a partner's drop and return, on the teacher's own 4s gate](docs/decisions/chat-behavior.md#students-see-a-partners-drop-and-return-on-the-teachers-own-4s-gate)

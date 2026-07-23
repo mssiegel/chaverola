@@ -72,7 +72,7 @@ export function ChatStage({
           sits on the keyboard; the min-h floor keeps the demo card from being
           crushed by its sibling controls. sm+: today's fixed centered card.
           self-stretch without a width lets -mx-2 actually widen the box. */}
-      <div className="-mx-2 flex min-h-[min(70dvh,620px)] flex-1 flex-col self-stretch animate-in duration-500 fade-in slide-in-from-bottom-4 motion-reduce:animate-none sm:mx-0 sm:h-[min(70dvh,620px)] sm:flex-none">
+      <div className="-mx-2 flex min-h-[min(70dvh,620px)] flex-1 animate-in flex-col self-stretch duration-500 fade-in slide-in-from-bottom-4 motion-reduce:animate-none sm:mx-0 sm:h-[min(70dvh,620px)] sm:flex-none">
         <Chatbox
           chat={chat}
           revealNames={revealNames}

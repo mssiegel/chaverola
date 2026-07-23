@@ -117,11 +117,12 @@ export function registerStudentSession(
     const current = getByJoinCode(data.joinCode);
     if (!current) return;
     // Mid-chat, leaving means leaving the activity: drop chat membership
-    // first — the peer's emits are exactly chat:remove's, minus the
-    // tombstone.
+    // first — like chat:remove minus the tombstone, except a below-2
+    // ending records "peer" plus who, so the survivor's screen names the
+    // leaver instead of blaming the teacher.
     const chat = findActiveChatOf(current, data.studentId);
     if (chat) {
-      const result = markInactive(current, chat.id, data.studentId);
+      const result = markInactive(current, chat.id, data.studentId, "peer");
       if (result) settleMembershipChange(current, result);
     }
     const left = leaveSeat(current, socket.id);

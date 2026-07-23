@@ -73,6 +73,7 @@ const fullChat: StoredChat = {
   startedAt: 20_000,
   status: "active",
   endReason: null,
+  endedBy: null,
 };
 
 describe("toActivity (student projection)", () => {
