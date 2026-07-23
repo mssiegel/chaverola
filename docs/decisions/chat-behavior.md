@@ -5,6 +5,40 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
+### While a student types on a phone, the world's chrome gets out of the way
+
+_2026-07-23_
+
+**Decision:** Below the `sm` breakpoint, focusing the chat composer collapses
+the student world's chrome: the corner pills (name badge, language switcher)
+and the `pt-20` that reserves their band, and in the demo the golden "This is
+the demo" banner and the "You're driving this demo" panel. Everything returns
+on blur. It's one CSS `:has()` rule keyed off the composer's focus — the
+student world's only `<textarea>` — not React state, and it's scoped to phones
+so a desktop click into the input changes nothing. Extends
+[On phones the chat fills the screen and hugs the keyboard](#on-phones-the-chat-fills-the-screen-and-hugs-the-keyboard-desktop-keeps-the-fixed-card).
+
+**Why:** Two founder screenshots (2026-07-23). In the demo, focusing the input
+threw the chat card off the top of the screen entirely: the steering panel sits
+*below* the composer, so with the keyboard open the document was still ~750px
+against a ~300px viewport and the browser was free to pan the focused input
+anywhere. The rule that makes an input hug a keyboard is simply that the
+composer is the last thing in the document — this makes that true in the demo
+too. In a live chat nothing was broken, just cramped: fixed chrome was renting
+80px of the ~300px left above the keys, a quarter of the visible world spent on
+a name badge while typing. Hiding the chrome for the *whole* chat was rejected
+(it would strand the language switcher and contradict
+[Mid-chat, the student's name is a corner badge](student-join.md#mid-chat-the-students-name-is-a-corner-badge));
+a `fixed inset-0` chat overlay was rejected because iOS pins `fixed` to the
+layout viewport, which would break the pan-to-input path V1 leans on.
+
+_Implemented in
+[StudentWorldLayout](../../client/src/components/layout/StudentWorldLayout.tsx)
+(the `group` hook and both collapses),
+[DemoBanner](../../client/src/components/demo/DemoBanner.tsx) (the `onWorld`
+variant), and [ChatStage](../../client/src/components/Student/ChatStage.tsx)
+(the steering panel)._
+
 ### A student's own leave ends a 1:1 as "peer", and the survivor's screen names their character
 
 _2026-07-23_

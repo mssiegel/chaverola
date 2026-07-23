@@ -85,45 +85,52 @@ export function ChatStage({
         />
       </div>
 
-      {/* The join flow's extra triggers: end sources that exist only once a
-          teacher and an activity clock are in the room. */}
-      <ChatDemoControls
-        chat={chat}
-        onWorld
-        revealNames={revealNames}
-        onRevealNamesChange={setRevealNames}
-        extraEvents={
-          <>
-            <EventButton
-              onWorld
-              onClick={() => chat.endChat("teacher")}
-              disabled={chat.isEnded}
-              icon={<GraduationCap className="size-4" />}
-            >
-              Teacher ends chat
-            </EventButton>
-            {/* Deliberately not gated on isEnded: pause is world-level, so
-                flipping it from the ended screen sends the student back to a
-                paused (or resumed) lobby. */}
-            <EventButton
-              onWorld
-              onClick={() => onClassPausedChange(true)}
-              disabled={classPaused}
-              icon={<Pause className="size-4" />}
-            >
-              Teacher pauses the class
-            </EventButton>
-            <EventButton
-              onWorld
-              onClick={() => onClassPausedChange(false)}
-              disabled={!classPaused}
-              icon={<Play className="size-4" />}
-            >
-              Teacher resumes the class
-            </EventButton>
-          </>
-        }
-      />
+      {/* Hidden on phones while the composer has focus. Not cosmetic: this
+          panel is what sits BELOW the input, and as long as it's there the
+          browser has somewhere to pan a focused input to — which is how the
+          demo's composer ended up off screen with the keyboard open. Dismiss
+          the keyboard to steer the demo again. */}
+      <div className="w-full max-sm:group-has-[textarea:focus]:hidden">
+        {/* The join flow's extra triggers: end sources that exist only once a
+            teacher and an activity clock are in the room. */}
+        <ChatDemoControls
+          chat={chat}
+          onWorld
+          revealNames={revealNames}
+          onRevealNamesChange={setRevealNames}
+          extraEvents={
+            <>
+              <EventButton
+                onWorld
+                onClick={() => chat.endChat("teacher")}
+                disabled={chat.isEnded}
+                icon={<GraduationCap className="size-4" />}
+              >
+                Teacher ends chat
+              </EventButton>
+              {/* Deliberately not gated on isEnded: pause is world-level, so
+                  flipping it from the ended screen sends the student back to a
+                  paused (or resumed) lobby. */}
+              <EventButton
+                onWorld
+                onClick={() => onClassPausedChange(true)}
+                disabled={classPaused}
+                icon={<Pause className="size-4" />}
+              >
+                Teacher pauses the class
+              </EventButton>
+              <EventButton
+                onWorld
+                onClick={() => onClassPausedChange(false)}
+                disabled={!classPaused}
+                icon={<Play className="size-4" />}
+              >
+                Teacher resumes the class
+              </EventButton>
+            </>
+          }
+        />
+      </div>
     </>
   );
 }

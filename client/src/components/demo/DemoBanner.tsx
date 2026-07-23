@@ -21,12 +21,15 @@ import { LocaleLink } from "@/components/layout/LocaleLink";
  * teacher nudges inside the student experience. It pins too: `top-20` equals
  * the world column's `pt-20` (StudentWorldLayout), so the card sticks exactly
  * where it first renders — below the corner pills — and the stages scroll
- * underneath it.
+ * underneath it. On phones it stands down while a student types, along with
+ * the rest of the world's chrome: the keyboard leaves ~300px of world, and the
+ * chatbox needs every one of them. (That also spares the pinning from having
+ * to follow the collapsing `pt-20`.)
  */
 export function DemoBanner({ onWorld = false }: { onWorld?: boolean }) {
   if (onWorld) {
     return (
-      <p className="sticky top-20 z-10 w-full rounded-2xl bg-brand-sun px-4 py-2.5 text-center text-sm font-semibold text-brand-grape-strong shadow-lg sm:text-base">
+      <p className="sticky top-20 z-10 w-full rounded-2xl bg-brand-sun px-4 py-2.5 text-center text-sm font-semibold text-brand-grape-strong shadow-lg max-sm:group-has-[textarea:focus]:hidden sm:text-base">
         This is the demo. The other students are pretend.
       </p>
     );

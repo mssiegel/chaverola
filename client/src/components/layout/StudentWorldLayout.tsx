@@ -28,6 +28,11 @@ export interface StudentWorldOutletContext {
  * rather than dragging the world along. On Android the keyboard resizes the
  * viewport itself (`interactive-widget` in index.html), so the world — and
  * the chat card filling it — shrinks to what's visible above the keys.
+ *
+ * On phones, typing collapses the corner chrome: with a keyboard open there
+ * are barely 300px of world left, and a quarter of it went to a name badge
+ * and a language pill (see DECISIONS.md → "While a student types on a phone,
+ * the world's chrome gets out of the way"). Both come back on blur.
  */
 export function StudentWorldLayout() {
   // While a chat is on screen the brand pill disappears (one stray tap on it
@@ -35,15 +40,20 @@ export function StudentWorldLayout() {
   // student's name badge fills the vacated corner.
   const [chatStudentName, setChatStudentName] = useState<string | null>(null);
   return (
-    <div className="relative flex min-h-dvh flex-col">
+    // `group` exists for one reason: the `group-has-[textarea:focus]` rules
+    // below, which fire while the chat composer — the student world's only
+    // textarea — has focus. Nothing else in client/src uses `group-*`; if you
+    // add one down here, give it a name (`group/thing`) so it can't collide.
+    <div className="group relative flex min-h-dvh flex-col">
       <div aria-hidden className="student-world-bg fixed inset-0">
         <DriftingDoodles />
       </div>
 
       {/* Corner chrome, navbar-style: brand pill (or, mid-chat, the name
           badge) starts, language pill ends. The bar itself must not block
-          clicks on the world below it. */}
-      <div className="pointer-events-none fixed inset-x-0 top-0 z-20 flex items-center justify-between gap-3 px-4 pt-4">
+          clicks on the world below it. On phones it stands down while the
+          student types, handing its band to the chatbox. */}
+      <div className="pointer-events-none fixed inset-x-0 top-0 z-20 flex items-center justify-between gap-3 px-4 pt-4 max-sm:group-has-[textarea:focus]:hidden">
         {chatStudentName === null ? (
           <LocaleLink
             to="/"
@@ -59,7 +69,9 @@ export function StudentWorldLayout() {
         <LanguageSwitcher className="pointer-events-auto ms-auto shrink-0 rounded-full bg-white/90 text-foreground shadow-md backdrop-blur-sm hover:bg-white hover:text-foreground" />
       </div>
 
-      <div className="relative z-10 flex flex-1 flex-col items-center gap-6 px-4 pt-20 pb-2 sm:pb-8">
+      {/* pt-20 clears the corner bar; when that bar stands down for the
+          keyboard the padding goes with it, or the chatbox would gain nothing. */}
+      <div className="relative z-10 flex flex-1 flex-col items-center gap-6 px-4 pt-20 pb-2 max-sm:group-has-[textarea:focus]:pt-2 sm:pb-8">
         <main className="flex w-full flex-1 flex-col items-center">
           <Outlet
             context={{ setChatStudentName } satisfies StudentWorldOutletContext}
