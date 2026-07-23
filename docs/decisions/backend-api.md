@@ -5,6 +5,40 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
+### The API runs on a paid Render instance, because free web services block outbound SMTP
+
+_2026-07-24_
+
+**Decision:** `chaverola-api` (`srv-d9ducu3bc2fs73esrr8g`) runs on a **paid**
+Render instance. Render blocks outbound traffic to SMTP ports 25, 465, and 587
+on **free** web services (rolled out across all regions 2025-09-26), so the
+Gmail SMTP transport can never connect from a free instance, whatever the
+credentials say. Ports 465 and 587 work on any paid plan; port 25 stays blocked
+on every plan, since Render runs on EC2. No code changed: the mailer, the app
+password, and the env vars were all already correct.
+
+**Why:** Found the hard way on the first real production End activity, and the
+symptom was thoroughly misleading. The wrap-up card showed the failure state,
+which normally means bad credentials, but the logged error was
+`connect ENETUNREACH …:465` with `command: "CONN"` — the socket died before any
+SMTP conversation, so the app password was never even offered. The IPv6 address
+in the error was a red herring: nodemailer 9 already orders IPv4 first, and
+IPv4 to 465 is blocked too. Worth knowing for next time: a wrong or revoked
+password fails at `AUTH` with a 535, while a blocked port fails at `CONN`.
+
+The alternative was swapping the mailer to an HTTP email API (Resend, Mailgun),
+which sends over 443 and would have kept the instance free. Rejected because the
+paid instance buys a second thing the product wants anyway: **no spin-down**.
+That removes student cold-start waits and turns the transcript fallback from
+genuinely best-effort into genuinely reliable, since the process no longer dies
+between the last teacher disconnect and the timer firing. The one-module mailer
+seam stays, so switching providers later is still a one-file change.
+
+_The plan requirement is documented in
+[operations.md](../operations.md#gmail-app-password-the-transcript-email); the
+mailer itself is unchanged (see
+[the transcript mailer](#the-transcript-mailer-gmail-smtp-behind-one-module-log-only-without-credentials))._
+
 ### The transcript mailer: Gmail SMTP behind one module, log-only without credentials
 
 _2026-07-23_

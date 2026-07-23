@@ -62,6 +62,22 @@ vars on Render — `GMAIL_USER` (the full Gmail address) and
 either missing the server runs in log-only mode, so this is production-only
 setup; dev needs nothing.
 
+> **`chaverola-api` must stay on a paid instance type.** Render blocks
+> outbound traffic to SMTP ports 25, 465, and 587 on **free** web services
+> (since 2025-09-26), so on a free instance the send dies at the socket with
+> `ESOCKET` / `ENETUNREACH … :465` and `command: "CONN"` no matter how correct
+> the credentials are. Ports 465 and 587 work on any paid plan; port 25 is
+> blocked on every plan (Render runs on EC2). If transcripts ever stop sending
+> right after a plan change, check this first — see DECISIONS.md → "The API
+> runs on a paid Render instance".
+>
+> It's the **instance type**, not the workspace plan. Render's own free-tier
+> docs: "Upgrading your workspace plan does _not_ remove limitations on Free
+> instances." Paying for a Professional **workspace** leaves the service on a
+> Free **instance**, SMTP still blocked, money spent for nothing. The control
+> is `chaverola-api` → Settings → Instance Type. The pricing page leads with
+> workspace plans, which is what makes this easy to get wrong.
+
 One-time steps on the sending Google account (`siegel.moshes@gmail.com`):
 
 1. Turn on 2-Step Verification — app passwords don't exist without it:
@@ -79,9 +95,17 @@ Confirm it took: the boot log's mail line reads `mode: "gmail"` ("mailer
 ready — sending via Gmail SMTP") instead of the log-only line. A wrong or
 revoked password doesn't fail at boot (nodemailer connects lazily) — it
 surfaces only as a `"transcript email failed"` error in the logs when an
-activity ends, so if transcripts stop arriving, check there first and
-regenerate the app password. Gmail caps a normal account at ~500 sends/day,
-which is far above launch scale.
+activity ends, so if transcripts stop arriving, check there first. Read the
+`err` before regenerating anything — the failure stage names the cause:
+
+- `command: "CONN"` with `ESOCKET` / `ENETUNREACH` / `ETIMEDOUT` — the socket
+  never opened, so the password was never offered. That's the blocked-port
+  case above (a free instance), not a bad credential.
+- `command: "AUTH …"` with a 535 (`Username and Password not accepted`) — that
+  really is the password. Regenerate it, and re-paste the 16 characters with
+  the spaces stripped.
+
+Gmail caps a normal account at ~500 sends/day, which is far above launch scale.
 
 ## Setting Vercel env vars — never from a PowerShell pipe
 

@@ -72,16 +72,21 @@ the fallback does nothing. It only emails. It does not end the activity or move
 students off their chats (any open chats keep running until students leave or the
 12h TTL), and it is completely silent in the UI, so teachers are never told the
 net exists. The send-once guard (prompt 2) means a later explicit End cannot
-produce a second email. It is best-effort: if the free-tier instance has spun
-down inside those 10 minutes, nothing sends.
+produce a second email. It survives anything the process itself survives: an
+in-memory timer dies with a restart or a deploy, so a push mid-window still
+loses that send.
 
 **Why:** The whole point of the transcript email is that a teacher does not have
 to remember to trigger it, but the explicit End button still asks them to. The
 common miss is closing the laptop at the bell, so a fallback catches exactly that
-case. Ten minutes is the balance we can actually keep on a free instance that
-spins down when idle: long enough to absorb a bathroom break or a wifi blip
-(either reconnects and cancels the send), short enough that the process is
-usually still alive to send at all. Email-only, not a full end, because a
+case. Ten minutes is long enough to absorb a bathroom break or a wifi blip
+(either reconnects, and a present teacher cancels the send at fire time) while
+still landing the transcript close enough to the lesson to be useful. It was
+originally also bounded by the free tier's idle spin-down, which could kill the
+timer before it fired; moving to a paid instance
+([the API runs on a paid Render instance](../decisions/backend-api.md#the-api-runs-on-a-paid-render-instance-because-free-web-services-block-outbound-smtp))
+removed that failure mode, so the ten minutes is now a product choice rather
+than a race against the process. Email-only, not a full end, because a
 fallback firing means a real ten-minute absence, not necessarily the end of
 class, and quietly nuking a class that is still productively chatting would be
 worse than leaving it be. Silent, because promising a safety net we cannot always

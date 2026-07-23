@@ -198,6 +198,7 @@ git: `git log -- DECISIONS.md`.
   - [`/demo`, `/demo/teacher`, and `/demo/student` are thin redirects, never pages](docs/decisions/routes.md#demo-demoteacher-and-demostudent-are-thin-redirects-never-pages)
   - [The temporary `/demo/*` routes are gone — every surface lives in its real flow](docs/decisions/routes.md#the-temporary-demo-routes-are-gone--every-surface-lives-in-its-real-flow)
 - [Backend & API](docs/decisions/backend-api.md)
+  - [The API runs on a paid Render instance, because free web services block outbound SMTP](docs/decisions/backend-api.md#the-api-runs-on-a-paid-render-instance-because-free-web-services-block-outbound-smtp)
   - [The transcript mailer: Gmail SMTP behind one module, log-only without credentials](docs/decisions/backend-api.md#the-transcript-mailer-gmail-smtp-behind-one-module-log-only-without-credentials)
   - [One implementation of the pure matching rules, shared by both engines](docs/decisions/backend-api.md#one-implementation-of-the-pure-matching-rules-shared-by-both-engines)
   - [Localhost real flows compress through a server-side time-scale knob; production is pinned to 1](docs/decisions/backend-api.md#localhost-real-flows-compress-through-a-server-side-time-scale-knob-production-is-pinned-to-1)
