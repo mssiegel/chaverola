@@ -137,7 +137,13 @@ const nextTranscriptLine = (socket: ClientSocket) =>
   });
 const nextChatEnded = (socket: ClientSocket) =>
   new Promise<{
-    reason: "teacher" | "peer" | "peer-timeout" | "self-timeout";
+    reason:
+      | "teacher"
+      | "student"
+      | "peer"
+      | "self-left"
+      | "peer-timeout"
+      | "self-timeout";
     endedBy?: string;
   }>((resolve) => {
     socket.once("chat:ended", resolve);
@@ -522,6 +528,67 @@ describe("the live lobby", () => {
     expect(chat.endReason).toBe("peer");
     expect(chat.endedBy).toBe(welcomeA.studentId);
     expect(activity.seats.byId.get(welcomeB.studentId)!.wrappingUp).toBe(true);
+  });
+
+  it('chat:leave ends the duo for both and keeps both seats — the ender hears "student", the partner "peer"', async () => {
+    const teacher = connect({ role: "teacher", hostKey: activity.hostKey });
+    await nextSnapshot(teacher);
+    const studentA = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Rachel",
+      nonce: "nonce-a",
+    });
+    const studentB = connect({
+      role: "student",
+      joinCode: activity.joinCode,
+      name: "Noa",
+      nonce: "nonce-b",
+    });
+    const welcomeA = await nextWelcome(studentA);
+    const welcomeB = await nextWelcome(studentB);
+    // `!` — both members are eligible; the chat just built above them.
+    const chat = createChat(
+      activity,
+      [welcomeA.studentId, welcomeB.studentId],
+      Date.now()
+    )!;
+    const enderCharacterId = chat.members.find(
+      (m) => m.studentId === welcomeA.studentId
+    )!.characterId;
+
+    const endedAtA = nextChatEnded(studentA);
+    const endedAtB = nextChatEnded(studentB);
+    studentA.emit("chat:leave");
+
+    const [payloadA, payloadB] = await Promise.all([endedAtA, endedAtB]);
+    // The same ending, read from two seats: A ended it, B was left by a
+    // partner whose character the copy can name. Nobody is told they ended
+    // a chat they didn't, and A isn't told who A is.
+    expect(payloadA.reason).toBe("student");
+    expect(payloadA.endedBy).toBeUndefined();
+    expect(payloadB.reason).toBe("peer");
+    expect(payloadB.endedBy).toBe(enderCharacterId);
+
+    // The store keeps the room's truth — "peer" plus the leaver's studentId
+    // — and membership stays intact, exactly like a teacher's chat:end: both
+    // are still members of the ended chat, so both resume into it honestly.
+    expect(chat.status).toBe("ended");
+    expect(chat.endReason).toBe("peer");
+    expect(chat.endedBy).toBe(welcomeA.studentId);
+    expect(chat.inactiveStudentIds).toEqual([]);
+
+    // The point of the whole event: the ender KEEPS their seat, wrapping up
+    // beside their partner, and rejoins the queue on their own tap.
+    const seatA = activity.seats.byId.get(welcomeA.studentId);
+    expect(seatA?.wrappingUp).toBe(true);
+    expect(activity.seats.byId.get(welcomeB.studentId)?.wrappingUp).toBe(true);
+
+    const backInQueue = snapshotWhere(teacher, (p) =>
+      p.students.some((s) => s.id === welcomeA.studentId)
+    );
+    studentA.emit("lobby:back");
+    await backInQueue;
   });
 
   it("chats:end-all closes every active chat at once, and a repeat is a no-op", async () => {

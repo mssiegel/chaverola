@@ -261,20 +261,26 @@ export function markInactive(
 }
 
 /**
- * The teacher ends a chat outright (per-card End chat, or End-all's loop):
- * membership stays intact — everyone is still in the room — the chat just
- * flips to ended with reason "teacher". Undefined when the chat is missing
- * or already ended — idempotent, like every teacher command. The result
- * shape matches markInactive's so settleMembershipChange serves both.
+ * A chat ends outright, membership intact — everyone is still in the room,
+ * the chat just flips to ended. Two callers: the teacher (per-card End chat
+ * or End-all's loop), who takes the "teacher" default, and a student's own
+ * chat:leave in a duo, which passes "peer" plus their studentId — ending for
+ * everyone is exactly what that tap means, so nobody goes inactive and both
+ * seats stay resumable members of the ended chat. Undefined when the chat is
+ * missing or already ended — idempotent, like every teacher command. The
+ * result shape matches markInactive's so settleMembershipChange serves both.
  */
 export function endChat(
   activity: StoredActivity,
-  chatId: string
+  chatId: string,
+  endReason: "teacher" | "peer" = "teacher",
+  endedBy: string | null = null
 ): { ended: true; chat: StoredChat } | undefined {
   const chat = activity.chats.find((c) => c.id === chatId);
   if (!chat || chat.status !== "active") return undefined;
   chat.status = "ended";
-  chat.endReason = "teacher";
+  chat.endReason = endReason;
+  chat.endedBy = endedBy;
   return { ended: true, chat };
 }
 

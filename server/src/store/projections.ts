@@ -308,20 +308,28 @@ export function toChatEnded(
   activity: StoredActivity,
   studentId: string
 ): {
-  reason: "teacher" | "peer" | "peer-timeout";
+  reason: "teacher" | "student" | "peer" | "peer-timeout";
   endedBy?: string;
   reveal?: { characterId: string; name: string }[];
 } {
-  // The stored reason is the truth — which is also what makes the
-  // wrappingUp resume re-delivery honest for free. The fallback keeps
-  // the projector total if it's ever called on a not-yet-ended chat.
-  const reason = chat.endReason ?? "teacher";
+  // The reason is PER RECIPIENT, decided here because this is the one place
+  // that already knows who's listening (it's how the reveal excludes self).
+  // The student who ended it hears "student" — "you ended this chat" — while
+  // everyone else hears the stored reason. Wire-only, exactly like
+  // "self-timeout": the store keeps the room's truth ("peer" plus who), so
+  // the wrappingUp resume re-delivery lands right for both seats for free.
+  // The fallback keeps the projector total if it's ever called on a
+  // not-yet-ended chat.
+  const endedByYou = chat.endedBy !== null && chat.endedBy === studentId;
+  const reason = endedByYou ? "student" : (chat.endReason ?? "teacher");
   // A "peer" ending names the leaver — as a characterId the survivor
   // already knows from chat:started, never a studentId, never a name (the
-  // ChatPeer pin). The key is absent entirely on every other reason.
-  const endedBy = chat.members.find(
-    (member) => member.studentId === chat.endedBy
-  )?.characterId;
+  // ChatPeer pin). The key is absent entirely on every other reason, the
+  // ender's own copy included: they don't need to be told who they are.
+  const endedBy = endedByYou
+    ? undefined
+    : chat.members.find((member) => member.studentId === chat.endedBy)
+        ?.characterId;
   const base: { reason: typeof reason; endedBy?: string } =
     endedBy === undefined ? { reason } : { reason, endedBy };
   // The name reveal — the ONE sanctioned exception to the characterIds-only

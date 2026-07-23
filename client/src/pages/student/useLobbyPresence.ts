@@ -84,17 +84,21 @@ function buildStudentAuth(
  * `onChatUpdate` is a membership change, `onChatLine` an incoming message
  * (the student's own send echoes back through it too), `onChatEnded` the
  * chat's ending with its honest reason ("teacher"; "peer" when a partner's
- * own leave ended it, naming their character; "peer-timeout" when a 1:1
- * partner's grace ran out; "self-timeout" when it was this student's
- * own — delivered right after the replayed chat:started on their return)
- * — re-sent on resume while the seat is wrapping up.
+ * own leave ended it, naming their character; "student" when this student
+ * ended it themselves and "self-left" when they stepped out of a group that
+ * kept going; "peer-timeout" when a 1:1 partner's grace ran out;
+ * "self-timeout" when it was this student's own — delivered right after the
+ * replayed chat:started on their return) — re-sent on resume while the seat
+ * is wrapping up.
  *
  * `paused` is the activity-wide teacher pause, delivered on lobby:welcome
  * (so a refresh mid-pause stays frozen) and flipped live by
  * activity:paused. State, not a callback: every seated stage — lobby,
  * chat, ended — renders it, and it must survive stage changes.
  *
- * `returnToLobby` is the ended screen's Back tap: it asks the server to
+ * `leaveChat` is the chat room's exit (End chat, or Leave in a group): the
+ * seat survives it, and the wrap-up screen arrives as a chat:ended like any
+ * other. `returnToLobby` is that screen's Back tap: it asks the server to
  * return the wrapping-up seat to the queue with a fresh wait clock.
  * `sendChatMessage` emits `chat:send`; rejections are silent server-side
  * and the echoed `chat:line` is the delivery receipt. `sendTyping` emits
@@ -139,7 +143,13 @@ export function useLobbyPresence({
   onChatUpdate?: (payload: { chatId: string; peers: ChatPeer[] }) => void;
   onChatLine?: (payload: { chatId: string; line: ChatLine }) => void;
   onChatEnded?: (payload: {
-    reason: "teacher" | "peer" | "peer-timeout" | "self-timeout";
+    reason:
+      | "teacher"
+      | "student"
+      | "peer"
+      | "self-left"
+      | "peer-timeout"
+      | "self-timeout";
     /** The leaver's characterId, only with reason "peer". Absent from an
      *  older server during the deploy window — the ended screen then falls
      *  back to its generic "Your partner" copy. */
@@ -161,6 +171,7 @@ export function useLobbyPresence({
   retrying: boolean;
   retry: () => void;
   returnToLobby: () => void;
+  leaveChat: () => void;
   sendChatMessage: (text: string) => void;
   sendTyping: () => void;
 } {
@@ -355,6 +366,13 @@ export function useLobbyPresence({
     socketRef.current?.emit("lobby:back");
   };
 
+  // The chat room's exit — End chat or Leave. The seat stays; the server
+  // answers with chat:ended, which is what moves the student to the wrap-up
+  // screen. A no-op outside an active chat, so a stray call is safe too.
+  const leaveChat = () => {
+    socketRef.current?.emit("chat:leave");
+  };
+
   // Fire-and-forget, exactly like returnToLobby: every server-side
   // rejection (cap, rate limit, not in a chat) is a silent no-op, and the
   // echoed chat:line is what actually puts the message on screen.
@@ -382,6 +400,7 @@ export function useLobbyPresence({
     retrying,
     retry,
     returnToLobby,
+    leaveChat,
     sendChatMessage,
     sendTyping,
   };

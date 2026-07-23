@@ -9,8 +9,19 @@ import type {
   LobbySocket,
   StudentSocketData,
 } from "../lobbyContext";
-import { findActiveChatOf, findEndedChatOf, markInactive } from "../matching";
-import { leaveSeat, markDisconnected, returnToQueue } from "../seats";
+import {
+  activeMembers,
+  endChat,
+  findActiveChatOf,
+  findEndedChatOf,
+  markInactive,
+} from "../matching";
+import {
+  leaveSeat,
+  markDisconnected,
+  markWrappingUp,
+  returnToQueue,
+} from "../seats";
 import { timing } from "../timing";
 import { registerStudentChatHandlers } from "./studentChat";
 
@@ -99,11 +110,21 @@ export function registerStudentSession(
       );
     } else {
       const endedChat = findEndedChatOf(record, data.studentId);
+      // A group leaver resolves no ended chat — they're an INACTIVE member,
+      // and the room they stepped out of may well still be going. Without
+      // this their 👋 screen would flip to the teacher's 🎓 on a reconnect.
+      // Only they can reach it: every other inactive member's seat is gone
+      // by now (left, removed, or reaped into the branch above).
+      const leftChat =
+        endedChat === undefined &&
+        record.chats.some((chat) =>
+          chat.inactiveStudentIds.includes(data.studentId)
+        );
       socket.emit(
         "chat:ended",
         endedChat
           ? toChatEnded(endedChat, record, data.studentId)
-          : { reason: "teacher" }
+          : { reason: leftChat ? "self-left" : "teacher" }
       );
     }
   }
@@ -133,6 +154,50 @@ export function registerStudentSession(
       );
     }
     if (left || chat) broadcastState(current);
+  });
+
+  // The chat room's own exit, and the only one that keeps the seat: the
+  // student lands on the ended screen wrappingUp and rejoins the queue by
+  // their own lobby:back tap. Which branch is decided HERE, from the room's
+  // current size — the client picks its End-vs-Leave button the same way,
+  // but the server's count at this instant is the one that rules.
+  socket.on("chat:leave", () => {
+    const current = getByJoinCode(data.joinCode);
+    if (!current) return;
+    const chat = findActiveChatOf(current, data.studentId);
+    const own = current.seats.byId.get(data.studentId);
+    if (!chat || !own) return; // not in a chat: a no-op, like every other event
+    const others = activeMembers(chat).filter(
+      (member) => member.studentId !== data.studentId
+    );
+    log.info(
+      {
+        joinCode: data.joinCode,
+        studentId: data.studentId,
+        chatId: chat.id,
+        others: others.length,
+      },
+      "student left their chat"
+    );
+    if (others.length < 2) {
+      // Nobody left to talk to, so this ends the room for everyone — the
+      // same act as the teacher's chat:end, and modelled as one: membership
+      // stays intact, so both seats go wrappingUp and both stay resumable
+      // members of the ended chat. settleMembershipChange sends each of
+      // them their own projection, and toChatEnded turns the stored "peer"
+      // into "student" for the one who tapped.
+      const result = endChat(current, chat.id, "peer", data.studentId);
+      if (result) settleMembershipChange(current, result);
+    } else {
+      // The room keeps going without them: drop the membership (the others
+      // get chat:update), then wrap up this seat alone. The payload is bare
+      // — that chat is still live, so there is nothing to reveal.
+      const result = markInactive(current, chat.id, data.studentId, "peer");
+      if (result) settleMembershipChange(current, result);
+      markWrappingUp(own);
+      socket.emit("chat:ended", { reason: "self-left" });
+    }
+    broadcastState(current);
   });
 
   socket.on("lobby:back", () => {

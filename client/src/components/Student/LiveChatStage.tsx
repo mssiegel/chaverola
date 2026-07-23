@@ -27,12 +27,21 @@ interface LiveChatStageProps {
    *  takes the banner slot; any remaining countdown resumes after. */
   returnedFlashId: string | null;
   isEnded: boolean;
-  /** Why the chat ended (chat:ended's payload): "peer" is a partner's own
-   *  leave — the 🎭 wrap-up naming their character — "peer-timeout" a 1:1
-   *  partner's expired grace (the 🔌 wrap-up), "self-timeout" the
-   *  student's own (the 📶 wrap-up on their return), "teacher" everything
-   *  else. Null while the chat is going. */
-  endReason: "teacher" | "peer" | "peer-timeout" | "self-timeout" | null;
+  /** Why the chat ended (chat:ended's payload): "student" is the student's
+   *  own End chat (the 🎬 wrap-up) and "self-left" their own Leave from a
+   *  group that kept going (the 👋 one), "peer" is a partner's leave — the
+   *  🎭 wrap-up naming their character — "peer-timeout" a 1:1 partner's
+   *  expired grace (the 🔌 wrap-up), "self-timeout" the student's own (the
+   *  📶 wrap-up on their return), "teacher" everything else. Null while the
+   *  chat is going. */
+  endReason:
+    | "teacher"
+    | "student"
+    | "peer"
+    | "self-left"
+    | "peer-timeout"
+    | "self-timeout"
+    | null;
   /** Who ended it — the leaver's characterId, riding chat:ended only with
    *  reason "peer" (null otherwise; also null from an older server, which
    *  falls back to the generic "Your partner" copy). */
@@ -51,10 +60,12 @@ interface LiveChatStageProps {
    *  heartbeats. */
   onTyping: () => void;
   /**
-   * The confirmed mid-chat exit. Leaving a live chat means leaving the
-   * activity (back-as-reset → lobby:leave); a duo partner's chat ends.
+   * The confirmed mid-chat exit — End chat in a duo, Leave in a group, one
+   * callback because the server re-reads the room's size and decides which
+   * it was (chat:leave). The seat survives it: the wrap-up screen arrives as
+   * a chat:ended, and the lobby is a tap away, not a sign-out.
    */
-  onLeaveActivity: () => void;
+  onEndChat: () => void;
   /** The ended screen's CTA: re-queue with a fresh wait clock. */
   onBackToLobby: () => void;
 }
@@ -76,8 +87,11 @@ interface LiveChatStageProps {
  * name reveal is real too (feature 10): when the teacher's "Reveal names when
  * a chat ends" setting is on, chat:ended carries each peer's real name and the
  * ended screen names who the student was really with — otherwise the neutral
- * secret box holds. Exits are honest too: walking out mid-chat leaves the
- * whole activity, and the confirm says so.
+ * secret box holds. And the exit keeps the seat (chat:leave): whoever taps it
+ * gets their own wrap-up screen — 🎬 for ending a duo, 👋 for stepping out of
+ * a group — reveal included, and returns to the lobby by their own tap like
+ * everyone else. Which is why the confirm needs no live-only copy: Chatbox's
+ * own "head back to the lobby whenever you're ready" is now the truth here.
  */
 export function LiveChatStage({
   self,
@@ -94,7 +108,7 @@ export function LiveChatStage({
   isPaused,
   onSend,
   onTyping,
-  onLeaveActivity,
+  onEndChat,
   onBackToLobby,
 }: LiveChatStageProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -175,16 +189,11 @@ export function LiveChatStage({
         revealNames={revealNames}
         onSend={onSend}
         onTyping={onTyping}
-        onEndChat={onLeaveActivity}
-        onLeaveChat={onLeaveActivity}
+        onEndChat={onEndChat}
+        onLeaveChat={onEndChat}
         onBackToLobby={onBackToLobby}
         endConfirmOpen={confirmOpen}
         onEndConfirmOpenChange={setConfirmOpen}
-        exitDescriptions={{
-          duo: "This ends the chat for both of you and signs you out of the activity. You can join again with the code.",
-          group:
-            "The chat keeps going without you, and you're signed out of the activity. You can join again with the code.",
-        }}
         endedSecretLine="Names stay secret. That's the whole game."
       />
     </div>

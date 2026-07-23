@@ -5,6 +5,63 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
+### Ending your own chat keeps your seat, and the ender gets a wrap-up screen
+
+_2026-07-23_
+
+**Decision:** The chat room's exit — **End chat** in a duo, **Leave** in a
+group — no longer signs a student out of the activity. It rides its own wire
+event, `chat:leave`, which keeps the seat: the student lands on their own
+wrap-up screen (🎬 "And… scene!" after ending a duo, 👋 "You left the chat"
+after stepping out of a group) and rejoins the queue with the same "Back to
+the lobby" tap everyone else takes. Three founder calls make it up:
+
+- **The ender's screen reuses the demo's existing copy** rather than
+  mirroring the partner's "«Character» ended the chat" wording. No new
+  strings ship, and the demo and a real room now read identically.
+- **A group leaver gets the same treatment** — seat kept, own screen, own
+  tap — but **no name reveal**, whatever the teacher's setting says: that
+  room is still going, so the mystery has to hold (the rule already recorded
+  in [In a group the student leaves; only a 2-person chat can be ended](#in-a-group-the-student-leaves-only-a-2-person-chat-can-be-ended),
+  now true on real activities and not just the demo).
+- **Leaving the activity is a lobby act.** There is no second exit inside
+  the chat; a student who is really done ends the chat, then leaves from the
+  lobby. `lobby:leave` keeps its old mid-chat behavior as the backstop for
+  any other way out.
+
+Mechanically, a duo's `chat:leave` takes the **`chat:end` shape** — the room
+ends for everyone with membership intact — recorded as `"peer"` plus who, so
+both students stay resumable members of the ended chat. The ender's own
+`chat:ended` says `"student"`, decided **per recipient inside `toChatEnded`**
+(the one projection that already knows who's listening, which is how the
+reveal excludes self). A group's `chat:leave` drops just that membership and
+sends the leaver a bare `"self-left"`.
+
+**Why:** Founder calls, 2026-07-23, for two reasons. A student who ends the
+chat should still learn who they were really talking to when the reveal is
+on — before this they were the only participant who never saw it. And the
+lobby should be entered deliberately: the tap is what says "I'm ready for
+another chat", instead of a student being dumped at the join-code screen for
+using the only exit in the room. This closes the slice that
+[Leaving a live chat means leaving the activity (until messaging ships)](#leaving-a-live-chat-means-leaving-the-activity-until-messaging-ships)
+deferred and named exactly — "a leave-the-chat-but-keep-your-seat path…
+its own wire event". Putting the per-recipient reason in the projection
+rather than at the emit sites is what makes a refresh honest for free: both
+seats resume into the ended chat and each is told the truth from where they
+sat.
+
+_Implemented in [socket.ts](../../shared/src/socket.ts) (`chat:leave`, plus
+`"student"` / `"self-left"` on `chat:ended`),
+[matching.ts](../../server/src/live/matching.ts) (`endChat` records the
+reason and who), [projections.ts](../../server/src/store/projections.ts)
+(`toChatEnded`'s per-recipient reason),
+[studentSession.ts](../../server/src/live/handlers/studentSession.ts) (the
+handler and the group leaver's resume), and on the client
+[useLobbyPresence](../../client/src/pages/student/useLobbyPresence.ts) /
+[LiveChatStage](../../client/src/components/Student/LiveChatStage.tsx),
+which also drops its live-only confirm copy — Chatbox's own "head back to
+the lobby whenever you're ready" is now the truth._
+
 ### While a student types on a phone, the world's chrome gets out of the way
 
 _2026-07-23_
@@ -20,13 +77,13 @@ so a desktop click into the input changes nothing. Extends
 
 **Why:** Two founder screenshots (2026-07-23). In the demo, focusing the input
 threw the chat card off the top of the screen entirely: the steering panel sits
-*below* the composer, so with the keyboard open the document was still ~750px
+_below_ the composer, so with the keyboard open the document was still ~750px
 against a ~300px viewport and the browser was free to pan the focused input
 anywhere. The rule that makes an input hug a keyboard is simply that the
 composer is the last thing in the document — this makes that true in the demo
 too. In a live chat nothing was broken, just cramped: fixed chrome was renting
 80px of the ~300px left above the keys, a quarter of the visible world spent on
-a name badge while typing. Hiding the chrome for the *whole* chat was rejected
+a name badge while typing. Hiding the chrome for the _whole_ chat was rejected
 (it would strand the language switcher and contradict
 [Mid-chat, the student's name is a corner badge](student-join.md#mid-chat-the-students-name-is-a-corner-badge));
 a `fixed inset-0` chat overlay was rejected because iOS pins `fixed` to the
@@ -349,13 +406,20 @@ _Implemented in [lobby.ts](../../server/src/live/lobby.ts)'s `chat:send` handler
 
 ### Leaving a live chat means leaving the activity (until messaging ships)
 
-_2026-07-19 · The "until messaging ships" clause came due 2026-07-20 —
-messaging shipped — and is **deliberately left open** rather than resolved:
-leaving a live chat still leaves the activity. The server already ends a
-duo and continues a trio on `lobby:leave`; what's missing is a
+_2026-07-19 · **Superseded 2026-07-23** by
+[Ending your own chat keeps your seat, and the ender gets a wrap-up screen](#ending-your-own-chat-keeps-your-seat-and-the-ender-gets-a-wrap-up-screen)
+— the deferred slice below shipped, wire event and all, so the chat room's
+exit keeps the seat and the confirm's copy no longer mentions the activity.
+Kept in place for the reasoning that held for four days, and because its
+browser-back half still stands: back mid-chat opens the same confirm._
+
+_The original deferral, 2026-07-20: the "until messaging ships" clause came
+due — messaging shipped — and was **deliberately left open** rather than
+resolved: leaving a live chat still left the activity. The server already
+ended a duo and continued a trio on `lobby:leave`; what was missing was a
 leave-the-chat-but-keep-your-seat path (return to the queue instead of
 signing out), which is its own slice with its own wire event, not a rider
-on messaging. Until it ships, the confirm's copy stays honest about
+on messaging. Until it shipped, the confirm's copy stayed honest about
 leaving the activity._
 
 **Decision:** In the real chat room, the header's exit control and browser
@@ -446,7 +510,12 @@ client reveal path
 
 ### In a group the student leaves; only a 2-person chat can be ended
 
-_2026-07-16_
+_2026-07-16 · Extended to real activities 2026-07-23: the End-vs-Leave swap
+below was demo-only on the live path (both buttons signed the student out).
+Since [Ending your own chat keeps your seat, and the ender gets a wrap-up screen](#ending-your-own-chat-keeps-your-seat-and-the-ender-gets-a-wrap-up-screen)
+it holds in real rooms too — including the suppressed reveal — with the
+server re-reading the room's size at confirm time, so its count is the one
+that decides._
 
 **Decision:** The student's exit action depends on who's still in the room.
 With 3+ active people, the header button is **Leave** (door icon) and browser

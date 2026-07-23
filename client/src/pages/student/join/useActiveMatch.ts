@@ -61,14 +61,22 @@ export function useActiveMatch({
   // Mirrors the chat engine's ended flag up here so the stage (and with it
   // the page title) can tell chatting from ended.
   const [chatEnded, setChatEnded] = useState(false);
-  // Why the live chat ended, from chat:ended's payload — "peer" is a
-  // partner's own leave (the 🎭 wrap-up naming their character),
-  // "peer-timeout" a 1:1 partner's expired grace (the 🔌 wrap-up),
-  // "self-timeout" the student's own (the 📶 wrap-up, delivered on their
-  // return), "teacher" everything else. Beside chatEnded rather than on the
-  // match state: it describes the ending, and it resets on the same edges.
+  // Why the live chat ended, from chat:ended's payload — "student" is the
+  // student's own End chat (the 🎬 wrap-up) and "self-left" their own Leave
+  // from a group that kept going (the 👋 one), "peer" is a partner's leave
+  // (the 🎭 wrap-up naming their character), "peer-timeout" a 1:1 partner's
+  // expired grace (the 🔌 wrap-up), "self-timeout" the student's own (the 📶
+  // wrap-up, delivered on their return), "teacher" everything else. Beside
+  // chatEnded rather than on the match state: it describes the ending, and
+  // it resets on the same edges.
   const [liveEndReason, setLiveEndReason] = useState<
-    "teacher" | "peer" | "peer-timeout" | "self-timeout" | null
+    | "teacher"
+    | "student"
+    | "peer"
+    | "self-left"
+    | "peer-timeout"
+    | "self-timeout"
+    | null
   >(null);
   // Who ended it — the leaver's characterId, riding only with "peer" (null
   // otherwise, and from an older server: the ended screen then falls back
@@ -135,6 +143,7 @@ export function useActiveMatch({
     retrying,
     retry,
     returnToLobby,
+    leaveChat,
     sendChatMessage,
     sendTyping,
   } = useLobbyPresence({
@@ -242,6 +251,7 @@ export function useActiveMatch({
     retrying,
     retry,
     returnToLobby,
+    leaveChat,
     sendChatMessage,
     sendTyping,
   };

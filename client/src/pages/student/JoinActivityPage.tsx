@@ -140,6 +140,7 @@ export function JoinActivityPage() {
     retrying,
     retry,
     returnToLobby,
+    leaveChat,
     sendChatMessage,
     sendTyping,
   } = useActiveMatch({
@@ -312,11 +313,11 @@ export function JoinActivityPage() {
             isPaused={livePaused}
             onSend={sendChatMessage}
             onTyping={sendTyping}
-            // Leaving a live chat means leaving the activity: landing on
-            // bare code entry runs the sign-out effect, and the presence
-            // hook's cleanup emits lobby:leave (back-as-reset, exactly the
-            // browser-back flow).
-            onLeaveActivity={() => navigate("/activity/join")}
+            // The exit keeps the seat: chat:leave ends the chat (or steps
+            // out of a group), the server answers with chat:ended, and the
+            // student reads their wrap-up screen right here. Leaving the
+            // activity is a lobby act now, not a chat one.
+            onEndChat={leaveChat}
             // The ended screen's Back tap: the server returns the
             // wrapping-up seat to the queue with a fresh clock, and the
             // local match state clears.

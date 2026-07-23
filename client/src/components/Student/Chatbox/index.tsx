@@ -33,12 +33,6 @@ export interface ChatboxProps {
   endConfirmOpen?: boolean;
   onEndConfirmOpenChange?: (open: boolean) => void;
   /**
-   * Override the exit confirm's body copy. Live rooms need it: there,
-   * walking out means leaving the whole activity, and the default copy's
-   * "back to the lobby whenever you're ready" would be a lie.
-   */
-  exitDescriptions?: { group: string; duo: string };
-  /**
    * Override the ended screen's names-stay-secret line (shown when
    * revealNames is off). Live rooms pass a neutral one: the reveal doesn't
    * exist yet, so the default's "your teacher hasn't revealed them" would
@@ -64,7 +58,6 @@ export function Chatbox({
   onBackToLobby,
   endConfirmOpen,
   onEndConfirmOpenChange,
-  exitDescriptions,
   endedSecretLine,
 }: ChatboxProps) {
   const {
@@ -104,7 +97,6 @@ export function Chatbox({
     ? {
         title: "Leave this chat?",
         description:
-          exitDescriptions?.group ??
           "The chat keeps going without you, and there's no coming back in. You can head back to the lobby whenever you're ready.",
         confirmLabel: (
           <>
@@ -116,7 +108,6 @@ export function Chatbox({
     : {
         title: "End this chat?",
         description:
-          exitDescriptions?.duo ??
           "This ends the chat for everyone in it, and there's no reopening it. You can head back to the lobby whenever you're ready.",
         confirmLabel: (
           <>

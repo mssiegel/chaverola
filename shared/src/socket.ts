@@ -42,7 +42,7 @@ export interface ChatSnapshot {
   messages: ChatTranscriptLine[]; // the whole capped transcript, oldest first
   status: "active" | "ended";
   // "peer-timeout": a below-2 ending caused by a partner's expired grace.
-  // "peer": a student's own leave (lobby:leave) dropped the room below 2.
+  // "peer": a student's own exit (chat:leave, or lobby:leave) ended it.
   endReason: "teacher" | "peer" | "peer-timeout" | null;
 }
 
@@ -176,15 +176,28 @@ export interface ServerToClientEvents {
   /** Student only, targeted; re-sent on resume while the seat is wrappingUp
    *  (the resume re-delivery carries the stored reason, so a survivor whose
    *  own socket blipped around the ending still learns the honest one).
-   *  "peer" is a student's own lobby:leave dropping the room below 2 — the
-   *  survivor's screen names the leaver's character. "peer-timeout" is a
-   *  1:1 partner's expired grace; every teacher-caused ending — chat:end,
-   *  chats:end-all, chat:remove — stays "teacher". "self-timeout" exists
-   *  only on the wire, never in the store: it's the per-recipient reason a
-   *  reaped student hears when they return to their ended chat (the stored
-   *  1:1 reason stays "peer-timeout" — the survivor's perspective). */
+   *  "peer" is another student ending the room under them — a duo's
+   *  chat:leave, or a lobby:leave dropping it below 2 — and the survivor's
+   *  screen names the leaver's character. "peer-timeout" is a 1:1 partner's
+   *  expired grace; every teacher-caused ending — chat:end, chats:end-all,
+   *  chat:remove — stays "teacher".
+   *
+   *  Three reasons are PER RECIPIENT and live only on the wire, never in the
+   *  store, because they describe the listener's own act rather than the
+   *  room's: "student" is you ending a duo (the store keeps "peer" plus who,
+   *  and toChatEnded flips it for the ender alone), "self-left" is you
+   *  stepping out of a group that keeps going without you (nothing about that
+   *  room ended, so no reveal rides along), and "self-timeout" is what a
+   *  reaped student hears on returning to the chat their grace ran out on
+   *  (the stored 1:1 reason stays "peer-timeout" — the survivor's view). */
   "chat:ended": (payload: {
-    reason: "teacher" | "peer" | "peer-timeout" | "self-timeout";
+    reason:
+      | "teacher"
+      | "student"
+      | "peer"
+      | "self-left"
+      | "peer-timeout"
+      | "self-timeout";
     // The leaver's characterId, present ONLY with reason "peer" — an id the
     // survivor already knows from chat:started, never a studentId or a name.
     // Absent from an older server during the deploy window; the client falls
@@ -211,9 +224,12 @@ export interface ClientToServerEvents {
   "queue:remove": (payload: { studentId: string }) => void;
   /** Student intentional exit (back-as-reset, sign-out): immediate seat
    *  removal, no 2-minute ghost row. Never fired on refresh/pagehide.
-   *  Mid-chat it drops chat membership first (like chat:remove, minus the
-   *  tombstone — but a below-2 ending records "peer" plus who, so the
-   *  survivor's screen names the leaver), then releases the seat. */
+   *  No longer the chat room's exit button — that's chat:leave, which keeps
+   *  the seat — but it stays the backstop for any other way out of a live
+   *  chat, so mid-chat it still drops chat membership first (like
+   *  chat:remove, minus the tombstone — and a below-2 ending records "peer"
+   *  plus who, so the survivor's screen names the leaver), then releases
+   *  the seat. */
   "lobby:leave": () => void;
   /** Teacher only. Filtered to eligible students, clamped to the server
    *  roster; no-ops below 2 eligible. */
@@ -252,6 +268,15 @@ export interface ClientToServerEvents {
    *  has no echo event: the email is one field on the teacher's own form, so
    *  last write wins and a second host device keeps the copy it fetched. */
   "activity:update-email": (payload: { teacherEmail: string | null }) => void;
+  /** Student: the chat room's own exit — End chat in a duo, Leave in a
+   *  group — which keeps the seat. A duo ends for both (nobody goes
+   *  inactive; the ending records "peer" plus who, and the ender's own
+   *  chat:ended reads "student"); a group of 3+ keeps going without the
+   *  leaver, who hears "self-left". Either way the student lands on the
+   *  ended screen wrappingUp and rejoins the queue by their own lobby:back
+   *  tap — the whole point of not reusing lobby:leave, which signs out.
+   *  Silent no-op outside an active chat, like every other socket event. */
+  "chat:leave": () => void;
   /** Student: the ended screen's Back-to-the-lobby tap — returns a
    *  wrappingUp seat to waiting with a fresh clock. Otherwise a no-op. */
   "lobby:back": () => void;
