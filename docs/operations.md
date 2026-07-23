@@ -54,6 +54,35 @@ tea-d8f90l0g4nts738mebhg -o json --confirm` if it's ever missing). We
   `.env.local` instead of inside agent config (see DECISIONS.md → "Agents
   read Render logs through the CLI").
 
+## Gmail app password (the transcript email)
+
+The transcript email (feature 11) sends over Gmail SMTP. It needs two env
+vars on Render — `GMAIL_USER` (the full Gmail address) and
+`GMAIL_APP_PASSWORD` (a Google app password, not the normal password). With
+either missing the server runs in log-only mode, so this is production-only
+setup; dev needs nothing.
+
+One-time steps on the sending Google account (`siegel.moshes@gmail.com`):
+
+1. Turn on 2-Step Verification — app passwords don't exist without it:
+   https://myaccount.google.com/signinoptions/twosv
+2. Create the password at https://myaccount.google.com/apppasswords — name it
+   "Chaverola", click Create. Google shows 16 characters as four groups of
+   four (`abcd efgh ijkl mnop`), once.
+3. **Strip the spaces** — the real password is the 16 characters with no
+   spaces.
+4. In Render's Environment tab for `chaverola-api`
+   (`srv-d9ducu3bc2fs73esrr8g`) add `GMAIL_USER` and `GMAIL_APP_PASSWORD`,
+   then let it redeploy.
+
+Confirm it took: the boot log's mail line reads `mode: "gmail"` ("mailer
+ready — sending via Gmail SMTP") instead of the log-only line. A wrong or
+revoked password doesn't fail at boot (nodemailer connects lazily) — it
+surfaces only as a `"transcript email failed"` error in the logs when an
+activity ends, so if transcripts stop arriving, check there first and
+regenerate the app password. Gmail caps a normal account at ~500 sends/day,
+which is far above launch scale.
+
 ## Setting Vercel env vars — never from a PowerShell pipe
 
 Piping a value into `vercel env add` from PowerShell smuggled a UTF-8 BOM

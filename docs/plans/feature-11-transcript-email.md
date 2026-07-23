@@ -55,7 +55,7 @@ all new user-facing copy (the email body counts). The prompts are sequential
 each leaves the app fully working.
 
 - [x] Prompt 1 — teacherEmail live edits reach the server
-- [ ] Prompt 2 — Mailer + transcript formatter (server-only, invisible)
+- [x] Prompt 2 — Mailer + transcript formatter (server-only, invisible)
 - [ ] Prompt 3 — End activity, end to end
 - [ ] Prompt 4 — The 10-minute fallback send
 
@@ -200,6 +200,29 @@ log-only mailer line; nothing user-visible changed anywhere. The real Gmail
 leg gets proven the first time a real activity is ended after prompt 3.
 Production pass is just a healthy deploy. `pnpm format`, one commit, checkbox
 ticked.
+
+**As built (2026-07-23), with the product calls made this session:**
+
+- Subject is `${hostName}'s Chaverola activity (code ${joinCode})` — **no
+  date** (Render is UTC; a stamped date is wrong for an evening class, and
+  Gmail timestamps in the reader's zone).
+- Log mode splits by env: **dev logs the full composed email**, **production
+  logs a warning with recipient + line count only, never the student
+  messages** (Render's log stream isn't a place for transcripts).
+- The send-once guard **skips a silent activity** (chats but no messages),
+  same as no chats — prompt 3's "nothing to send" card covers it.
+- The participants line **marks a student who left mid-chat** (`(left
+partway)`); departed members still resolve off `chat.members`.
+- Each chat block gets a **numbered heading** (`Chat 3 of 15`) so a long
+  email stays scannable.
+- `characterLabel`'s `name + emoji` join **moved to `shared/`**
+  (`shared/src/labels.ts`), so the server formatter and the client share one
+  rule; the client keeps a thin `Participant` wrapper. (Chosen over a
+  server-local copy to honor the single-formatter decision.)
+- `/healthz` was **left unchanged** (a `mail` field was considered and cut to
+  stay minimal).
+- The homepage's stale "full transcript" claim vs. the 200-line cap is
+  **left to feature 20** (docs & copy drift).
 
 ---
 

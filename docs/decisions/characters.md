@@ -15,11 +15,15 @@ surface that shows a character (chat header, conversation lines, lobby
 roster chips, reconnect banner, roster popover, end-of-chat reveal, composer
 placeholder) renders "Name emoji" when there is one and plain "Name" when
 there isn't: no placeholder glyph, no reserved gap, no trailing space.
-`characterLabel` in [characterLabel](../../client/src/lib/characterLabel.ts) is
-the single formatter — nothing may hand-roll `name + emoji` (ConversationLines
-used to; it no longer does). The demo data keeps the path visibly exercised:
-Marc Antony in the join-flow roster and Julius Caesar on `/demo/student-chat`
-have no emoji on purpose.
+`characterLabel` is the single formatter — nothing may hand-roll `name +
+emoji` (ConversationLines used to; it no longer does). As of feature 11 the
+join itself lives in [labels.ts](../../shared/src/labels.ts) in `shared/`,
+so the server's transcript email uses the same rule; the client keeps a thin
+`Participant`-taking wrapper at
+[characterLabel.ts](../../client/src/lib/characterLabel.ts) that delegates to
+it. The demo data keeps the path visibly exercised: Marc Antony in the
+join-flow roster and Julius Caesar on `/demo/student-chat` have no emoji on
+purpose.
 
 **Why:** Product-owner call (2026-07-14). Requiring an emoji forces teachers
 to decorate characters that don't want decorating (try picking one for

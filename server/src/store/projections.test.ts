@@ -41,6 +41,7 @@ const fullRecord: StoredActivity = {
   leftoverStudentId: null,
   rematchNotice: null,
   pausedAt: null,
+  transcriptEmail: null,
 };
 
 const fullSeat: Seat = {

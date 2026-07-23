@@ -3,6 +3,7 @@
 export * from "./types";
 export * from "./api";
 export * from "./constants";
+export * from "./labels";
 export * from "./socket";
 export * from "./random";
 export * from "./matchRules";

@@ -4,6 +4,7 @@ import { pino } from "pino";
 
 import { buildApp } from "./app";
 import { readConfig } from "./config";
+import { createMailer } from "./email/mailer";
 import { attachLobby } from "./live/lobby";
 import { startSweep } from "./store/activityStore";
 
@@ -16,8 +17,12 @@ import { startSweep } from "./store/activityStore";
 
 const config = readConfig();
 const logger = pino();
+// The transcript mailer is built here (the composition root) and threaded
+// into the lobby; it logs its chosen mode once. Unused until feature 11's
+// End activity lands — created now so that prompt stays pure feature.
+const mailer = createMailer(config, logger);
 const server = http.createServer(buildApp(config, logger));
-const io = attachLobby(server, config, logger);
+const io = attachLobby(server, config, logger, mailer);
 
 startSweep();
 

@@ -16,6 +16,7 @@ const app = buildApp({
   nodeEnv: "test",
   corsOrigins: [],
   timeScale: 1,
+  smtp: null,
 });
 
 const validBody: CreateActivityRequest = {

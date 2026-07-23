@@ -5,6 +5,43 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
+### The transcript mailer: Gmail SMTP behind one module, log-only without credentials
+
+_2026-07-23_
+
+**Decision:** The transcript email sends over Gmail SMTP (nodemailer, the
+founder's account plus an app password, `GMAIL_USER` / `GMAIL_APP_PASSWORD`
+on Render), isolated in `server/src/email/`: a pure formatter, a send-once
+guard, and the mailer. With either credential missing the mailer runs in
+log-only mode, so dev needs zero env vars. In dev's log mode it logs the
+whole composed email (that's how the format gets eyeballed); in production's
+log mode it logs a warning with the recipient and line count only, never the
+student messages. The body is plain text: a short header, then each chat as a
+numbered block ("Chat 3 of 15") with a participants line that marks anyone
+who left mid-chat, then the lines in the teacher's `(Rachel) Brutus 🔪: text`
+format, an empty-chat line for a silent room, and a "showing the most recent
+200" note at the transcript cap. The subject names the host and join code
+with **no date** (the server runs UTC, so a stamped date is wrong for an
+evening class; Gmail timestamps the message in the reader's own zone). A
+silent activity — chats but not a single message — sends nothing.
+
+**Why:** Founder call (2026-07-23), realizing the earlier
+[Transcripts wait](#transcripts-wait-feature-1-only-stores-the-teachers-email)
+plan. Gmail SMTP is free and fine at MVP volume, and the one-module isolation
+keeps a later swap to Resend a single-file change. Log-only mode is what
+preserves the zero-env dev rule and turns a misconfigured production into a
+visible warning instead of a silent non-delivery. Suppressing the body in
+production keeps classroom transcripts out of Render's log stream. One
+operational constraint shaped the whole feature: the free-tier instance spins
+down when idle, so "send it later" would usually fire against a dead process
+— the send has to happen at a concrete event (an activity ending) while the
+server is demonstrably alive.
+
+_Implemented in [server/src/email/](../../server/src/email/) (formatter,
+send-once guard, mailer), created at boot in
+[index.ts](../../server/src/index.ts). Extends
+[Transcripts wait](#transcripts-wait-feature-1-only-stores-the-teachers-email)._
+
 ### One implementation of the pure matching rules, shared by both engines
 
 _2026-07-22_
@@ -383,6 +420,12 @@ one-module isolation is what keeps it disposable.
 _Storage in [activityStore.ts](../../server/src/store/activityStore.ts);
 host-only exposure pinned by
 [projections.test.ts](../../server/src/store/projections.test.ts)._
+
+_Update (2026-07-23): the send half is being built. Feature 11 prompt 2
+landed the mailer and formatter (see
+[The transcript mailer](#the-transcript-mailer-gmail-smtp-behind-one-module-log-only-without-credentials)),
+still invisible — nothing sends until prompt 3 wires the End activity button.
+Full supersede lands with that send._
 
 ### Considered and rejected for the backend: TanStack Query, dotenv, a hostKey stash, an npm conversion
 

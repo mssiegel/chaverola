@@ -44,6 +44,7 @@ function makeActivity(characters: Character[]): StoredActivity {
     leftoverStudentId: null,
     rematchNotice: null,
     pausedAt: null,
+    transcriptEmail: null,
   };
 }
 

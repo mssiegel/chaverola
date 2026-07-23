@@ -4,6 +4,7 @@ import type { Logger } from "pino";
 import { Server } from "socket.io";
 
 import type { Config } from "../config";
+import type { Mailer } from "../email/mailer";
 import { onActivityRemoved } from "../store/activityStore";
 import { clearAutoMatch } from "./autoMatch";
 import { createAuthMiddleware } from "./auth";
@@ -45,7 +46,8 @@ import { applyTimeScale, timing } from "./timing";
 export function attachLobby(
   httpServer: http.Server,
   config: Config,
-  logger: Logger
+  logger: Logger,
+  mailer: Mailer
 ): LobbyServer {
   const log = logger.child({ module: "lobby" });
   // First thing: every timing.* read below (and in projections.ts) must see
@@ -60,7 +62,7 @@ export function attachLobby(
     pingTimeout: timing.pingTimeoutMs,
   });
 
-  const ctx = createLobbyContext(io, log);
+  const ctx = createLobbyContext(io, log, mailer);
 
   io.use(createAuthMiddleware(io, log));
 

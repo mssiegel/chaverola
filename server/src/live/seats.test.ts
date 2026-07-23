@@ -30,6 +30,7 @@ function makeActivity(): StoredActivity {
     leftoverStudentId: null,
     rematchNotice: null,
     pausedAt: null,
+    transcriptEmail: null,
   };
 }
 

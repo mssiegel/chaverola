@@ -56,6 +56,14 @@ export interface StoredActivity {
    *  the freeze anchor — snapshots clock against it, and resumeChats shifts
    *  the stored clocks forward by (now - pausedAt). */
   pausedAt: number | null;
+  /** The transcript email's send-once guard (feature 11). `null` until a
+   *  send is attempted; then mutated ONLY inside sendTranscriptEmail — the
+   *  synchronous null → "sending" check-and-set is what makes the explicit
+   *  End vs. the fallback timer race safe. "failed" admits one retry. */
+  transcriptEmail: {
+    to: string;
+    state: "sending" | "sent" | "failed";
+  } | null;
 }
 
 /** A validated create request, post-zod: trimmed, blanks already omitted. */
@@ -168,6 +176,7 @@ export function createActivity(
     leftoverStudentId: null,
     rematchNotice: null,
     pausedAt: null,
+    transcriptEmail: null,
   };
   if (input.scenario !== undefined) record.scenario = input.scenario;
   if (input.teacherEmail !== undefined)

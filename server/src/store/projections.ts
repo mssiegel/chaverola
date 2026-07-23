@@ -125,8 +125,9 @@ export function toLobbyWelcome(
 /** Characters resolve from the SERVER roster (character edits are
  *  local-only client-side, so the server's copy never changes and the id
  *  was minted from it — the find can't miss; the fallback keeps the
- *  projector total anyway). */
-function resolveCharacter(
+ *  projector total anyway). Exported for the transcript formatter
+ *  (server/src/email/transcript.ts), which resolves the same way. */
+export function resolveCharacter(
   activity: StoredActivity,
   characterId: string
 ): Character {

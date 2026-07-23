@@ -15,6 +15,7 @@ import type {
   ServerToClientEvents,
 } from "@chaverola/shared";
 
+import { createMailer } from "../email/mailer";
 import { createActivity, resetForTests } from "../store/activityStore";
 import type { StoredActivity } from "../store/activityStore";
 import { attachLobby } from "./lobby";
@@ -60,14 +61,22 @@ let port: number;
 let clients: ClientSocket[];
 let activity: StoredActivity;
 
+// A log-mode mailer (no smtp) — nothing here exercises the send, so a shared
+// stateless instance is fine.
+const testMailer = createMailer(
+  { port: 0, nodeEnv: "test", corsOrigins: [], timeScale: 1, smtp: null },
+  pino({ level: "silent" })
+);
+
 beforeEach(async () => {
   resetForTests();
   clients = [];
   httpServer = http.createServer();
   io = attachLobby(
     httpServer,
-    { port: 0, nodeEnv: "test", corsOrigins: [], timeScale: 1 },
-    pino({ level: "silent" })
+    { port: 0, nodeEnv: "test", corsOrigins: [], timeScale: 1, smtp: null },
+    pino({ level: "silent" }),
+    testMailer
   );
   await new Promise<void>((resolve) => {
     httpServer.listen(0, "127.0.0.1", resolve);
@@ -974,8 +983,9 @@ describe("the live lobby", () => {
     const scaledHttp = http.createServer();
     const scaledIo = attachLobby(
       scaledHttp,
-      { port: 0, nodeEnv: "test", corsOrigins: [], timeScale: 8 },
-      pino({ level: "silent" })
+      { port: 0, nodeEnv: "test", corsOrigins: [], timeScale: 8, smtp: null },
+      pino({ level: "silent" }),
+      testMailer
     );
     await new Promise<void>((resolve) => {
       scaledHttp.listen(0, "127.0.0.1", resolve);

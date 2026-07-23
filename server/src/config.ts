@@ -13,6 +13,10 @@ export interface Config {
   /** The dev-only clock compressor, from readTimeScale(). 1 in production,
    *  always. */
   timeScale: number;
+  /** Gmail SMTP credentials for the transcript email (feature 11), from
+   *  GMAIL_USER / GMAIL_APP_PASSWORD. `null` when either is missing — the
+   *  mailer then runs in log-only mode, so dev still needs zero env vars. */
+  smtp: { user: string; pass: string } | null;
 }
 
 /**
@@ -76,10 +80,15 @@ export function readTimeScale(env: NodeJS.ProcessEnv = process.env): number {
 
 export function readConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const port = Number(env.PORT);
+  // Both vars or neither: a half-configured Gmail can't send, so treat it as
+  // unset and fall back to log mode rather than booting a broken transporter.
+  const user = env.GMAIL_USER?.trim();
+  const pass = env.GMAIL_APP_PASSWORD?.trim();
   return {
     port: Number.isInteger(port) && port > 0 ? port : 3001,
     nodeEnv: env.NODE_ENV ?? "development",
     corsOrigins: allowedOrigins(env),
     timeScale: readTimeScale(env),
+    smtp: user && pass ? { user, pass } : null,
   };
 }

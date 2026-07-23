@@ -765,6 +765,17 @@ timings, teacher keepalive, store TTL/sweep, the client's
 compress through a server-side time-scale knob; production is pinned
 to 1".
 
+**Email delivery.** The transcript email (feature 11) sends over Gmail SMTP
+when `GMAIL_USER` and `GMAIL_APP_PASSWORD` are both set (nodemailer, the
+founder's account plus an app password on Render). With either missing —
+every dev machine — the mailer runs in log-only mode instead, so dev still
+needs zero env vars: in dev it logs the whole composed email, and in
+production it logs a warning with the recipient and line count only, never
+the student messages. The composer and the send-once guard live in
+`server/src/email/`; the setup steps are in
+[operations.md](operations.md) → "Gmail app password". Nothing sends until
+the teacher ends an activity (feature 11 prompt 3).
+
 ## curl smoke
 
 ```bash

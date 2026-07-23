@@ -8,6 +8,7 @@ import type {
   ServerToClientEvents,
 } from "@chaverola/shared";
 
+import type { Mailer } from "../email/mailer";
 import type { StoredActivity } from "../store/activityStore";
 import {
   graceSecondsLeft,
@@ -79,6 +80,10 @@ export function room(joinCode: string): string {
 export interface LobbyContext {
   io: LobbyServer;
   log: Logger;
+  /** The transcript mailer (feature 11). Threaded through here so the
+   *  teacher handler's End activity (prompt 3) and the fallback timer
+   *  (prompt 4) can reach it; unused until then. */
+  mailer: Mailer;
   queuePayload(record: StoredActivity, now: number): { students: QueueEntry[] };
   chatsPayload(
     record: StoredActivity,
@@ -107,7 +112,11 @@ export interface LobbyContext {
   armSeatTimers(record: StoredActivity, seat: Seat, graceMs: number): void;
 }
 
-export function createLobbyContext(io: LobbyServer, log: Logger): LobbyContext {
+export function createLobbyContext(
+  io: LobbyServer,
+  log: Logger,
+  mailer: Mailer
+): LobbyContext {
   function queuePayload(record: StoredActivity, now: number) {
     // Matched and wrappingUp seats hold seats but aren't waiting — the
     // queue shows only the matchable(ish) pool.
@@ -295,6 +304,7 @@ export function createLobbyContext(io: LobbyServer, log: Logger): LobbyContext {
   return {
     io,
     log,
+    mailer,
     queuePayload,
     chatsPayload,
     broadcastState,

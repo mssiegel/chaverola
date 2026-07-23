@@ -150,7 +150,10 @@ pieces those surfaces share.
   gate; at runtime **tsx executes the TypeScript source directly** — there
   is no emit step anywhere. Render injects `PORT` and
   `RENDER_GIT_COMMIT` (echoed by `/healthz`); Node's version comes from
-  the root `.nvmrc`.
+  the root `.nvmrc`. The transcript email (feature 11) reads two more Render
+  vars, `GMAIL_USER` / `GMAIL_APP_PASSWORD` — unset in dev, where the mailer
+  logs instead of sending ([operations.md](operations.md) → Gmail app
+  password).
 - **Free-tier consequences:** the instance spins down when idle, and the
   spin-down rule is verified empirically (2026-07-19, the feature-2
   Prompt 1 proof — results in
@@ -211,6 +214,13 @@ calls the store, and projects. The **projection layer**
 stored record into response JSON, and it builds explicit field-by-field
 literals — the student projection cannot leak `settings`, `teacherEmail`,
 or the hostKey by construction. Tests pin the exact key lists.
+
+The one place a stored record leaves the process as anything other than a
+projection is `server/src/email/` (feature 11): a pure formatter turns a
+`StoredActivity` into the plain-text transcript email, a send-once guard
+gates the send, and the mailer sends it over Gmail SMTP (or logs it, with
+no credentials). Built at boot in `index.ts` and threaded onto the lobby
+context; the send fires when a teacher ends an activity.
 
 ### The `app.ts` / `index.ts` seam
 
