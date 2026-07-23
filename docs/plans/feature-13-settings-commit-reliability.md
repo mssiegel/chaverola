@@ -125,10 +125,11 @@ and an invalid one still holds.
   the inline field error enough? Any new line is user-facing copy: the wording is
   the founder's call and it needs the humanizer pass.
 - Removing a character while another field is invalid — commit the removal, or
-  refuse it and leave the row until the other field is fixed? Worth having in the
-  room: [feature 18](./feature-18-character-roster-syncs-live.md) prompt 3 gives
-  removal a server-side twin of `removeGuard` and must decide how a server
-  refusal gets back into the draft, so this answer becomes its client half.
+  refuse it and leave the row until the other field is fixed? This stays a
+  client-side call: [feature 18](./feature-18-character-roster-syncs-live.md)
+  allows removal at any time — a chat snapshots its cast at start, so removing an
+  in-use character is label-safe — and adds **no** server-side refusal, so there
+  is no server round-trip to reconcile with. Decide it on the panel's own terms.
 
 **Edge cases:** a removed row that was only ever local filters to a no-op against
 `activity.characters` — harmless, and the draft still loses the row. Holding the
@@ -141,7 +142,8 @@ socket.io-client buffers and flushes it, nobody has watched it happen, and
 [feature 15](./feature-15-the-panel-respects-a-dropped-connection.md) owns that
 surface; don't assert either here. A second host device hears the flip through
 `settings:changed` exactly as it does from the rail today, and `removeGuard` still
-blocks removing a character mid-chat.
+blocks removing a character mid-chat (feature 18 retires that guard once a chat's
+cast is snapshotted; until then it stands).
 
 **Tests:** none. The fix is a handler shape inside a component and the no-DOM
 client policy can't reach it (`DECISIONS.md` → "Testing stays small"). The failure

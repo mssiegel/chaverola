@@ -1,120 +1,122 @@
-# Feature 18 — Character edits reach students, mid-chat included
+# Feature 18 — Character edits reach the lobby and every future chat
 
 The live settings panel leads with the **Characters** block, and every control
-in it is a dead end on a real activity. Rename a character, swap its emoji,
-add a fifth, drop the fourth — all four land in the teacher's local React
-state ([`HostActivityPage.tsx:255-270`](../../client/src/pages/teacher/HostActivityPage.tsx)
+in it is a dead end on a real activity. Rename a character, swap its emoji, add
+a fifth, drop the fourth — all four land in the teacher's local React state
+([`HostActivityPage.tsx:255-270`](../../client/src/pages/teacher/HostActivityPage.tsx)
 diffs `settings` and `teacherEmail`, nothing else) and stop there. There is no
 roster field on any wire event, no server handler, and
 `StoredActivity.characters` is write-once at create
 ([`activityStore.ts:148-155`](../../server/src/store/activityStore.ts)).
 
-What makes this worse than a missing feature is that the teacher's own page
-puts on a convincing show. Chat cards re-label by character id within a second
-through [`withCurrentCharacters`](../../client/src/lib/hostActivity.ts)
-([`hostActivity.ts:135-144`](../../client/src/lib/hostActivity.ts), called at
-[`ChatsInProgressSection.tsx:150-155`](../../client/src/components/Teacher/HostActivity/ChatsInProgressSection.tsx)
+The teacher's own page puts on a convincing show. Chat cards re-label by
+character id within a second through
+[`withCurrentCharacters`](../../client/src/lib/hostActivity.ts)
+([`hostActivity.ts:128-144`](../../client/src/lib/hostActivity.ts), called at
+[`ChatsInProgressSection.tsx:152`](../../client/src/components/Teacher/HostActivity/ChatsInProgressSection.tsx)
 and [`CompletedChatsSection.tsx:48`](../../client/src/components/Teacher/HostActivity/CompletedChatsSection.tsx)),
-so the rename looks like it worked. The student's side resolves every label —
-each bubble, each peer name, the drop banner, the reveal rows — against the
-roster fetched **once** at join
-([`characterLabel.ts:8-12`](../../client/src/lib/characterLabel.ts),
-[`liveMatchState.ts:75-101`](../../client/src/pages/student/join/liveMatchState.ts),
-[`ChatEndedSection.tsx:138-161`](../../client/src/components/Student/Chatbox/ChatEndedSection.tsx)),
+so the rename looks like it worked. It reaches nobody else. The student's side
+resolves every label against the roster fetched **once** at join
+([`characterLabel.ts:13-15`](../../client/src/lib/characterLabel.ts),
+[`liveMatchState.ts:72-101`](../../client/src/pages/student/join/liveMatchState.ts),
+[`ChatEndedSection.tsx:144-157`](../../client/src/components/Student/Chatbox/ChatEndedSection.tsx)),
 and the lobby's roster chips come from the same copy
 ([`WaitingLobby.tsx:91-104`](../../client/src/components/Student/WaitingLobby.tsx)).
-Teacher and student end up calling the same live chat different things. A
-student who joins ten minutes _after_ the rename gets the old name too
+A student who joins ten minutes _after_ the rename gets the old name too
 ([`projections.ts:26-34`](../../server/src/store/projections.ts) reads
-`stored.characters`), so this is missing data, not a stale cache — a refresh
-cannot heal it. Emoji rides the identical path
+`stored.characters`), so this is missing data, not a stale cache — a refresh on
+the host page just reverts the whole edit. It is a teacher-facing illusion with
+nothing behind it. Emoji rides the identical path
 ([`EmojiSlot.tsx:58-75`](../../client/src/components/Teacher/ActivitySetup/EmojiSlot.tsx));
 clearing one works locally only, via a truthiness check two files away
 ([`hostActivity.ts:154-160`](../../client/src/lib/hostActivity.ts)).
 
-**Remove has the widest blast radius.** The comment at
-[`LiveSettingsPanel.tsx:111-113`](../../client/src/components/Teacher/HostActivity/LiveSettingsPanel.tsx)
-explains that removal skips the typing debounce because "a removed character
-must stop being offered to future pairings immediately." On a real activity it
-never stops: `dealCast` still hands it out
-([`matching.ts:153`](../../server/src/live/matching.ts) →
-[`matchRules.ts:31-33`](../../shared/src/matchRules.ts)), and `planPairEveryone`
-sizes its trailing trio off the **server's** `characters.length`
-([`matching.ts:196-212`](../../server/src/live/matching.ts) →
-[`matchRules.ts:43-57`](../../shared/src/matchRules.ts)), so Pair-everyone
-forms a trio on the character the teacher just deleted. `withCurrentCharacters`
-then can't find the id locally and falls back to the wire copy
-([`hostActivity.ts:139-143`](../../client/src/lib/hostActivity.ts)), so the
-deleted character is rendered **by name** on the teacher's own chat card. A
-reload restores the row from the server
-([`projections.ts:38-50`](../../server/src/store/projections.ts)).
+**What this feature delivers, and the line it draws.** A character rename, an
+emoji swap, an added character, a removed one — each should reach the **waiting
+lobby's** roster chips and **every chat that starts after the edit**, including a
+student who joins ten minutes later and the teacher's second host device. But a
+chat **already in progress keeps the cast it started with**. Renaming the cast
+is a between-rounds move, not a mid-conversation one: two students deep in a
+scene as Brutus and Cassius should not watch their names rewrite themselves
+under them, and the teacher and both students should always agree on who is in
+that room. The lobby and the next chat follow the edit; a running chat is a
+fixed scene.
 
-It reads worse than it is, and the prompts below must not over-build for it:
-`dealCast` slices the roster's **first N** characters
-([`matchRules.ts:31-33`](../../shared/src/matchRules.ts)) and only rows 3–4 are
-removable ([`CharacterRowsField.tsx:69`](../../client/src/components/Teacher/ActivitySetup/CharacterRowsField.tsx)),
-while auto-match always deals a two-id pair
-([`autoMatch.ts:35-43`](../../server/src/live/autoMatch.ts)). So 1:1 chats and
-auto-match can never be affected. The only two reachable paths are a manual
-3-or-more start and pair-everyone's trio.
+**The mechanism is a snapshot at chat start.** When a chat forms, each seat's
+character name and emoji are captured onto `chat.members` — today a member holds
+only `{ studentId, name, characterId }`
+([`matching.ts:53-70`](../../server/src/live/matching.ts)), where `name` is the
+student's real name and the character label is resolved later from
+`characterId`. Every in-chat surface then reads that snapshot instead of the
+live roster: the teacher's in-progress and completed cards, the student's
+bubbles and peer labels, the end-of-chat reveal rows, and the emailed
+transcript. The live roster — `stored.characters`, and its client mirror
+`activity.characters` — drives only the lobby chips and the next `createChat`.
+One consequence falls out for free: a character removed while it is on a card
+keeps its captured label forever, so the raw-id fallback the removal path
+fears never fires
+([`projections.ts:125-140`](../../server/src/store/projections.ts) —
+`resolveCharacter` returns the bare id as a name) — which is why removal becomes
+safe at any time.
 
-**Add strands a student, quietly.** `maxGroupSize` is computed from the
-**local** roster ([`index.tsx:84`](../../client/src/components/Teacher/HostActivity/index.tsx)),
-so a locally-added third character immediately permits a three-student
-selection. `createChat` clamps to the **server** roster —
-`requested.slice(0, Math.min(4, activity.characters.length))`
-([`matching.ts:142-151`](../../server/src/live/matching.ts)). Two students get
-a chat; the third stays in the queue with no leftover highlight (`createChat`
-only ever _clears_ `leftoverStudentId`,
-[`matching.ts:178-183`](../../server/src/live/matching.ts)) and the selection
-has already been wiped ([`index.tsx:114-118`](../../client/src/components/Teacher/HostActivity/index.tsx)).
-**The audit corrected itself here and the correction matters:** the server never
-_refuses_ a chat on roster grounds. It silently clamps and seats fewer. The
-reportable defect is the silent under-seating, which is a server robustness gap
-that survives even after the roster syncs (the panel's 1s debounce plus network
-latency leaves the same window open), so it gets its own prompt.
+## Founder calls that shape this feature (2026-07-23)
 
-**Reproduce all four in two minutes** (this whole area was contested — two of
-three audit lenses argued the missing sync is a scheduled feature rather than a
-bug, and only the consequences below were unsigned-off): host a real activity
-with three characters, get three students into the queue, start a chat with
-two of them. Rename character 1 in the panel — your card relabels, the
-students' bubbles don't. Add a fourth character, select all three waiting
-students, Start their chat — two get seated, one sits in the queue with nothing
-marking them. Remove character 3, hit Pair everyone with three students waiting
-— the trio forms on the character you just deleted. Refresh the host page —
-every edit is gone.
+Two product calls were settled in planning; the prompts below build to them and
+each records its own into `DECISIONS.md` + `docs/decisions/teacher-live.md` when
+it ships (per AGENTS.md → Working Rules), so this file is where they live until
+then:
+
+- **A chat freezes its cast when it starts.** Character name/emoji edits reach
+  the lobby and every chat that starts _afterward_, never a chat already
+  running. The alternative — following a rename into a live chat, which earlier
+  drafts of this doc planned — was rejected: relabeling a character mid-scene
+  disorients the two students in it and buys nothing a between-rounds edit
+  doesn't. This is why the snapshot exists, and why there is **no** mid-chat
+  re-resolution reducer.
+- **A character can be removed at any time.** Because the snapshot keeps every
+  running and completed chat's labels intact, removing a character that is in a
+  live chat is now label-safe: the running chat keeps the cast it started with,
+  and the character simply stops being dealt to future chats. The old
+  "can't remove while in a live chat" lock (the `removeGuard` Live dot) is
+  **retired**, not moved to the server — and the dot goes entirely, with no
+  informational "in a live chat" marker replacing it.
 
 ## Depends on feature 17
 
-This doc **extends the event feature 17 introduces**; it does not add a second
-one. Feature 17 ships `activity:update-details` / `activity:details-changed`
-(host name and scene) through all seven touch points in
-[`docs/adding-a-wire-event.md`](../adding-a-wire-event.md). Feature 18 adds
+The **lobby half** of this feature extends the event feature 17 introduces; it
+does not add a second one. Feature 17 ships `activity:update-details` /
+`activity:details-changed` (host name and scene) through all seven touch points
+in [`docs/adding-a-wire-event.md`](../adding-a-wire-event.md). Feature 18 adds
 `characters` to that same payload pair, reuses its fan-out, and extends its
-allowlist pin. Run 17 first. If 17 shipped different event names or a different
-payload split, prompt 1 adopts what 17 actually built rather than what this doc
-guesses.
+allowlist pin — that is the channel the **roster reaches the lobby** on. The
+**in-chat half** is separate and rides the existing chat events (`chat:started`
+and the resume snapshot), which gain the frozen cast. Run 17 first. If 17
+shipped different event names or a different payload split, prompt 2 adopts what
+17 actually built rather than what this doc guesses.
 
 ## Decisions this supersedes
 
 Three entries in [`docs/decisions/teacher-live.md`](../decisions/teacher-live.md)
-speak to this area, and this feature is the one that retires the local-only
-half of all three:
+speak to this area:
 
 - **"Settings edits sync for real; characters, scenario, and host name stay
   local"** (2026-07-19, `:505-541`) — the founder call that made roster edits
   local-only, on the reasoning that roster sync "propagates to students'
-  lobbies — a bigger feature than a settings echo." That was right. This is
-  that bigger feature. Prompt 1 supersedes the character half; feature 17
-  supersedes the scene and host-name half.
+  lobbies — a bigger feature than a settings echo." That was right. This is that
+  bigger feature. Prompt 2 supersedes the character half; feature 17 superseded
+  the scene and host-name half.
 - **"The live-settings panel stays on real activities, editing the teacher's
   local view"** (2026-07-19, `:681-713`) — its remaining local-only clause
   retires here.
 - **"Live edits propagate after a 1-second pause, and invalid states never do"**
-  (2026-07-15, `:1070-1100`) — this one is not superseded, it is finally made
-  true. It already specified the behavior this feature builds: re-labeling by
-  stable character id, everywhere at once, student surfaces included.
+  (2026-07-15, `:1132-1161`) — this one is **revised, not fulfilled**. It
+  promised every valid edit applies "everywhere at once — roster rows, pairing,
+  in-progress chat cards, student surfaces — re-labeling by stable character
+  id." That is now true for **settings, scene and host name** (feature 17) but
+  **deliberately not for characters**: a character edit reaches the lobby and
+  future chats and stops at the door of a running one. Record the reversal in
+  the entry's own update-note style — the phrase "in-progress chat cards,
+  student surfaces" no longer describes character edits.
 
 Each prompt records its own supersession in `DECISIONS.md` plus the area file,
 per AGENTS.md → Working Rules.
@@ -122,170 +124,319 @@ per AGENTS.md → Working Rules.
 ## How to use this document
 
 Same rules as features 4–11: each prompt is sized for one agent session, ends
-green (`pnpm typecheck` + `pnpm test` + its own verification), gets **one
-commit straight to `main`**, and is safe to push on its own. Run `pnpm format`
-before committing; record newly-made decisions in `DECISIONS.md` +
+green (`pnpm typecheck` + `pnpm test` + its own verification), gets **one commit
+straight to `main`**, and is safe to push on its own. Run `pnpm format` before
+committing; record newly-made decisions in `DECISIONS.md` +
 `docs/decisions/teacher-live.md`; run the humanizer skill on all new
-user-facing copy. The prompts are sequential — 2 needs 1's roster on the wire,
-3 and 4 need 1's server-side roster — but each leaves the app fully working.
-Production is driven once, in prompt 4.
+user-facing copy. The prompts are sequential — prompt 1 freezes running chats so
+prompt 2 can safely make the roster mutable; 3 and 4 build on 2's server-side
+roster — but each leaves the app fully working. Production is driven once, in
+prompt 4.
 
 Where a prompt names an **Ask the founder** question, raise it when you run that
 prompt. Do not resolve it from this document.
 
-- [ ] Prompt 1 — A renamed character reaches every student
-- [ ] Prompt 2 — The rename follows a student into their live chat
+- [ ] Prompt 1 — A chat's cast is fixed the moment it starts
+- [ ] Prompt 2 — A renamed character reaches the lobby and every future chat
 - [ ] Prompt 3 — Removing a character actually removes it
 - [ ] Prompt 4 — Nobody is silently left out of a chat, and the panel stops lying
 
-## Shared context: the wire contract addition
+## Shared context: the two channels
 
-In `shared/src/socket.ts`, per [`docs/adding-a-wire-event.md`](../adding-a-wire-event.md),
-documented in `docs/api.md`. Feature 17 owns the event; 18 adds one field to
-each side of it:
+A character edit travels on **two** channels, and keeping them apart is the
+whole design:
 
-```ts
-// ClientToServerEvents — teacher only, beside settings:update (socket.ts:264-265):
-"activity:update-details": (payload: {
-  characters: Character[];   // ← feature 18 adds this
-  hostName: string;          // feature 17
-  scenario: string | null;   // feature 17
-}) => void;
+1. **The lobby channel — feature 17's details event, `characters` added.** In
+   `shared/src/socket.ts`, per
+   [`docs/adding-a-wire-event.md`](../adding-a-wire-event.md), documented in
+   `docs/api.md`. Feature 17 owns the event; 18 adds one field to each side:
 
-// ServerToClientEvents — same shape, fanned to other host devices AND to
-// every seated student:
-"activity:details-changed": (payload: { characters: Character[]; /* … */ }) => void;
-```
+   ```ts
+   // ClientToServerEvents — teacher only, beside settings:update (socket.ts:264-265):
+   "activity:update-details": (payload: {
+     characters: Character[];   // ← feature 18 adds this
+     hostName: string;          // feature 17
+     scenario: string | null;   // feature 17
+   }) => void;
 
-**This does not weaken the characterIds-only invariant.** A `Character` is
-`{ id, name, emoji? }` — public data every student already fetches at join
-through `GET /activities/:joinCode`
-([`projections.ts:26-34`](../../server/src/store/projections.ts)). What must
-never ride along is `teacherEmail`, `hostKey`, `settings`, seats, or chats,
-which is exactly what the field-by-field projector and the exact-key allowlist
-pin in `projections.test.ts` exist to prevent. That pin is **mandatory** and is
-not covered by this feature's otherwise-minimal test budget.
+   // ServerToClientEvents — same shape, fanned to other host devices AND to
+   // every seated student's LOBBY:
+   "activity:details-changed": (payload: { characters: Character[]; /* … */ }) => void;
+   ```
+
+   **This does not weaken the characterIds-only invariant.** A `Character` is
+   `{ id, name, emoji? }` — public data every student already fetches at join
+   through `GET /activities/:joinCode`
+   ([`projections.ts:26-34`](../../server/src/store/projections.ts)). What must
+   never ride along is `teacherEmail`, `hostKey`, `settings`, seats, or chats,
+   which is exactly what the field-by-field projector and the exact-key
+   allowlist pin in `projections.test.ts` exist to prevent. That pin is
+   **mandatory** and is not part of this feature's otherwise-minimal test
+   budget.
+
+2. **The frozen-cast channel — the chat's own events.** A chat already carries
+   its members to the teacher (`toChatSnapshot`) and to each student
+   (`toChatStarted`, plus the resume delivery). Prompt 1 captures each
+   character's name and emoji onto `chat.members` at chat start and teaches
+   those two projectors to read the snapshot rather than resolve against the
+   live roster. The student's `chat:started` / resume payload gains the chat's
+   frozen `cast: Character[]` so the client resolves in-chat labels against it,
+   never against the mutable lobby roster. This channel carries **no lobby
+   data** and the lobby channel carries **no chat data** — that separation is
+   what lets the lobby update while a running chat stays fixed.
 
 ## Shared context: character ids on the wire
 
-The panel mints ids client-side as `live-character-N` from a module counter
-that **resets on every page load**
+The panel mints ids client-side as `live-character-N` from a module counter that
+**resets on every page load**
 ([`hostActivity.ts:33-39`](../../client/src/lib/hostActivity.ts)), while the
 server slugs ids from names at create time
 ([`activityStore.ts:78-92`](../../server/src/store/activityStore.ts)). Two host
 devices — or one device refreshed twice — mint colliding ids for different
-characters. The moment ids ride the wire, that collision becomes real data.
+characters. The moment ids ride the wire (prompt 2), that collision becomes real
+data. It also matters to the snapshot: `chat.members` reference `characterId`,
+and a re-minted id would orphan a running chat's members.
 
 Two hard constraints on whatever fix is chosen:
 
 1. **An id that any chat already references must never change.** Stored chat
    members hold a `characterId`
-   ([`matching.ts:55-70`](../../server/src/live/matching.ts)) and both
-   projectors resolve through it
-   ([`projections.ts:129-139`](../../server/src/store/projections.ts)). Re-mint
-   an in-use id and every card and every student bubble goes to the fallback.
+   ([`matching.ts:53-70`](../../server/src/live/matching.ts)); the snapshot
+   captures the label but the id stays the join key. Re-mint an in-use id and
+   the snapshot lookups still resolve (the label is captured), but the deal-time
+   `characterIdsInUse` bookkeeping and any future resolution break.
 2. **Ids are opaque and always were** — nothing renders them, so a change of
    minting scheme costs nothing except the collision math.
 
-**Ask the founder (prompt 1):** make client-side minting collision-proof (a
+**Ask the founder (prompt 2):** make client-side minting collision-proof (a
 random suffix, so the panel's ids are globally unique and the server takes them
-as given), or have the server remap unknown ids to its own slugged ones and
-echo the canonical roster back. The first is smaller; the second keeps id
-minting in one place and matches how create already works.
+as given), or have the server remap unknown ids to its own slugged ones and echo
+the canonical roster back. The first is smaller; the second keeps id minting in
+one place and matches how create already works.
 
 ## Shared context: the deploy race
 
 `shared/` is in both deploy triggers, so one push races two pipelines and
 Socket.IO drops an unhandled event **silently** (AGENTS.md → Working Rules).
 
-- **Server ahead of client** is benign everywhere: an unknown extra payload
-  field is ignored, and nobody emits the new field yet.
-- **Client ahead of server bites prompt 1 specifically:** a panel emitting
-  `activity:update-details` with a roster at a server that doesn't read it is
-  exactly today's behavior (a local-only edit) with no error anywhere — which
-  is the worst kind of silent, because it looks like the feature works on your
-  own screen. **Split prompt 1 into a server commit and a client commit and
-  push them separately**, polling `/healthz` for the server commit in between.
+- **Prompt 1 (frozen cast)** adds a field to existing chat events. Both
+  directions are benign _as long as the client falls back_: server-ahead means
+  an old client ignores the new `cast` and resolves against `activity.characters`
+  (still the immutable roster in prompt 1 — correct); client-ahead means the new
+  client must read `payload.cast ?? activity.characters`, so a server that
+  doesn't send `cast` yet still renders. Ship it with the fallback and the split
+  is optional.
+- **Prompt 2 (lobby sync)** is the dangerous one, exactly as in feature 17.
+  **Server ahead of client** is benign: an unknown extra payload field is
+  ignored and nobody emits the new roster yet. **Client ahead of server** is the
+  worst kind of silent — a panel emitting `activity:update-details` with a
+  roster at a server that doesn't read it is today's local-only edit, no error
+  anywhere, looks like it works on your own screen. **Split prompt 2 into a
+  server commit and a client commit and push them separately**, polling
+  `/healthz` for the server commit in between.
 - Remember the tip-commit rule: the last commit of any push must touch
   `client/`, `shared/`, or a root manifest, or Vercel silently skips the client
   build. A docs-only follow-up goes in its own push.
-- Prompt 2 is client-only and races nothing. Prompts 3 and 4 are
-  server-behavior changes behind an event that already exists, so both
-  directions are benign.
+- Prompts 3 and 4 are server-behavior changes behind events that already exist,
+  so both directions are benign.
 
 ---
 
-## Prompt 1 — A renamed character reaches every student
+## Prompt 1 — A chat's cast is fixed the moment it starts
+
+**Goal:** every surface that shows a character _inside a chat_ — the teacher's
+in-progress and completed cards, both students' bubbles and peer labels, the
+end-of-chat reveal rows, and the emailed transcript — reads a name and emoji
+**captured when the chat started**, not the live roster. Today the roster is
+still write-once (feature 17 left characters local-only), so this ships with
+**no student-visible change**: it is the insulation that lets prompt 2 make the
+roster mutable without a running chat ever seeing the edit. The one visible
+change is on the teacher's own page — the local-only fake relabel stops, because
+the cards now render captured truth instead of the panel's unsynced draft.
+
+1. **Capture the cast on `chat.members`**
+   ([`matching.ts:154-161`](../../server/src/live/matching.ts)): when
+   `createChat` builds `members`, snapshot each seat's character alongside its
+   `characterId`. A member becomes
+   `{ studentId, name, characterId, character }` where `character: Character` is
+   resolved from `stored.characters` **at chat-start time** and never touched
+   again. (Keeping both `characterId` and the captured `character` is
+   deliberate: the id stays the matching/deal key, the object is the frozen
+   label. An implementer who prefers `characterName` + `characterEmoji` scalars
+   may — the projector shape is what matters.) Update the docblock at
+   `matching.ts:53-70`, which already says `name` is captured "so a removed
+   seat's card label survives" — the same reasoning now covers the character.
+2. **Teacher projector reads the snapshot**
+   ([`projections.ts:144-155`](../../server/src/store/projections.ts)):
+   `toChatSnapshot` currently sets `character: resolveCharacter(activity, member.characterId)`.
+   Change it to `character: member.character`. The teacher's card no longer
+   depends on the live roster at all.
+3. **Student projector ships the frozen cast**
+   ([`projections.ts:219-241`](../../server/src/store/projections.ts)):
+   `toChatStarted` today emits bare `characterId`s and lets the client resolve.
+   Add the chat's `cast: Character[]` (the distinct captured characters from
+   `chat.members`) to its payload — and to the resume delivery that reuses it —
+   so the client resolves against a frozen roster instead of the mutable lobby
+   copy. Add the field to `ServerToClientEvents`' `chat:started` shape (and any
+   resume event) in `shared/src/socket.ts`, documented in `docs/api.md`.
+4. **`resolveCharacter` stops being the chat path**
+   ([`projections.ts:125-140`](../../server/src/store/projections.ts)): its
+   docblock claims "the server's copy never changes and the id was minted from
+   it — the find can't miss." Prompt 2 kills that claim. After this prompt the
+   chat projectors no longer call it; rewrite the docblock to say the roster is
+   now mutable, chat labels come from the member snapshot, and this helper
+   remains only for surfaces that _want_ the live roster (if any) — verify
+   whether any caller still does.
+5. **The transcript reads the snapshot too**
+   ([`server/src/email/transcript.ts`](../../server/src/email/transcript.ts)):
+   feature 11's formatter resolves characters "the same way" as the projector
+   (that is what the `resolveCharacter` docblock's export note points at). An
+   emailed transcript is a record of a chat that already happened, so it must
+   show the names used **during** that chat. Switch it to `member.character`,
+   with a `?? resolveCharacter(...)` fallback for any member that predates this
+   prompt. Feature 11 ships before this and is correct as-is against the
+   immutable roster; this prompt is where the transcript starts reading captured
+   truth.
+6. **Retire `withCurrentCharacters`**
+   ([`hostActivity.ts:128-144`](../../client/src/lib/hostActivity.ts)): its two
+   callers (`ChatsInProgressSection.tsx:152`,
+   `CompletedChatsSection.tsx:48`) re-resolve the server snapshot's participants
+   against the client's local roster — which is exactly the relabel we are
+   removing. The server snapshot now carries frozen labels, so both call sites
+   render `chat.participants` directly and the function has no callers. Delete
+   it (and its `hostActivity.test.ts` coverage, if any).
+7. **Student resolves in-chat labels against the frozen cast**
+   ([`liveMatchState.ts:72-101`](../../client/src/pages/student/join/liveMatchState.ts),
+   [`useActiveMatch.ts:172-179`](../../client/src/pages/student/join/useActiveMatch.ts)):
+   `applyChatStarted` resolves `self`/`peers`/`everPeers` against the `roster`
+   the hook passes in, which is `activity?.characters` (the lobby copy). Change
+   the hook to pass `payload.cast ?? activity?.characters ?? []` so the chat is
+   resolved against its own frozen roster. The live peers are already baked once
+   and never re-resolved (`shrinkToPeers` only filters,
+   [`liveMatchState.ts:111-121`](../../client/src/pages/student/join/liveMatchState.ts));
+   the only place the mutable roster could still leak in is the resume re-map of
+   `everPeers` (`:164-199`) — feed it the frozen cast too. `characterLabel`
+   reads `participant.character` and needs nothing
+   ([`characterLabel.ts:13-15`](../../client/src/lib/characterLabel.ts)).
+8. **Docs.** `docs/api.md` (the `cast` field on `chat:started`); the
+   `liveMatchState.ts` module docblock at `:19-27` (the chat resolves against
+   its own frozen cast, not the live roster);
+   `docs/decisions/teacher-live.md` + `DECISIONS.md` (record the frozen-cast
+   founder call and the revision of the 2026-07-15 entry).
+
+**Edge cases:** a chat that started before this prompt shipped has members
+without a captured `character` — the store is in-memory and a deploy wipes it,
+but keep the `?? resolveCharacter` fallback so a mid-deploy resume never renders
+a raw id; a resume/reconnect must re-resolve `everPeers` against the frozen cast,
+not the current lobby roster (that is the one real leak this prompt closes ahead
+of prompt 2); a removed character already reads its captured label here, so
+prompt 3 inherits a clean slate.
+
+**Tests:** the projections allowlist pins. Re-pin `toChatSnapshot` /
+`toChatStarted` for the new shape (a `cast` array, `character` on members) and
+keep the `toActivityDetails` pin from feature 17 unchanged
+([`projections.test.ts:24-44`](../../server/src/store/projections.test.ts)).
+These are privacy/shape invariants, not part of the test budget. Everything
+else is a browser check.
+
+**Done when:** `pnpm typecheck` + `pnpm test` green; browser pass —
+teacher plus two students, start their chat, exchange a message, then rename
+both characters and clear one emoji in the panel → **nothing in the running chat
+moves** on either student, and the teacher's card for that chat holds the old
+names too (the edit is still local-only until prompt 2, so it also doesn't reach
+the lobby yet — that is expected here); end the chat with **Reveal names** on →
+the reveal rows show the names the chat ran under; a mid-chat refresh on a
+student resumes with the same frozen names. The `1234` demo shifts with this too
+— deleting the shared `withCurrentCharacters` means a rename no longer relabels a
+demo chat **already in progress** (new demo chats still deal the current name),
+which is the correct new behavior; if the demo cards lose their labels entirely,
+the demo's chat participants must embed the character at deal time to mirror the
+server snapshot (prompt 4's demo-parity step owns finishing this). The demo
+journey is otherwise unchanged with zero `/socket.io/` traffic. `pnpm format`,
+one commit (or a server/client split if you skip the `payload.cast` fallback),
+checkbox ticked.
+
+---
+
+## Prompt 2 — A renamed character reaches the lobby and every future chat
 
 **Goal:** a teacher renames Brutus to "Brute the Betrayer" (or swaps his knife
-emoji for a dagger) in the live settings panel, and within a second every
-student's lobby roster chip says so — including a student who joins ten minutes
-later, and including the teacher's second host device. The roster stops being
-write-once: it is server truth, it survives a refresh, and the panel's promise
-about character edits becomes true for everything except a chat already in
-progress (prompt 2).
+emoji for a dagger) in the panel, and within a second every student's **lobby**
+roster chip says so — including a student who joins ten minutes later, and the
+teacher's second host device — and the **next** chat that starts is dealt the
+new name. The roster stops being write-once: it is server truth and survives a
+refresh. A chat already running is untouched, because prompt 1 froze it.
 
 1. **Wire** (`shared/src/socket.ts`): add `characters: Character[]` to feature
    17's `activity:update-details` and `activity:details-changed`, with a
    docblock saying why a roster is student-safe and the email/settings/hostKey
-   are not.
+   are not, and that this is the **lobby** channel (the frozen-cast channel is
+   prompt 1's).
 2. **Projector** ([`projections.ts`](../../server/src/store/projections.ts)):
-   extend 17's `toActivityDetails(stored)` with `characters: stored.characters`
-   — a field-by-field literal, never a spread. This payload reaches students.
-   (Feature 17 names it `toActivityDetails` because it projects the
-   student-visible detail block, not one event; if 17 shipped another name, use
-   that one.)
+   extend feature 17's `toActivityDetails(stored)` with
+   `characters: stored.characters` — a field-by-field literal, never a spread.
+   This payload reaches students' lobbies. (If 17 shipped another name for the
+   projector, use that one.)
 3. **Allowlist pin** (`projections.test.ts`, **mandatory**): extend 17's
    exact-key assertion for `toActivityDetails` — it pinned
-   `["hostName","scenario"]`, and this prompt makes it
-   `["characters","hostName","scenario"]`. Add `characters` to the
-   `fullRecord` fixture's expectations wherever it moved
-   ([`projections.test.ts:24-44`](../../server/src/store/projections.test.ts)),
-   and **re-pin `toChatSnapshot` / `toChatStarted`** — the docblock at
-   [`projections.ts:125-128`](../../server/src/store/projections.ts) claims
-   "the server's copy never changes," and this prompt kills that claim. Rewrite
-   the comment to say the roster is now mutable and the fallback is reachable.
+   `["hostName","scenario"]`, and this makes it
+   `["characters","hostName","scenario"]`
+   ([`projections.test.ts:24-44`](../../server/src/store/projections.test.ts)).
 4. **Server handler** ([`handlers/teacher.ts`](../../server/src/live/handlers/teacher.ts),
    beside `settings:update` at `:248-263`): extend feature 17's
    `activityDetailsUpdateSchema` with the roster — the module-local
    `characterInputSchema` ([`schemas/activity.ts:27-41`](../../server/src/schemas/activity.ts),
-   private to that file and reusable in place, no export needed) plus the same
-   count bounds and duplicate-name refine the create schema uses
+   private to that file and reusable in place) plus the same count bounds and
+   duplicate-name refine the create schema uses
    ([`schemas/activity.ts:79-99`](../../server/src/schemas/activity.ts)), and
    whatever id rule the founder's answer settles on. Repeat the refine in the
    sibling schema rather than refactoring `createActivityRequestSchema` — the
-   `teacherEmailUpdateSchema` precedent at `:63-71`. Assign onto the record from
-   `getByHostKey`. Log a count, never the names.
+   `teacherEmailUpdateSchema` precedent at `:63-71`. Assign the roster onto the
+   record from `getByHostKey`. **The store's `characters` becomes mutable here.**
+   Log a count, never the names.
 5. **Fan out twice.** `socket.to(room(joinCode))` reaches the teacher's other
-   devices; students never join that room ([`handlers/teacher.ts:51`](../../server/src/live/handlers/teacher.ts)
-   is the server's only `socket.join`), so a per-seat loop over
-   `record.seats.byId` is what reaches them — model it on `sendActivityPaused`
-   ([`lobbyContext.ts:250-260`](../../server/src/live/lobbyContext.ts)). One
-   helper in `lobbyContext.ts`, shared with feature 17.
+   devices; students never join that room
+   ([`handlers/teacher.ts:51`](../../server/src/live/handlers/teacher.ts) is the
+   server's only `socket.join`), so a per-seat loop over `record.seats.byId`
+   reaches them — model it on `sendActivityPaused`
+   ([`lobbyContext.ts:250-260`](../../server/src/live/lobbyContext.ts)), the
+   helper feature 17 already added.
 6. **Teacher client.** [`useHostActivityLive.ts`](../../client/src/components/Teacher/HostActivity/useHostActivityLive.ts):
    an `updateDetails` emitter beside `:265-270` and a listener beside the
-   `settings:changed` one at `:181-183`.
+   `settings:changed` one at `:181-183` (both extended by 17).
    [`HostActivityPage.tsx:255-270`](../../client/src/pages/teacher/HostActivityPage.tsx):
    add a roster diff beside the settings and email diffs, and fold the incoming
    echo into `setActivity` **without** re-entering `handleActivityChange` — the
-   same anti-echo rule the settings sync already documents at `:243-249`.
+   anti-echo rule the settings sync documents at `:243-249`. Note that folding
+   the roster into `activity.characters` now updates the lobby-facing copy and
+   the pairing rail, **not** any running chat card (those render the frozen
+   snapshot from prompt 1).
 7. **Student client.** [`useLobbyPresence.ts`](../../client/src/pages/student/useLobbyPresence.ts):
-   relay the event to a callback prop exactly like `activity:paused` at
-   `:236-238`. The roster is currently immutable lookup state
-   ([`useActivityLookup.ts:64-67`](../../client/src/lib/useActivityLookup.ts),
-   and `:75` short-circuits the fetch entirely on the `handedOff` path) — the
-   `deliver` seam at `:98-103` already exists for exactly this and is wired
-   through [`JoinActivityPage.tsx:71-75`](../../client/src/pages/student/JoinActivityPage.tsx).
-   Use it; do not add a second state channel.
-8. **Docs.** `docs/api.md` (the new field); the now-false comment at
-   [`index.tsx:197-201`](../../client/src/components/Teacher/HostActivity/index.tsx)
+   relay `activity:details-changed` to a callback prop exactly like
+   `activity:paused` at `:236-238` (feature 17 wired the callback). The roster is
+   currently immutable lookup state
+   ([`useActivityLookup.ts:64-67`](../../client/src/lib/useActivityLookup.ts));
+   the `deliver` seam at `:98-103` is wired through
+   [`JoinActivityPage.tsx:71-75`](../../client/src/pages/student/JoinActivityPage.tsx)
+   for exactly this. Use it; do not add a second state channel. **The lobby
+   chips update; a student mid-chat is untouched** because the chat resolves
+   against `payload.cast`, not this lookup (prompt 1).
+8. **Future chats read the new roster.** `createChat` and pair-everyone already
+   read `stored.characters` at deal time
+   ([`matching.ts:142-151`](../../server/src/live/matching.ts),
+   [`:196-212`](../../server/src/live/matching.ts)), so once the store is mutable
+   they deal — and snapshot (prompt 1) — the current names for free. Verify,
+   don't refactor.
+9. **Docs.** `docs/api.md` (the new lobby-channel field); the now-false comment
+   at [`index.tsx:197-201`](../../client/src/components/Teacher/HostActivity/index.tsx)
    and the block comment at
    [`HostActivityPage.tsx:170-186`](../../client/src/pages/teacher/HostActivityPage.tsx)
-   (characters leave the local-only list); `docs/decisions/teacher-live.md` +
+   (characters leave the local-only list — for the lobby and future chats, with
+   running chats deliberately frozen); `docs/decisions/teacher-live.md` +
    `DECISIONS.md` (supersede the character half of the 2026-07-19 local-only
    call). `tools/verify/README.md:103-107` still tells the browser-verification
-   reader that character edits are local-only and a refresh reverts them — fix
-   it here.
+   reader that character edits are local-only and a refresh reverts them — fix it
+   here (reach the lobby and future chats; a running chat keeps its cast).
 
 **Ask the founder (this prompt):** when a second host device edits the roster
 while this device has a half-typed rename in the panel draft, does the incoming
@@ -296,101 +447,30 @@ roster last-write-wins per device like the teacher's email
 but re-introduces the stale-device overwrite; the merge is one more pure
 function. Also settle the id question in the shared context above.
 
-**Edge cases:** a cleared emoji arrives as an absent key and the server
-replaces the roster wholesale, so it clears — verify it rather than assuming;
-an invalid draft never emits (the panel already holds its commit at
+**Edge cases:** a cleared emoji arrives as an absent key and the server replaces
+the roster wholesale, so it clears — verify rather than assume; an invalid draft
+never emits (the panel already holds its commit at
 [`LiveSettingsPanel.tsx:89-98`](../../client/src/components/Teacher/HostActivity/LiveSettingsPanel.tsx)),
 and server zod is the backstop; a student mid-chat sees the lobby chips change
-but their bubbles do not until prompt 2 — an acceptable half-state for one
-commit, and better than today in every direction; a student whose socket is
-down misses the event and heals on their next `GET /activities/:joinCode`.
+but their chat does not — that is the whole point now, not a half-state; a
+student whose socket is down misses the lobby event and heals on their next
+`GET /activities/:joinCode`; a chat that starts one second after the edit is
+dealt and frozen with the new names, which is the correct seam between "future"
+and "running."
 
-**Tests:** the projections allowlist pin from step 3, and nothing else. It is
-the privacy invariant, not part of the test budget. The round-trip is verified
-in the browser.
+**Tests:** the `toActivityDetails` allowlist pin from step 3, and nothing else.
+The round-trip is verified in the browser.
 
 **Done when:** `pnpm typecheck` + `pnpm test` green; browser pass with
-`verify:up --scale 10` — host a real activity, one student in the lobby, rename
-a character and swap its emoji → the student's roster chips change within a
-second without a refresh; open a second host tab → it shows the new name; open
-a **third** browser and join fresh → the new name is there; refresh the host
-page → the edit survived (it round-tripped through the server); the `1234`
-demo unchanged with zero `/socket.io/` traffic. Server commit and client commit
-pushed **separately** with a `/healthz` poll between them. `pnpm format`,
-checkbox ticked.
-
----
-
-## Prompt 2 — The rename follows a student into their live chat
-
-**Goal:** a teacher renames a character while a chat is running, and the
-students in that chat watch every bubble prefix, the peer label, the typing
-indicator, the drop banner and the end-of-chat reveal row change to the new
-name — no refresh, no waiting for the round to end. This is the half of
-`teacher-live.md:1070-1100`'s promise ("student surfaces … re-labeling by
-stable character id") that has never been true.
-
-1. **Understand why prompt 1 is not enough.** Live participants are resolved
-   **once**, at chat start: `applyChatStarted` builds `self`, `peers` and
-   `everPeers` through `toParticipant`/`resolveCharacter` against the roster
-   passed in ([`liveMatchState.ts:75-101`](../../client/src/pages/student/join/liveMatchState.ts),
-   `:207-225`), and nothing re-resolves them afterwards. A new roster changes
-   the lobby and nothing else.
-2. **New pure reducer** in [`liveMatchState.ts`](../../client/src/pages/student/join/liveMatchState.ts):
-   an `applyRoster(prev, roster)` that re-resolves `self`, `peers` and
-   `everPeers` by `characterId` against the new roster, preserving everything
-   the wire never carries — `realName` (stamped by `applyReveal` at
-   `:350-363`), the participant `id`, message history, `offlinePeers`,
-   `typingPeerId`, `returnedFlashId`. A non-live match is a no-op. A
-   characterId the new roster no longer has keeps the label it had rather than
-   collapsing to the mystery fallback at `:79-83`.
-3. **One wiring line** in [`useActiveMatch.ts`](../../client/src/pages/student/join/useActiveMatch.ts):
-   the roster the hook already reads at `:172-179` becomes the trigger —
-   `setMatch((prev) => applyRoster(prev, activity?.characters ?? []))` when it
-   changes. Keep the hook's shape: the reducer owns the transition, the hook
-   owns the subscription.
-4. **Verify the render path needs nothing.** `characterLabel`
-   ([`characterLabel.ts:8-12`](../../client/src/lib/characterLabel.ts)) reads
-   `participant.character`, and the ended screen's reveal rows read the same
-   objects ([`ChatEndedSection.tsx:138-161`](../../client/src/components/Student/Chatbox/ChatEndedSection.tsx)),
-   so re-resolving the participants is the whole change. Confirm rather than
-   refactor — no new props, no new context.
-5. **Docs.** `docs/architecture.md` if the reducer inventory is listed there;
-   the `liveMatchState.ts` module docblock at `:19-27` (roster resolution is no
-   longer a one-time parameter).
-
-**Ask the founder (this prompt):** should a mid-chat rename **announce itself**
-to the student — a notice line in the transcript, the way a peer's departure
-gets one at `shrinkToPeers` ([`liveMatchState.ts:132-147`](../../client/src/pages/student/join/liveMatchState.ts))
-— or should the label just quietly change? Silent is smaller and matches the
-teacher's mental model ("I renamed the cast between rounds"); a notice avoids a
-student wondering whether they are still talking to the same person. Do not
-decide this without asking.
-
-**Edge cases:** a rename landing between `chat:started` and the first message
-(the reducer runs on a fresh match too); a rename landing after the chat ended
-while the student is still on the ended screen (`prev.kind === "live"` is still
-true — the reveal rows must relabel too); a rename of a character nobody in
-this chat holds (no visible change, no churn); a removed character mid-chat —
-prompt 3 decides whether that is even reachable, and until then the label
-holds; the roster arriving before `chat:started` on a resume (the fresh build
-already uses the current roster).
-
-**Tests:** none. Every one of `applyRoster`'s obligations — labels update by id,
-message history survives, `realName` survives to the reveal rows — is a line in
-the browser pass below, so nothing here fails silently. The existing
-[`liveMatchState.test.ts`](../../client/src/pages/student/join/liveMatchState.test.ts)
-must stay green unchanged; if the reducer's signature forces a fixture edit,
-edit the fixture rather than adding a case.
-
-**Done when:** `pnpm typecheck` + `pnpm test` green; browser pass —
-teacher plus two students, start their chat, exchange a message, then rename
-both characters and clear one emoji from the panel → both students' bubbles,
-peer labels and typing indicator relabel live, and the message history is
-intact; end the chat with **Reveal names** on → the reveal rows show the new
-names (proof `realName` survived the re-resolve); rename a character nobody in
-the chat holds → nothing moves; the `1234` demo unchanged. `pnpm format`, one
-commit, checkbox ticked.
+`verify:up --scale 10` — host a real activity, one student in the lobby, rename a
+character and swap its emoji → the lobby chips change within a second without a
+refresh; a second student mid-chat is undisturbed; open a second host tab → it
+shows the new name; open a **third** browser and join fresh → the new name is
+there; start a **new** chat → it is dealt the new name; refresh the host page →
+the edit survived (it round-tripped through the server); the `1234` demo
+unchanged with zero `/socket.io/` traffic. Server commit and client commit pushed
+**separately** with a `/healthz` poll between them. `pnpm format`, checkbox
+ticked.
 
 ---
 
@@ -398,162 +478,170 @@ commit, checkbox ticked.
 
 **Goal:** a teacher removes character 3 mid-activity and it is genuinely gone:
 Pair-everyone stops forming trios on it, a manual 3-student start stops dealing
-it, it never appears on a chat card again, and the removal survives a reload.
-The row stays locked while a live chat is using that character — and the lock
-finally means something, because the server enforces its own copy of it.
+it, it never appears on a **future** chat card, and the removal survives a
+reload. A chat already using that character keeps it — the snapshot from prompt 1
+holds the label — and, per the founder call, **removal is allowed at any time**:
+the old "can't remove while in a live chat" lock is gone.
+
+Most of this falls out of prompts 1–2 and the job here is mostly verification
+plus deleting a guard:
 
 Keep the scope honest: only rows 3–4 are removable
 ([`CharacterRowsField.tsx:69`](../../client/src/components/Teacher/ActivitySetup/CharacterRowsField.tsx)),
 `dealCast` only ever takes the roster's **first N**
 ([`matchRules.ts:31-33`](../../shared/src/matchRules.ts)), and auto-match always
 deals two ([`autoMatch.ts:35-43`](../../server/src/live/autoMatch.ts)). Exactly
-two paths are reachable: a manual 3-or-more `chat:start`, and pair-everyone's
-trailing trio. Do not build for more.
+two paths could ever have dealt a removed character: a manual 3-or-more
+`chat:start`, and pair-everyone's trailing trio. Do not build for more.
 
-1. **Server-side removal guard** in the `activity:update-details` handler: the
-   server's twin of the client's `removeGuard`
-   ([`LiveSettingsPanel.tsx:151-161`](../../client/src/components/Teacher/HostActivity/LiveSettingsPanel.tsx)).
-   Without it, `resolveCharacter`'s fallback
-   ([`projections.ts:129-139`](../../server/src/store/projections.ts)) — which
-   the docblock above it calls unreachable — goes live and renders a **raw
-   opaque id** as a display name on the teacher's own chat card and on the
-   student's bubbles.
-2. **Pair-everyone and manual start read the new roster for free** once the
-   server holds it (`matching.ts:150`, `:203`). Verify, don't refactor.
-3. **Client `characterIdsInUse` is engine-divergent** — live builds it from
-   server snapshot participants
+1. **Future deals already read the shrunk roster.** Once prompt 2 made
+   `stored.characters` mutable, `dealCast` and `planPairEveryone` size and slice
+   off the **current** server roster
+   ([`matching.ts:150`](../../server/src/live/matching.ts),
+   [`:203`](../../server/src/live/matching.ts) →
+   [`matchRules.ts:31-33,43-57`](../../shared/src/matchRules.ts)), so a removed
+   character is never dealt to a new chat. Verify; do not refactor.
+2. **Running and completed chats keep their label** from the member snapshot
+   (prompt 1) — the `resolveCharacter` raw-id fallback that the old removal path
+   feared can no longer fire on a card. Verify with a browser removal of an
+   in-use character.
+3. **Delete the removal guard and the Live dot entirely.** The client's
+   `removeGuard`
+   ([`LiveSettingsPanel.tsx:151-161`](../../client/src/components/Teacher/HostActivity/LiveSettingsPanel.tsx))
+   and the Live-dot treatment on rows 3–4
+   ([`CharacterRowsField.tsx:70,113-122`](../../client/src/components/Teacher/ActivitySetup/CharacterRowsField.tsx))
+   exist to block a removal that would orphan a live chat's label. The snapshot
+   makes that safe, so **both go**: removal is never gated, and an in-use
+   character's row keeps **no** special affordance — not even an informational
+   dot (founder call, 2026-07-23). The row removes like any other. **Do not add a
+   server-side twin** — the earlier draft of this doc planned one, and it is
+   explicitly not wanted now. Removal is a plain roster edit that rides the
+   prompt-2 event like any other.
+4. **`characterIdsInUse` is engine-divergent** — live builds it from server
+   snapshot participants
    ([`useHostActivityLive.ts:274-278`](../../client/src/components/Teacher/HostActivity/useHostActivityLive.ts)),
    the demo from deal-time local objects
    ([`useHostActivityDemo.ts:263-267`](../../client/src/components/Teacher/HostActivity/useHostActivityDemo.ts)).
-   Prompt 1 mostly heals this by itself (an added character now reaches the
-   server and can be dealt, so its row can lock). Re-verify both engines rather
-   than unifying them.
-4. **Docs.** `docs/api.md` (the guard's refusal semantics); the comment at
+   With the guard and the dot both gone it marks and gates nothing on the row;
+   confirm nothing else in either engine still reads it in a way that would
+   break, and if it has no readers left, delete it.
+5. **Docs.** `docs/api.md` if the removal semantics need a line (it is just a
+   roster replace now); the comment at
    [`LiveSettingsPanel.tsx:111-113`](../../client/src/components/Teacher/HostActivity/LiveSettingsPanel.tsx)
-   (its claim is finally true — say where it is enforced); `DECISIONS.md` +
-   `teacher-live.md` for whatever the two questions below settle.
+   — its claim that "a removed character must stop being offered to future
+   pairings immediately" is finally true (the server holds the shrunk roster);
+   `DECISIONS.md` + `teacher-live.md` for the retire-the-guard-and-dot call. The
+   2026-07-16 decision "A character in a live chat shows the Live dot, and its
+   hint says who" is **fully superseded** — the dot is gone.
 
-**Ask the founder (this prompt), two questions:**
-
-- **A character that an _ended_ chat still shows.** The guard has to cover
-  active chats or a running room breaks. Ended chats are the real choice: (a)
-  guard those too, so a character used once can never be removed for the
-  activity's life; (b) allow removal and let completed cards fall back —
-  unacceptable as-is, since the fallback prints a raw id; (c) capture the
-  character's name and emoji onto `chat.members` at chat start
-  ([`matching.ts:154-168`](../../server/src/live/matching.ts)) so a removed
-  character's completed card keeps its label forever. (c) is a small data-model
-  change and is what the client's `withCurrentCharacters` fallback was already
-  reaching for. Present all three.
-- **Is `removeGuard` still wanted at all, and if so, should it gate more than
-  the remove button?** Today it is inconsistent: it swaps the remove button
-  ([`CharacterRowsField.tsx:70`](../../client/src/components/Teacher/ActivitySetup/CharacterRowsField.tsx),
-  `:113-122`) while the emoji slot (`:73-77`) and the name input (`:80-92`)
-  stay wide open — the row that says "…is in a live chat right now" lets you
-  rename that character and strip its emoji freely. Once renames propagate
-  safely (prompts 1–2), renaming an in-use character is a _feature_, and the
-  guard may only need to keep covering removal. Do not tighten or loosen it
-  without asking.
-
-**Edge cases:** removal racing a chat start (the server holds both, so
-whichever lands first wins and the other is a clean refusal or a clean deal);
-removal dropping the roster below three while a trio is running (the trio keeps
-its dealt characters; only future deals shrink); a refused removal must not
-leave the panel showing a vanished row — the panel calls `setDraft`
-unconditionally at [`LiveSettingsPanel.tsx:105-117`](../../client/src/components/Teacher/HostActivity/LiveSettingsPanel.tsx),
-so decide how a server refusal gets back to the draft (the echo from prompt 1
-is the cheapest channel). **Read `removeCharacter` before you plan that**:
-[feature 13](./feature-13-settings-commit-reliability.md) rewrites exactly this
-function — it drops the validity gate at `:114` and commits the removal
-straight from the committed activity — so if 13 shipped, the removal always
-emits and the refusal path is the only way the row can come back. Removing then
-re-adding a character with the same
-name mints a different id, so old chats keep resolving to the old one, which is
+**Edge cases:** removing a character whose only chats have **ended** — the
+completed cards keep their snapshot label, so this is now unremarkable
+(previously the thorniest case); removal dropping the roster below three while a
+trio is running — the trio keeps its dealt, snapshotted characters and only
+future deals shrink; removal racing a chat start — the server holds both, so
+whichever lands first wins and the loser is a clean deal or a clean shrink, with
+no label breakage either way. **Read `removeCharacter` before you plan the panel
+side**: [feature 13](./feature-13-settings-commit-reliability.md) rewrites
+exactly this function — it drops the validity gate at `LiveSettingsPanel.tsx:114`
+and commits the removal straight from the committed activity — so if 13 shipped,
+the removal always emits and there is no refusal path to design for. Removing
+then re-adding a character with the same name mints a different id, so old chats
+keep resolving to their captured label and new chats get the new id — both
 correct.
 
-**Tests:** none new. The projections pin from prompt 1 already covers the
-payload, `matchRules` is already tested, and the guard's behavior is two
-browser clicks. Add one only if the founder picks option (c) above and the
-stored member shape changes, in which case the existing `matching.test.ts`
-fixture needs updating anyway.
+**Tests:** none new. The projections pins from prompt 1 cover the snapshot,
+`matchRules` is already tested, and the guard deletion plus the two deal paths
+are browser clicks.
 
 **Done when:** `pnpm typecheck` + `pnpm test` green; browser pass — three
-students waiting, four characters; remove character 4, Pair everyone → the
-trio is dealt from characters 1–3 and character 4 appears nowhere; start a
-manual 3-student chat while a character is in use → its row shows the Live dot
-and the remove is refused server-side too (drive it from a scratch
-`socket.io-client` script in `tools/verify/scratch/` if the UI won't let you
-try); reload the host page → the removal stuck; no raw id renders on any card
-or bubble; the `1234` demo unchanged. `pnpm format`, one commit, checkbox
-ticked.
+students waiting, four characters; remove character 4, Pair everyone → the trio
+is dealt from characters 1–3 and character 4 appears nowhere; start a manual
+3-student chat, then remove a character that chat is using → the row shows no
+Live dot and removes immediately, the running chat keeps its cast on both the
+teacher card and the students' bubbles, and no raw id renders anywhere; reload
+the host page → the removal stuck; the `1234` demo unchanged. `pnpm format`, one
+commit, checkbox ticked.
 
 ---
 
 ## Prompt 4 — Nobody is silently left out of a chat, and the panel stops lying
 
-**Goal:** the teacher selects three students for a chat and either all three
-get seated or the teacher is told why not — instead of two getting a chat and
-the third sitting in the queue with nothing marking them. Then the panel's
-opening sentence gets to say what it originally said, because it is finally
-true, and the whole feature gets its one production drive.
+**Goal:** the teacher selects three students for a chat and either all three get
+seated or the teacher is told why not — instead of two getting a chat and the
+third sitting in the queue with nothing marking them. Then the panel's opening
+sentence gets to tell the truth about what character edits now do, and the whole
+feature gets its one production drive.
 
-1. **The silent under-seating.** `createChat` clamps the request to the server
-   roster and returns a chat for whoever fit
-   ([`matching.ts:142-151`](../../server/src/live/matching.ts)); the leftover
-   student gets no highlight, because `createChat` only ever clears
-   `leftoverStudentId` ([`matching.ts:178-183`](../../server/src/live/matching.ts)),
-   and the teacher's selection is already gone
+1. **The silent under-seating.** `maxGroupSize` is computed from the roster
+   ([`index.tsx:84`](../../client/src/components/Teacher/HostActivity/index.tsx)),
+   so an added character permits a three-student selection the instant it lands
+   locally; `createChat` clamps the request to the **server** roster —
+   `requested.slice(0, Math.min(4, activity.characters.length))`
+   ([`matching.ts:142-151`](../../server/src/live/matching.ts)) — and returns a
+   chat for whoever fit. The leftover student gets no highlight, because
+   `createChat` only ever _clears_ `leftoverStudentId`
+   ([`matching.ts:178-183`](../../server/src/live/matching.ts)), and the
+   teacher's selection is already wiped
    ([`index.tsx:114-118`](../../client/src/components/Teacher/HostActivity/index.tsx)).
-   Prompt 1 closes the usual cause (the roster now matches), but the window
-   stays open through the panel's 1s debounce and any network latency, so this
-   is a server robustness gap worth closing on its own terms.
+   Prompt 2 closes the usual cause (an added character now reaches the server
+   before it can be selected), but the panel's 1s debounce plus network latency
+   leaves the window open, so this is a server robustness gap worth closing on
+   its own terms.
 2. **Ask the founder (this prompt):** what should the under-seated case do?
    (a) mark the unseated students as the leftover so the existing highlight
-   explains it — the smallest change, and it reuses machinery the rail already
+   explains it — the smallest change, reusing machinery the rail already
    renders; (b) refuse the whole `chat:start` when the request exceeds the
    roster, leaving the selection intact so the teacher can fix it; (c) keep
    clamping but surface a rail notice in the `rematchNotice` idiom
    ([`handlers/teacher.ts:130-140`](../../server/src/live/handlers/teacher.ts)).
-   Get the call, then implement exactly one of them. Get the copy wording too
-   if it needs any.
+   Get the call, then implement exactly one. Get the copy wording too if it needs
+   any, and run the humanizer on it.
 3. **Widen the panel copy** at
    [`LiveSettingsPanel.tsx:134-138`](../../client/src/components/Teacher/HostActivity/LiveSettingsPanel.tsx),
-   which feature 12 narrowed to scope the promise to settings and email. With
-   features 17 and 18 shipped the original claim — changes reach everyone the
-   moment you pause typing, students mid-chat included — is true again. **Ask
-   the founder for the wording** rather than reverting to the old string
-   verbatim; then run the humanizer skill on it. Check the collapsed hint at
-   `:128-132` while you are there — feature 12 already reshaped that one for a
-   different reason (it can only see this tab's copy of the email), so confirm
-   it still reads true rather than re-opening its shape.
+   which feature 12 narrowed to scope the promise to settings and email. The old
+   string over-promised "changes reach everyone the moment you pause typing,
+   including what students see mid-chat" — which is now **half true and half
+   deliberately false**: settings, scene and host name reach everyone live
+   (feature 17), and character edits reach the lobby and every new chat, **but a
+   chat already running keeps its cast on purpose**. **Ask the founder for the
+   wording** rather than reverting to the old string — the copy must not promise
+   the mid-chat relabel this feature deliberately does not do — then run the
+   humanizer skill on it. Check the collapsed hint at `:128-132` while you are
+   there (feature 12 reshaped it for a different reason) and confirm it still
+   reads true.
 4. **Demo parity — and it is the inverted kind.** `/activity/host/1234` already
    deals from the live-edited local roster
    ([`hostWorld.ts:107-124`](../../client/src/components/Teacher/HostActivity/hostWorld.ts),
-   handed in by [`useHostActivityDemo.ts:68-73`](../../client/src/components/Teacher/HostActivity/useHostActivityDemo.ts),
-   `:113-122`), so renaming, adding and removing all visibly work there **today**
-   — the demo has been _better_ than live, which is how a teacher learns the
-   panel and concludes roster editing works everywhere. After this feature the
-   demo finally tells the truth. Expect **no demo engine work**; what this step
-   owes is a re-verification pass and a note if anything drifted. The demo's
-   student tab reads a separate module constant with no cross-tab sync
+   handed in by [`useHostActivityDemo.ts:68-73`](../../client/src/components/Teacher/HostActivity/useHostActivityDemo.ts)),
+   so renaming, adding and removing all visibly work there **today** — the demo
+   has been _better_ than live. After this feature the demo finally tells the
+   truth for the lobby and future chats. **One thing to check that the corrected
+   plan introduces:** does the demo relabel a character _inside a running demo
+   chat_ when the teacher edits it? If it does, the demo now over-promises the
+   opposite way — showing a mid-chat relabel the real app deliberately withholds —
+   so freeze the demo's in-progress chat cards to match (the demo builds
+   participants at deal time, so capturing the character there mirrors the
+   server snapshot). Expect small or no demo engine work, but verify this leg
+   specifically. The demo's student tab reads a separate module constant with no
+   cross-tab sync
    ([`hostActivityDemo.ts:7-14`](../../client/src/mockData/hostActivityDemo.ts))
    and stays that way.
 5. **Docs and the status table.** Give this feature its row in `AGENTS.md`'s
    status table, and correct the "nothing on a real activity is simulated
    anymore" claim — today it sits at [`AGENTS.md:22`](../../AGENTS.md), but
    [feature 20](./feature-20-docs-and-copy-drift-cleanup.md) rewrites that
-   sentence and asks the founder whether the fact belongs in `AGENTS.md`'s
-   Status block or in `architecture.md`'s realtime section, so **find its home
-   before editing it** and fix the one home rather than both. This feature is
-   what finally makes the roster half of it true. Then `docs/api.md`;
-   `DECISIONS.md` + `teacher-live.md` for the under-seating call and the copy
-   call.
-6. **The production drive** (once per feature, per AGENTS.md): cold-wake check
-   as the session's first server contact, then the feature's network-sensitive
-   legs on chaverola.com — rename reaching a real second device and a real
-   student handset mid-chat, a removal, an add-then-seat-three. Send it to a
-   real phone; if that can't happen now, record it in
-   `docs/pending-manual-tests.md` rather than letting the ask evaporate.
+   sentence and asks the founder whether the fact belongs in `AGENTS.md`'s Status
+   block or in `architecture.md`'s realtime section, so **find its home before
+   editing it** and fix the one home rather than both. This feature is what
+   finally makes the roster half of it true. Then `docs/api.md`; `DECISIONS.md` +
+   `teacher-live.md` for the under-seating call and the copy call.
+6. **The production drive** (once per feature, per AGENTS.md): cold-wake check as
+   the session's first server contact, then the feature's network-sensitive legs
+   on chaverola.com — a rename reaching a real second device and a real student's
+   **lobby** (not their running chat), a chat started after the edit carrying the
+   new name, a removal, an add-then-seat-three. Send it to a real phone; if that
+   can't happen now, record it in `docs/pending-manual-tests.md` rather than
+   letting the ask evaporate.
 
 **Edge cases:** a two-character roster with three students selected (the oldest
 reachable version of this bug, unchanged by the roster sync); the leftover
@@ -564,16 +652,17 @@ must not regress; a roster edit landing between the teacher's tap and the
 server's `createChat` (the server's copy is the arbiter, which is the whole
 point).
 
-**Tests:** none new — the seating rule change is one branch in `createChat`
-with a visible consequence in the rail, and `matching.test.ts` already fixtures
-the surrounding behavior. Add an assertion to an existing test only if the
-founder picks option (b), where the refusal is invisible from the client.
+**Tests:** none new — the seating rule change is one branch in `createChat` with
+a visible consequence in the rail, and `matching.test.ts` already fixtures the
+surrounding behavior. Add an assertion to an existing test only if the founder
+picks option (b), where the refusal is invisible from the client.
 
 **Done when:** `pnpm typecheck` + `pnpm test` green; browser pass — three
 students, two characters, select all three and Start their chat → the chosen
 behavior happens and the teacher can tell what happened; add a third character,
 wait for the commit, select all three again → all three get seated; the panel's
-new sentence is humanized and accurate; `/activity/host/1234` still renames,
-adds and removes with zero `/socket.io/` traffic. **Then the production pass**
-as described in step 6, on chaverola.com. `pnpm format`, one commit, checkbox
-ticked, `AGENTS.md` row flipped.
+new sentence is humanized and accurate about the lobby-and-future scope;
+`/activity/host/1234` renames, adds and removes for the lobby and future chats
+with zero `/socket.io/` traffic, and a running demo chat keeps its cast. **Then
+the production pass** as described in step 6, on chaverola.com. `pnpm format`,
+one commit, checkbox ticked, `AGENTS.md` row flipped.

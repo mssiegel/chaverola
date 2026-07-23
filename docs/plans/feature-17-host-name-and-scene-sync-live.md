@@ -51,10 +51,13 @@ in the textarea, and change nothing anywhere, including on their own page.
 **Deliberately the two fields that only render in the student LOBBY.** Both
 are lobby-only, so this ships without touching mid-chat label resolution —
 which is what makes it the small first edit-sync slice. Feature 18 (character
-roster sync) extends the **same event** with `characters`, and that is where
-mid-chat labels, `liveMatchState.ts`, and the removal guards get paid for.
-Design here is chosen so 18 is an extension, not a rewrite: see the wire
-contract section.
+roster sync) extends the **same event** with `characters` to reach the student
+**lobby**, and on a separate track snapshots each chat's cast at start so a
+running chat keeps its names — that is where `liveMatchState.ts`, the frozen-cast
+projectors, and retiring the removal guard get paid for. A character edit
+deliberately does **not** reach a chat already in progress. Design here is
+chosen so 18 extends this event rather than rewriting it: see the wire contract
+section.
 
 **The decisions this supersedes.** Local-only name/scene edits are a recorded
 founder call, twice:

@@ -11,7 +11,12 @@ stored participant against the local roster
 ([`hostActivity.ts:135-144`](../../client/src/lib/hostActivity.ts)) — while the
 server's roster, every student's lobby, and every bubble in the live chat keep
 the old name. That is a simulation on a real activity: a teacher-facing illusion
-with nothing behind it. Second falsehood: feature 11 is in flight (prompt 1 of 4
+with nothing behind it. (This is the **pre-feature-18** state. Feature 18 deletes
+`withCurrentCharacters` — the teacher's cards read a cast snapshotted at chat
+start — and syncs the roster to the lobby and future chats, deliberately leaving
+a running chat frozen. If 18 has shipped by the time you run this, the reproduce
+no longer reproduces and the citation is gone; treat it as the history that
+motivated the cleanup.) Second falsehood: feature 11 is in flight (prompt 1 of 4
 landed — [`feature-11-transcript-email.md:57-60`](feature-11-transcript-email.md)),
 so the promised transcript email still does nothing, and the status table above
 that sentence ([`AGENTS.md:9-20`](../../AGENTS.md)) has no row for it.
