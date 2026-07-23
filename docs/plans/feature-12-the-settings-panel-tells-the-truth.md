@@ -51,9 +51,13 @@ client-side and it was true; the 2026-07-19 founder call at
 [`:681-712`](../decisions/teacher-live.md) made roster, scene and host name
 local-only and never superseded it. This doc works **within** the 2026-07-19
 call and retires the copy half of the 2026-07-15 one — no behavior change, no
-wire change. **It is temporary by design:** features 17 and 18 restore the
-fuller promise, and whoever finishes 18 comes back and widens this copy. Say so
-in the decision entry so the next agent finds it.
+wire change. **It is temporary by design:** features 17 and 18 widen this copy
+as their sync ships — but **not** back to the original wording. The endpoint is
+narrower than the promise this doc removes: host name and scene reach everyone
+live, character edits reach the lobby and future chats, and a chat already in
+progress deliberately keeps its cast. Whoever finishes 18 widens the copy to
+_that_ scope, never back to "what students see mid-chat." Say so in the decision
+entry so the next agent finds it.
 
 - [ ] Prompt — The panel only claims what it can actually do
 
@@ -99,7 +103,9 @@ stops asserting something it can't know. No wire, no server, no behavior change.
 4. **Humanizer** on every string this prompt writes or changes.
 5. **Decisions.** A new entry at the top of
    [`docs/decisions/teacher-live.md`](../decisions/teacher-live.md) recording
-   what the panel now claims and that features 17 and 18 widen it back, plus a
+   what the panel now claims and that features 17 and 18 widen it later to their
+   real scope — feature 18 keeps character edits out of a running chat, so not
+   back to the "mid-chat" wording — plus a
    dated `_Partly superseded …_` note on the 2026-07-15 entry at
    [`:1070-1099`](../decisions/teacher-live.md) — the idiom already used at
    [`:496-503`](../decisions/teacher-live.md) — retiring its "changes reach
