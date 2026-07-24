@@ -44,13 +44,26 @@ function DialogOverlay({
   );
 }
 
+/** How the content sits. `center` is the stock modal; `bottom-sheet` docks it
+ *  full-width to the bottom edge and slides it up — the mobile pattern for a
+ *  reach-with-your-thumb picker, built from this same Radix Dialog rather than
+ *  a second primitive. */
+const dialogContentVariants = {
+  center:
+    "top-[50%] left-[50%] max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] rounded-xl border p-6 shadow-xl data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:max-w-md",
+  "bottom-sheet":
+    "inset-x-0 bottom-0 max-w-none rounded-t-2xl border-t p-0 shadow-2xl data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+} as const;
+
 function DialogContent({
   className,
   children,
   showCloseButton = true,
+  variant = "center",
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
+  variant?: keyof typeof dialogContentVariants;
 }) {
   return (
     <DialogPortal data-slot="dialog-portal">
@@ -58,7 +71,8 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-xl border border-border bg-card p-6 text-card-foreground shadow-xl duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-md",
+          "fixed z-50 grid w-full gap-4 border-border bg-card text-card-foreground duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0",
+          dialogContentVariants[variant],
           className
         )}
         {...props}
