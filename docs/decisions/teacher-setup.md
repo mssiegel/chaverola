@@ -5,6 +5,42 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
+### On a phone, picking a character's emoji is a bottom sheet, not a popover
+
+_2026-07-24_
+
+**Decision:** Below `sm`, tapping a character row's emoji avatar opens a
+full-width bottom sheet — docked to the screen's bottom edge, titled with which
+row it's editing, "Remove the emoji" pinned as a footer. Desktop keeps the
+anchored popover. The width is read at tap time (the same `(min-width: 640px)`
+line the rest of the app draws `sm` at), so only one container is ever mounted
+and a rotation is free. The same slot backs the create form and the host page's
+live-settings panel, so both get the sheet.
+
+**Why:** On a phone the old popover was the wrong shape. A ~300px picker
+anchored to a size-12 avatar had nowhere to go: Radix flipped it up over the
+section header, it hung past the card's right edge, and once the row list grew
+it was clipped with no way to scroll. The library's autofocused search also
+opened a phone keyboard over a picker nobody was typing into. A bottom sheet
+sidesteps all of it — it's full width, it can't flip or outdent, it names the
+row (which the popover never could), and it parks focus on the sheet so no
+phantom keyboard appears.
+
+**Built from the existing Radix Dialog**, via a `variant="bottom-sheet"` on
+`DialogContent` — deliberately **not** a new `ui/sheet.tsx`. A primitive with a
+single caller is what the lean-dependency policy exists to stop, and Dialog
+already portals cleanly past the form's `overflow-hidden` section and its fixed
+submit dock. Picking still closes on the first tap, the opposite of the
+composer's stay-open picker, because a character has exactly one emoji (see
+[Character rows lead with the emoji avatar](#character-rows-lead-with-the-emoji-avatar)).
+
+_Implemented in
+[EmojiSlot](../../client/src/components/Teacher/ActivitySetup/EmojiSlot.tsx),
+with the `bottom-sheet` variant in
+[ui/dialog.tsx](../../client/src/components/ui/dialog.tsx) and `PopoverAnchor`
+added to [ui/popover.tsx](../../client/src/components/ui/popover.tsx) so the
+avatar can both open the picker and anchor the desktop popover._
+
 ### Setup is one scrolling form, and Host the Activity is never disabled
 
 _2026-07-14_

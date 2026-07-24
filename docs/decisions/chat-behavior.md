@@ -5,6 +5,72 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
+### On a phone the emoji panel takes the keyboard's place
+
+_2026-07-24_
+
+**Decision:** On a full-screen student chat below `sm`, tapping the smile
+button no longer floats a picker over the chat card. It blurs the field and
+drops the emoji grid into the on-screen keyboard's rectangle — a plain block
+docked under the composer, full card width — and the smile turns into a
+keyboard button that hands the field back. It is the WhatsApp swap. Desktop and
+the homepage hero keep the floating popover (and its search field); only
+`Chatbox` callers, which are always full-screen chats, opt in via
+`emojiPanel="dock"`.
+
+Choices inside it, each a founder call:
+
+- **The dock is an in-flow child of the chat card, never `fixed` or
+  portalled.** The conversation feed is the frame's only grower (`h-0
+flex-auto`), so a `shrink-0` sibling makes the feed give up exactly the
+  panel's height and the page never grows. A portalled/fixed panel is what
+  overlaid and clipped the card before.
+- **Its height is a constant, `clamp(240px, 42dvh, 336px)` — not a measurement
+  of the real keyboard.** Android keyboards cluster at 42–46% of the viewport,
+  so when the keys slide out and the panel slides in the composer settles
+  within a few dozen pixels, during the keyboard's own animation. Pixel-exact
+  tracking of `visualViewport` is the known follow-up _if_ that settle ever
+  reads as a jump; it was cut from V1 because every hard bug in prototyping
+  lived in that machinery and the constant is imperceptibly close.
+- **The dock survives a send.** Firing off "😂", "😭", "🔥" as separate
+  messages shouldn't reopen it each time, and there is no keyboard to hand back
+  while the dock is standing in for one.
+- **No search field in the dock.** The search box is an `<input>`; tapping it
+  would summon the very keyboard the dock replaced, on top of the dock. Eight
+  category tabs are browsable without it. Desktop and the teacher's sheet keep
+  search, where there is no keyboard to protect.
+
+**Why:** Two founder screenshots (2026-07-23) on a real Android handset: the
+floating picker overlaid and clipped the purple card, and every emoji tap made
+the screen flicker. The flicker was a focus fight — the library's
+`autoFocusSearch` (on by default, never overridden) pulled the keyboard back
+over the picker, an `<input>` focus un-fired the phone's chrome-collapse rules,
+`interactive-widget=resizes-content` resized the card, Radix re-positioned the
+portalled popover a frame behind, and the composer's own refocus-per-insert
+replayed the whole loop twice per tap. Slice 1 killed the flicker at the focus
+level; the dock is what makes it read like WhatsApp. The honest caveat: WebKit
+ignores `interactive-widget` entirely, so on iOS the card never shrank for the
+keyboard and Safari pans the page instead — the swap there is a visible settle,
+not a pixel-frozen composer, until the `visualViewport` follow-up lands.
+
+**Phone dismissal contract** (the dock is not a Radix `DismissableLayer`, so
+this is wired by hand): it closes on the keyboard button, on tapping the field,
+on a tap anywhere outside the composer (including the conversation feed, which
+also brings the demo's steering panel back), on Escape, on the teacher's pause,
+and when the chat ends. It deliberately does **not** close on send.
+
+_Implemented in
+[MessageComposer](../../client/src/components/chat/MessageComposer.tsx) (the
+dock, the toggle ordering, the caret ref, the dismissal listeners),
+[Chatbox](../../client/src/components/Student/Chatbox/index.tsx) (opts in),
+[EmojiPickerBody](../../client/src/components/chat/EmojiPickerBody.tsx) +
+[LazyEmojiPicker](../../client/src/components/chat/LazyEmojiPicker.tsx) (the
+`dock`/`box` variants and the shared config), and the `[data-emoji-panel]`
+chrome-collapse variants in
+[StudentWorldLayout](../../client/src/components/layout/StudentWorldLayout.tsx),
+[ChatStage](../../client/src/components/Student/ChatStage.tsx), and
+[DemoBanner](../../client/src/components/demo/DemoBanner.tsx)._
+
 ### Ending your own chat keeps your seat, and the ender gets a wrap-up screen
 
 _2026-07-23_
@@ -74,6 +140,14 @@ on blur. It's one CSS `:has()` rule keyed off the composer's focus — the
 student world's only `<textarea>` — not React state, and it's scoped to phones
 so a desktop click into the input changes nothing. Extends
 [On phones the chat fills the screen and hugs the keyboard](#on-phones-the-chat-fills-the-screen-and-hugs-the-keyboard-desktop-keeps-the-fixed-card).
+
+**As of the emoji dock (2026-07-24) the signal is composer-focus _or_ an open
+dock.** The dock deliberately blurs the field to take the keyboard's place, so
+each of these rules gained a parallel `[data-emoji-panel]` variant beside its
+`textarea:focus` one — additive, so the focus case is untouched. Without it the
+chrome would spring back the instant the keyboard-to-dock swap begins, which is
+the one moment it has to stay put. See
+[On a phone the emoji panel takes the keyboard's place](#on-a-phone-the-emoji-panel-takes-the-keyboards-place).
 
 **And in the demo, sending a message hands the keyboard back.** The composer
 drops focus on send, so the steering panel this collapse just hid comes back
@@ -566,22 +640,36 @@ _2026-07-14_
 
 **Decision:** In the message composer, picking an emoji inserts it at the
 caret and leaves the picker open, so a student can drop in several emojis
-without reopening it each time; focus never leaves the textarea. Escape,
-an outside tap, and sending the message all close it. The teacher setup's
-emoji slot is the opposite on purpose: a character has exactly one emoji,
-so picking closes the popover immediately.
+without reopening it each time. The teacher setup's emoji slot is the opposite
+on purpose: a character has exactly one emoji, so picking closes the surface
+immediately.
+
+**On the desktop popover**, focus never leaves the textarea, and Escape, an
+outside tap, and sending all close the picker. **On the phone dock** (see
+[On a phone the emoji panel takes the keyboard's place](#on-a-phone-the-emoji-panel-takes-the-keyboards-place))
+the contract differs because the field is deliberately blurred and the picker
+is not a dismissable layer: the dock's own wrapper cancels the emoji-button
+mousedown so focus is never stolen in the first place, multi-insert is free,
+send leaves the dock open, and the dismissal paths are the ones listed in that
+entry (keyboard button, tapping the field, an outside/feed tap, Escape, pause,
+chat end).
 
 **Why:** Kids chain emojis — close-on-pick would turn "😀😀😀" into three
-round trips. Technically the picker is a non-modal Radix popover, and the
-insert flow refocuses the textarea, which Radix counts as focus leaving the
-popover and normally dismisses it. The composer therefore prevents the
-Radix defaults (`onOpenAutoFocus`, `onFocusOutside`, `onCloseAutoFocus`) —
-those preventDefaults are load-bearing, not leftovers; "fixing" them makes
-the picker close after the first emoji or yank focus off the textarea.
+round trips. On the desktop popover the insert flow refocuses the textarea,
+which Radix counts as focus leaving the non-modal popover and normally
+dismisses it, so the composer prevents three Radix defaults
+(`onOpenAutoFocus`, `onFocusOutside`, `onCloseAutoFocus`) on that path — they
+are load-bearing there, not leftovers. Note the correction the 2026-07-24 work
+turned up: those preventDefaults never actually held the picker's search box
+away from focus. That was the library's own `autoFocusSearch` (on by default,
+applied by React at commitMount, out of Radix's reach); the composer now passes
+`autoFocusSearch={false}` explicitly, which is what stopped the picker
+summoning a phone keyboard onto itself.
 
 _Implemented in
 [MessageComposer](../../client/src/components/chat/MessageComposer.tsx),
-with the shared lazy loading in
+with the shared picker body in
+[EmojiPickerBody](../../client/src/components/chat/EmojiPickerBody.tsx) behind
 [LazyEmojiPicker](../../client/src/components/chat/LazyEmojiPicker.tsx)._
 
 ### Every chat end explains itself

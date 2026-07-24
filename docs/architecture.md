@@ -68,11 +68,15 @@ pieces those surfaces share.
   Y" header (`ChatHeader`), the message-line renderer
   (`ConversationLines`), the conversation feed (`Conversation`, with
   `PeerIsTyping` and `PeerReconnectBanner`), and the message input
-  (`MessageComposer`, with `LazyEmojiPicker` / `EmojiPickerPopover` — also
-  the setup form's emoji slots, always inside the `ui/popover` primitive)
-  are shared by the student chatbox, the homepage hero chatbox, and the
-  teacher chat cards
+  (`MessageComposer`, with `LazyEmojiPicker` / `EmojiPickerBody` — shared with
+  the setup form's emoji slots) are shared by the student chatbox, the homepage
+  hero chatbox, and the teacher chat cards
   ([client/src/components/Teacher/ChatCard/](../client/src/components/Teacher/ChatCard/)).
+  The picker's container varies by surface: the desktop composer and hero use a
+  `ui/popover`, the phone composer a docked in-flow panel (`emojiPanel="dock"`),
+  and the teacher's emoji slot a `ui/popover` on desktop / a `ui/dialog` bottom
+  sheet on a phone — see DECISIONS.md → "On a phone the emoji panel takes the
+  keyboard's place".
   Character display labels come from `characterLabel` / `peerListLabel`
   ([client/src/lib/characterLabel.ts](../client/src/lib/characterLabel.ts)).
   Every confirmation step renders through
