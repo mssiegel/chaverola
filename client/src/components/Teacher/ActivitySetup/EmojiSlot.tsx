@@ -50,17 +50,29 @@ export function EmojiSlot({ emoji, characterName, onChange }: EmojiSlotProps) {
           )}
         </button>
       </PopoverTrigger>
+      {/* A definite height, capped by the space Radix says it actually has —
+          the picker used to pin itself to 340px and overflow whatever was
+          left. Remove is a pinned footer rather than a tail, so the popover
+          no longer changes height (and therefore which side it flips to)
+          depending on whether the row already has an emoji. */}
       <PopoverContent
         align="start"
         collisionPadding={8}
-        className="w-auto overflow-hidden p-0"
+        className="flex h-[min(23rem,var(--radix-popper-available-height))] w-[min(20rem,calc(100vw-2rem))] flex-col overflow-hidden p-0"
       >
-        <LazyEmojiPicker
-          onPick={({ emoji: picked }) => {
-            onChange(picked);
-            setOpen(false);
-          }}
-        />
+        <div className="min-h-0 flex-1">
+          <LazyEmojiPicker
+            variant="box"
+            // No textarea to protect here and no phone keyboard to keep away
+            // (phones get the sheet), so landing in the search box is the
+            // fastest path to a specific emoji.
+            autoFocusSearch
+            onPick={({ emoji: picked }) => {
+              onChange(picked);
+              setOpen(false);
+            }}
+          />
+        </div>
         {emoji && (
           <button
             type="button"
@@ -68,7 +80,7 @@ export function EmojiSlot({ emoji, characterName, onChange }: EmojiSlotProps) {
               onChange(undefined);
               setOpen(false);
             }}
-            className="w-full border-t border-border px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className="w-full shrink-0 border-t border-border px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             Remove the emoji
           </button>

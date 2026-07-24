@@ -276,3 +276,15 @@
     background: transparent;
   }
 }
+
+/* emoji-picker-react injects its stylesheet inline and UNLAYERED, so Tailwind
+   utilities (which live in @layer utilities) always lose to it — which is why
+   this rule has to sit outside every @layer too. Two of the picker's own class
+   hooks (0,2,0) beat its single-class rules (0,1,0), so no !important is
+   needed. `auto` drops the permanent scrollbar gutter it hard-codes with
+   `overflow-y: scroll`; `contain` stops Chrome's pull-to-refresh firing when a
+   student flicks the emoji grid at its top edge inside the bottom-most panel. */
+.EmojiPickerReact .epr-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}

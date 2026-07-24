@@ -4,7 +4,10 @@ import { SendHorizontal, Smile } from "lucide-react";
 
 import { CHAT_MESSAGE_MAX_CHARS } from "@chaverola/shared";
 
-import { LazyEmojiPicker } from "@/components/chat/LazyEmojiPicker";
+import {
+  LazyEmojiPicker,
+  prefetchEmojiPicker,
+} from "@/components/chat/LazyEmojiPicker";
 import {
   Popover,
   PopoverContent,
@@ -175,17 +178,22 @@ export function MessageComposer({
                 <Smile className="size-5" />
               </button>
             </PopoverTrigger>
+            {/* Radix has published --radix-popper-available-height all along
+                and nothing here ever read it, which is why the picker used to
+                overflow a keyboard-shrunk viewport with no way to scroll. A
+                definite height also gives the picker's own height="100%"
+                something to resolve against. */}
             <PopoverContent
               side="top"
               align="start"
               sideOffset={8}
               collisionPadding={8}
-              className="w-auto overflow-hidden p-0"
+              className="h-[min(21rem,var(--radix-popper-available-height))] w-[min(20rem,calc(100vw-2rem))] overflow-hidden p-0"
               onOpenAutoFocus={(event) => event.preventDefault()}
               onFocusOutside={(event) => event.preventDefault()}
               onCloseAutoFocus={(event) => event.preventDefault()}
             >
-              <LazyEmojiPicker onPick={insertEmoji} />
+              <LazyEmojiPicker variant="box" onPick={insertEmoji} />
             </PopoverContent>
           </Popover>
 
@@ -195,6 +203,9 @@ export function MessageComposer({
             value={value}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
+            // Warm the picker's chunk while the student is still typing, so
+            // the first tap on the smile button opens a populated grid.
+            onFocus={prefetchEmojiPicker}
             disabled={disabled}
             placeholder={
               disabled
