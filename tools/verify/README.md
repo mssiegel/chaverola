@@ -21,10 +21,10 @@ no build, no typecheck, no lint ceremony.
 - `smoke.mjs` — the everyday driver (`pnpm verify:smoke`): a full
   activity end to end — create, two students, pair, a message each way,
   teacher transcript, End all. Local or `--prod`.
-- `coldwake.mjs` — prod cold-start wake UX
-  (`node tools/verify/coldwake.mjs --prod`); the first contact of every
-  per-feature prod pass. Opportunistic: a warm server is reported, not
-  failed.
+- `coldwake.mjs` — first contact with a freshly deployed instance
+  (`node tools/verify/coldwake.mjs --prod`): it boots, answers `/healthz`,
+  and a create through the real form lands on a live host page with a real
+  socket.
 - `shots/` (gitignored) — screenshots, via `lib.mjs`'s `SHOT(name)`.
 - `scratch/` (gitignored) — one-shot and rarely-triggered drivers.
 
@@ -237,7 +237,7 @@ are the things a headless browser on localhost structurally cannot prove.
   the fresh instance rejects each client's resumed token. Budget ~37s for a
   connected client to land on the ended screen. →
   [feature-2-live-lobby.md](../../docs/plans/feature-2-live-lobby.md).
-- **Render is a single free-tier instance** (`numInstances: 1`, no autoscaling,
+- **Render is a single paid instance** (`numInstances: 1`, no autoscaling,
   virginia) — the in-memory store and seat-resume logic depend on it. Re-check
   before assuming any of this survives scaling. → DECISIONS.md → "Nothing
   persists: activities live in memory for 12 hours".
@@ -249,7 +249,8 @@ token}`) — the right tool for anything statistical or timing-sensitive a
   gate, so `Pair your students` / `Pair everyone 1:1` render on live host
   pages too; the surviving discriminator is "A real class does all this by
   itself."
-- **Don't await a slow-hint selector before the navigation.** Race the "just
-  waking up" copy against the URL change, or a warm server reports a cold start
-  that is entirely your own timeout; a fast create still flashes the pending
-  button, so "pending was seen" is not evidence of a cold start. → coldwake.mjs.
+- **Don't await a transient selector before the navigation.** Race any
+  in-flight state against the URL change rather than awaiting it first, or a
+  fast server reports a delay that is entirely your own timeout; a fast create
+  still flashes the pending button, so "pending was seen" proves nothing about
+  timing. → coldwake.mjs.

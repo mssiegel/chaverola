@@ -20,9 +20,7 @@ import {
   type SetupProblem,
 } from "@/lib/activitySetup";
 import { useLocaleNavigate } from "@/lib/locale";
-import { SLOW_LOOKUP_HINT_MS } from "@/lib/useActivityLookup";
 import { primeHostedActivityLookup } from "@/lib/useHostedActivityLookup";
-import { useWarmUpServer } from "@/lib/useWarmUpServer";
 
 import { AboutYouFields } from "./AboutYouFields";
 import {
@@ -42,14 +40,6 @@ const nextRowId = () => `character-row-${++rowSeq}`;
 
 /** What went wrong with the last Host attempt. */
 type CreateFailure = "unreachable" | "server";
-
-/**
- * The copy for a create that has blown past the slow-hint mark — the
- * free-tier server takes ~30s to wake. Mirrors the join page's line.
- */
-const SLOW_CREATE_COPY =
-  "Chaverola is just waking up. The first activity of the day takes about " +
-  "half a minute.";
 
 const FAILURE_COPY: Record<CreateFailure, string> = {
   unreachable:
@@ -93,10 +83,6 @@ function toDraft(form: SetupFormState): ActivityDraft {
 export function ActivitySetupForm() {
   const navigate = useLocaleNavigate();
 
-  // Wake the free-tier server while the teacher fills the form, so the
-  // create they submit in a minute lands on a warm instance.
-  useWarmUpServer();
-
   const [form, setForm] = useState<SetupFormState>(() =>
     fromDraft(readActivityDraft())
   );
@@ -107,17 +93,7 @@ export function ActivitySetupForm() {
   // True while the create request is in flight; the button stays disabled
   // for the whole ride (see handleSubmit for why there's no timeout).
   const [hosting, setHosting] = useState(false);
-  // True once an in-flight create has blown past the slow-hint mark.
-  const [hostingSlow, setHostingSlow] = useState(false);
-  const hostingSlowTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [failure, setFailure] = useState<CreateFailure | null>(null);
-
-  useEffect(
-    () => () => {
-      if (hostingSlowTimer.current) clearTimeout(hostingSlowTimer.current);
-    },
-    []
-  );
 
   useEffect(() => {
     saveActivityDraft(toDraft(form));
@@ -173,21 +149,12 @@ export function ActivitySetupForm() {
     }
     setHosting(true);
     setFailure(null);
-    hostingSlowTimer.current = setTimeout(
-      () => setHostingSlow(true),
-      SLOW_LOOKUP_HINT_MS
-    );
     // No client-side timeout on purpose: create isn't idempotent, so a retry
-    // fired while a cold-start response is still in flight could mint a
-    // second activity. The button waits out even a ~60s cold start.
+    // fired while a slow response is still in flight could mint a second
+    // activity. The button waits the request out however long it takes.
     void createActivity(toCreateActivityRequest(toDraft(form))).then(
       (result) => {
-        if (hostingSlowTimer.current !== null) {
-          clearTimeout(hostingSlowTimer.current);
-          hostingSlowTimer.current = null;
-        }
         setHosting(false);
-        setHostingSlow(false);
         if (!result.ok) {
           // Create has no not-found; anything but unreachable reads as a
           // server-side failure.
@@ -295,14 +262,6 @@ export function ActivitySetupForm() {
               >
                 {FAILURE_COPY[failure]}
               </div>
-            )}
-            {hosting && hostingSlow && (
-              <p
-                role="status"
-                className="rounded-xl bg-background/95 px-4 py-1.5 text-center text-sm text-muted-foreground lg:shadow-lg"
-              >
-                {SLOW_CREATE_COPY}
-              </p>
             )}
             <Button
               type="submit"

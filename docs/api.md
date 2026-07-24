@@ -134,9 +134,9 @@ The teacher lookup, by capability URL. Returns the full
 ### `GET /healthz` → `200 { ok: true, commit? }`
 
 `commit` is Render's injected `RENDER_GIT_COMMIT`, absent locally.
-Mounted **before** the rate limiters: it is the client's fire-and-forget
-warm-up ping (fired from the homepage, create, and join pages) and
-Render's health check — neither may burn limiter budget.
+Mounted **before** the rate limiters: it is Render's own health check
+and the deploy probe used by `tools/verify/up.mjs` and `coldwake.mjs` —
+neither may burn limiter budget.
 
 ## Rate limits
 

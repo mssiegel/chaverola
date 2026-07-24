@@ -171,6 +171,12 @@ _Implemented in
 [api.ts](../../client/src/lib/api.ts), and
 [JoinActivityPage](../../client/src/pages/student/JoinActivityPage.tsx)._
 
+**Update (2026-07-24):** the patience copy is gone. It existed for the free
+tier's idle spin-down, and the API now runs on a paid instance that never
+sleeps (see [backend-api.md](backend-api.md#the-api-runs-on-a-paid-render-instance-because-free-web-services-block-outbound-smtp)).
+The rest of this entry stands: unreachable still never signs a student out,
+and the loading card still says "Finding your activity…".
+
 ### Stage swaps inside the student route open at the top of the page
 
 _2026-07-16_

@@ -48,6 +48,12 @@ The pending button reads "Setting up your activity…", swaps in the
 create shows distinct inline copy for unreachable vs server error, right
 above the button. Validation still never disables anything.
 
+**Update (2026-07-24):** the "Chaverola is just waking up" patience line is
+gone — it covered the free tier's idle spin-down, and the API now runs on a
+paid instance that never sleeps. The pending button and the no-timeout rule
+both stand: create still isn't idempotent, so it still waits the request out
+however long it takes.
+
 _Implemented in
 [ActivitySetupForm](../../client/src/components/Teacher/ActivitySetup/index.tsx)
 with validation in [activitySetup](../../client/src/lib/activitySetup.ts)._

@@ -98,14 +98,6 @@ export const DEMO_LOBBY_AUTO_MATCH_MS = 20_000;
  *  does). */
 export const DEMO_WIFI_BLIP_MS = 4_000;
 
-/**
- * The copy for a lookup that has blown past the slow-hint mark
- * (SLOW_LOOKUP_HINT_MS). Shared by the code-entry button's pending state
- * and the loading stage.
- */
-export const SLOW_LOOKUP_COPY =
-  "Chaverola is just waking up. The first join of the day takes about half a minute.";
-
 /** The copy for a server we couldn't reach at all — distinct from not-found. */
 export const UNREACHABLE_COPY =
   "We can't reach Chaverola right now. Check your internet, then try again.";

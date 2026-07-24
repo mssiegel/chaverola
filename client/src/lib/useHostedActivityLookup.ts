@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 
 import { HOST_KEY_PATTERN } from "@chaverola/shared";
 import { getHostedActivity } from "@/lib/api";
-import { SLOW_LOOKUP_HINT_MS } from "@/lib/useActivityLookup";
 import type { HostedActivity } from "@/types/activity";
 
 /**
@@ -45,7 +44,6 @@ export function primeHostedActivityLookup(
  */
 export function useHostedActivityLookup(hostKey: string | undefined): {
   lookup: HostedActivityLookup;
-  slow: boolean;
   retry: () => void;
 } {
   const [settled, setSettled] = useState<{
@@ -53,22 +51,13 @@ export function useHostedActivityLookup(hostKey: string | undefined): {
     attempt: number;
     lookup: HostedActivityLookup;
   } | null>(null);
-  // Which fetch blew past the slow-hint mark, keyed like `settled` so a new
-  // lookup or a retry needs no synchronous reset — a stale mark just stops
-  // matching.
-  const [slowMark, setSlowMark] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (hostKey === undefined || !HOST_KEY_PATTERN.test(hostKey)) return;
     if (attempt === 0 && handedOff.has(hostKey)) return;
     let cancelled = false;
-    const mark = `${hostKey}#${attempt}`;
-    const slowTimer = setTimeout(() => {
-      if (!cancelled) setSlowMark(mark);
-    }, SLOW_LOOKUP_HINT_MS);
     void getHostedActivity(hostKey).then((result) => {
-      clearTimeout(slowTimer);
       if (cancelled) return;
       setSettled({
         key: hostKey,
@@ -82,14 +71,13 @@ export function useHostedActivityLookup(hostKey: string | undefined): {
     });
     return () => {
       cancelled = true;
-      clearTimeout(slowTimer);
     };
   }, [hostKey, attempt]);
 
   const retry = () => setAttempt((n) => n + 1);
 
   if (hostKey === undefined || !HOST_KEY_PATTERN.test(hostKey)) {
-    return { lookup: { state: "not-found" }, slow: false, retry };
+    return { lookup: { state: "not-found" }, retry };
   }
   // Settled state outranks the hand-off map, same as the student lookup:
   // a fresh mount reads the map reliably, later renders might not.
@@ -98,21 +86,13 @@ export function useHostedActivityLookup(hostKey: string | undefined): {
     settled.key === hostKey &&
     settled.attempt === attempt
   ) {
-    return { lookup: settled.lookup, slow: false, retry };
+    return { lookup: settled.lookup, retry };
   }
   if (attempt === 0) {
     const primed = handedOff.get(hostKey);
     if (primed !== undefined) {
-      return {
-        lookup: { state: "found", activity: primed },
-        slow: false,
-        retry,
-      };
+      return { lookup: { state: "found", activity: primed }, retry };
     }
   }
-  return {
-    lookup: { state: "loading" },
-    slow: slowMark === `${hostKey}#${attempt}`,
-    retry,
-  };
+  return { lookup: { state: "loading" }, retry };
 }

@@ -207,7 +207,6 @@ git: `git log -- DECISIONS.md`.
   - [Sockets connect at lobby entry and host-page load, and never on the demo](docs/decisions/backend-api.md#sockets-connect-at-lobby-entry-and-host-page-load-and-never-on-the-demo)
   - [The backend is Express 5 on Render's free tier — REST now, Socket.IO later](docs/decisions/backend-api.md#the-backend-is-express-5-on-renders-free-tier--rest-now-socketio-later)
   - [The API lives at `api.chaverola.com` from day one, with no `/api/v1` prefix](docs/decisions/backend-api.md#the-api-lives-at-apichaverolacom-from-day-one-with-no-apiv1-prefix)
-  - [Teachers set up at class start, and a warm-up ping hides the cold start](docs/decisions/backend-api.md#teachers-set-up-at-class-start-and-a-warm-up-ping-hides-the-cold-start)
   - [Nothing persists: activities live in memory for 12 hours, and deploys wipe them](docs/decisions/backend-api.md#nothing-persists-activities-live-in-memory-for-12-hours-and-deploys-wipe-them)
   - [Host access is a URL capability — the hostKey — not an account](docs/decisions/backend-api.md#host-access-is-a-url-capability--the-hostkey--not-an-account)
   - [The wire contract is handwritten types in `shared/`; zod validates on the server only](docs/decisions/backend-api.md#the-wire-contract-is-handwritten-types-in-shared-zod-validates-on-the-server-only)
@@ -215,6 +214,8 @@ git: `git log -- DECISIONS.md`.
   - [Create is not idempotent in v1: a lost response can orphan one activity](docs/decisions/backend-api.md#create-is-not-idempotent-in-v1-a-lost-response-can-orphan-one-activity)
   - [Transcripts wait: feature 1 only stores the teacher's email](docs/decisions/backend-api.md#transcripts-wait-feature-1-only-stores-the-teachers-email)
   - [Considered and rejected for the backend: TanStack Query, dotenv, a hostKey stash, an npm conversion](docs/decisions/backend-api.md#considered-and-rejected-for-the-backend-tanstack-query-dotenv-a-hostkey-stash-an-npm-conversion)
+  - _Superseded_
+    - [Teachers set up at class start, and a warm-up ping hides the cold start](docs/decisions/backend-api.md#teachers-set-up-at-class-start-and-a-warm-up-ping-hides-the-cold-start)
 - [Process & tooling](docs/decisions/process.md)
   - [AGENTS.md is a router: a status table, invariants, and a task router, not a narrative](docs/decisions/process.md#agentsmd-is-a-router-a-status-table-invariants-and-a-task-router-not-a-narrative)
   - [DECISIONS.md is an index; entries live in docs/decisions/ per area](docs/decisions/process.md#decisionsmd-is-an-index-entries-live-in-docsdecisions-per-area)

@@ -20,13 +20,6 @@ export type ActivityLookup =
   | { state: "unreachable" };
 
 /**
- * How long a lookup runs before the UI's waiting copy should admit it's a
- * free-tier wake-up (~30s), not a normal loading beat. Real-user timing —
- * never demo-scaled.
- */
-export const SLOW_LOOKUP_HINT_MS = 5_000;
-
-/**
  * Hand-off from the code-entry submit (which already fetched the activity)
  * to the lookup this hook runs after NAVIGATING to /activity/join/:code —
  * without it the code→name swap would flash a loading screen and burn a
@@ -50,35 +43,25 @@ export function primeActivityLookup(activity: Activity): void {
  * synchronously with zero network — the demo works offline forever. Real
  * codes go through `GET /activities/:joinCode`.
  *
- * `slow` is true once a still-loading lookup has blown past
- * SLOW_LOOKUP_HINT_MS. `deliver` hands the hook an activity a caller
- * fetched itself (the code-entry submit, when the code is already in the
- * URL so no navigation will remount anything) — it goes through hook
- * state, the only channel a render is guaranteed to observe.
+ * `deliver` hands the hook an activity a caller fetched itself (the
+ * code-entry submit, when the code is already in the URL so no navigation
+ * will remount anything) — it goes through hook state, the only channel a
+ * render is guaranteed to observe.
  */
 export function useActivityLookup(joinCode: string | undefined): {
   lookup: ActivityLookup;
-  slow: boolean;
   deliver: (activity: Activity) => void;
 } {
   const [settled, setSettled] = useState<{
     joinCode: string;
     lookup: ActivityLookup;
   } | null>(null);
-  // Which code's fetch blew past the slow-hint mark. Keyed instead of a
-  // boolean so a new lookup needs no synchronous reset — a stale mark just
-  // stops matching.
-  const [slowMark, setSlowMark] = useState<string | null>(null);
 
   useEffect(() => {
     if (joinCode === undefined || joinCode === DEMO_JOIN_CODE) return;
     if (handedOff.has(joinCode)) return;
     let cancelled = false;
-    const slowTimer = setTimeout(() => {
-      if (!cancelled) setSlowMark(joinCode);
-    }, SLOW_LOOKUP_HINT_MS);
     void getActivity(joinCode).then((result) => {
-      clearTimeout(slowTimer);
       if (cancelled) return;
       setSettled({
         joinCode,
@@ -91,7 +74,6 @@ export function useActivityLookup(joinCode: string | undefined): {
     });
     return () => {
       cancelled = true;
-      clearTimeout(slowTimer);
     };
   }, [joinCode]);
 
@@ -103,12 +85,11 @@ export function useActivityLookup(joinCode: string | undefined): {
   };
 
   if (joinCode === undefined) {
-    return { lookup: { state: "idle" }, slow: false, deliver };
+    return { lookup: { state: "idle" }, deliver };
   }
   if (joinCode === DEMO_JOIN_CODE) {
     return {
       lookup: { state: "found", activity: demoActivity },
-      slow: false,
       deliver,
     };
   }
@@ -116,19 +97,14 @@ export function useActivityLookup(joinCode: string | undefined): {
   // reliably, but later renders may see a memoized (stale) `get`, so state
   // is the source of truth once it exists.
   if (settled !== null && settled.joinCode === joinCode) {
-    return { lookup: settled.lookup, slow: false, deliver };
+    return { lookup: settled.lookup, deliver };
   }
   const primed = handedOff.get(joinCode);
   if (primed !== undefined) {
     return {
       lookup: { state: "found", activity: primed },
-      slow: false,
       deliver,
     };
   }
-  return {
-    lookup: { state: "loading" },
-    slow: slowMark === joinCode,
-    deliver,
-  };
+  return { lookup: { state: "loading" }, deliver };
 }

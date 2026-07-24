@@ -49,7 +49,7 @@ against chaverola.com instead of localhost.
 | Driver   | Command                                 | What it proves                                                                                                                                                                       |
 | -------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | smoke    | `pnpm verify:smoke` (`--prod`)          | A full activity end to end: create → teacher → two students → Pair everyone → a message each way → teacher transcript → End all. Seconds at scale 10. Also the deployed-build smoke. |
-| coldwake | `node tools/verify/coldwake.mjs --prod` | The prod cold-start wake UX. First contact of every prod pass; opportunistic — a warm server is reported, not failed.                                                                |
+| coldwake | `node tools/verify/coldwake.mjs --prod` | The freshly deployed build boots and answers, and a create through the real form lands on a live host page with a real socket.                                                       |
 
 New one-shot drivers go in `tools/verify/scratch/` (gitignored), import
 `../lib.mjs`, and are authored with file tools only — never round-tripped
@@ -91,9 +91,10 @@ trimmed by "The per-feature prod pass trims to cold-wake, a smoke, and one
 network leg"). A slice's own verification is entirely local, on the stack
 above. The feature's final prompt runs the trimmed pass, in order:
 
-1. **`node tools/verify/coldwake.mjs --prod` FIRST**, before any other prod
-   contact — a naturally-asleep instance is the only place the cold path is
-   exercisable (a warm server just means it wasn't, this session).
+1. **`node tools/verify/coldwake.mjs --prod`** — first contact with the fresh
+   deployment: it boots, answers `/healthz`, and a teacher can create through
+   the real form onto a live host page. No longer has to run first: the API is
+   on a paid instance, so there is no idle spin-down to catch before it warms.
 2. **`pnpm verify:smoke --prod`** — the deployed-build smoke.
 3. **ONE** feature-specific, network-sensitive leg, written fresh in
    `tools/verify/scratch/` — the single thing about THIS feature that only the

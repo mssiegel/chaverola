@@ -2,15 +2,14 @@ import { Loader2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-import { SLOW_LOOKUP_COPY, STUDENT_CARD_CLASS } from "./stageTypes";
+import { STUDENT_CARD_CLASS } from "./stageTypes";
 
 /**
  * The URL names a code whose lookup is still in flight (a lobby refresh, a
  * shared link). Its own stage on purpose: rendering the code gate here would
- * fire the page's sign-out effect mid-lookup. `showPatience` admits the
- * free-tier wake-up once the lookup blows past the slow-hint mark.
+ * fire the page's sign-out effect mid-lookup.
  */
-export function LoadingCard({ showPatience }: { showPatience: boolean }) {
+export function LoadingCard() {
   return (
     <div className="flex w-full max-w-sm flex-1 flex-col items-center justify-start gap-4 pt-2 sm:justify-center sm:pt-0">
       <div
@@ -27,9 +26,6 @@ export function LoadingCard({ showPatience }: { showPatience: boolean }) {
         <p className="text-lg font-semibold text-foreground">
           Finding your activity…
         </p>
-        {showPatience && (
-          <p className="text-sm text-muted-foreground">{SLOW_LOOKUP_COPY}</p>
-        )}
       </div>
     </div>
   );

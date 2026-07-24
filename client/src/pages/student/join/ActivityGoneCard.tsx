@@ -8,7 +8,7 @@ import { STUDENT_CARD_CLASS } from "./stageTypes";
 /**
  * The screen for an activity that died under a seated student — a deploy or
  * restart wiped the in-memory store, or the 12h TTL reaped it. Honest about
- * the free tier instead of blaming the student's code, and the sign-out is
+ * what happened instead of blaming the student's code, and the sign-out is
  * deferred to the CTA (the session is the evidence this screen exists).
  */
 export function ActivityGoneCard({

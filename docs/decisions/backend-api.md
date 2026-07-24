@@ -37,7 +37,10 @@ seam stays, so switching providers later is still a one-file change.
 _The plan requirement is documented in
 [operations.md](../operations.md#gmail-app-password-the-transcript-email); the
 mailer itself is unchanged (see
-[the transcript mailer](#the-transcript-mailer-gmail-smtp-behind-one-module-log-only-without-credentials))._
+[the transcript mailer](#the-transcript-mailer-gmail-smtp-behind-one-module-log-only-without-credentials)).
+The paid instance also never idles down, which retired
+[the warm-up ping](#teachers-set-up-at-class-start-and-a-warm-up-ping-hides-the-cold-start)
+and every "just waking up" line in the client._
 
 ### The transcript mailer: Gmail SMTP behind one module, log-only without credentials
 
@@ -274,39 +277,6 @@ an `/api` path prefix redundant. If a public API ever ships, introduce
 _Recorded in [docs/api.md](../../docs/api.md); the DNS landed 2026-07-18 with
 the Prompt 4 deploy._
 
-### Teachers set up at class start, and a warm-up ping hides the cold start
-
-_2026-07-17_
-
-**Decision:** The product assumes teachers create activities **at the
-start of class** — no accounts, setup takes under a minute — so the
-client fires a fire-and-forget `GET /healthz` when the homepage, the
-create page, or the join page mounts. `/healthz` sits before the rate
-limiters on purpose: the ping every visitor fires (and Render's health
-check) never burns limiter budget.
-
-**Why:** Founder call. The free-tier instance spins down after ~15 idle
-minutes and takes tens of seconds to wake; without the ping, the first
-teacher of the morning would submit a form into a sleeping server. With
-it, the server wakes while the teacher is still typing. The client-side
-mounts land with the wiring prompts (feature-1 Prompts 5–6); the
-patience copy on pending buttons covers the case where the ping loses
-the race.
-
-**Update (2026-07-19):** placement revisited (founder question: should
-the ping centralize into a run-once call in `App.tsx`?) and deliberately
-kept per-surface. `App` mounts once per page load, so a run-once ping
-couldn't re-warm a server that spun down while a visitor idled on the
-homepage before navigating into the join or create page — the
-per-surface mounts re-ping at exactly the moments that precede an API
-call. Per-surface also keeps the demo routes zero-network (the demo must
-work offline forever), and the host page needs no ping because its own
-lookup is the wake. DRY lives in the shared hook
-([useWarmUpServer.ts](../../client/src/lib/useWarmUpServer.ts)); the three
-one-line call sites are declarations of intent.
-
-_Server side in [app.ts](../../server/src/app.ts)._
-
 ### Nothing persists: activities live in memory for 12 hours, and deploys wipe them
 
 _2026-07-17_
@@ -484,3 +454,44 @@ _2026-07-17_
 problem this repo doesn't have yet, at the cost of a dependency, a
 secret-handling surface, or a privacy hole it would have to carry
 forever.
+
+## Superseded
+
+Replaced decisions, kept for history. Don't apply these; each date line links
+to what replaced it.
+
+### Teachers set up at class start, and a warm-up ping hides the cold start
+
+_2026-07-17 · Superseded by
+[The API runs on a paid Render instance](#the-api-runs-on-a-paid-render-instance-because-free-web-services-block-outbound-smtp)_
+
+**Decision:** The product assumes teachers create activities **at the
+start of class** — no accounts, setup takes under a minute — so the
+client fires a fire-and-forget `GET /healthz` when the homepage, the
+create page, or the join page mounts. `/healthz` sits before the rate
+limiters on purpose: the ping every visitor fires (and Render's health
+check) never burns limiter budget.
+
+**Why:** Founder call. The free-tier instance spins down after ~15 idle
+minutes and takes tens of seconds to wake; without the ping, the first
+teacher of the morning would submit a form into a sleeping server. With
+it, the server wakes while the teacher is still typing. The client-side
+mounts land with the wiring prompts (feature-1 Prompts 5–6); the
+patience copy on pending buttons covers the case where the ping loses
+the race.
+
+**Update (2026-07-19):** placement revisited (founder question: should
+the ping centralize into a run-once call in `App.tsx`?) and deliberately
+kept per-surface. `App` mounts once per page load, so a run-once ping
+couldn't re-warm a server that spun down while a visitor idled on the
+homepage before navigating into the join or create page — the
+per-surface mounts re-ping at exactly the moments that precede an API
+call. Per-surface also keeps the demo routes zero-network (the demo must
+work offline forever), and the host page needs no ping because its own
+lookup is the wake. DRY lived in a shared hook,
+`client/src/lib/useWarmUpServer.ts`, with three one-line call sites.
+
+_The hook, its three call sites, and the patience copy were all deleted on
+2026-07-24 when the API moved to a paid instance: with no idle spin-down there
+is no cold start to hide. `/healthz` itself stays, for Render's health check
+and the verify harness's deploy probe._

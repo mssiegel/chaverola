@@ -60,8 +60,10 @@ _2026-07-22_
 **Decision:** The once-per-feature production pass is a short, fixed sequence,
 not a replay of every prior gauntlet:
 
-1. `coldwake --prod` **first**, before any other prod contact — a naturally
-   asleep instance is the only place the cold-start path is exercisable.
+1. `coldwake --prod` — first contact with the fresh deployment: it boots,
+   answers, and a create through the real form reaches a live host page.
+   (Until 2026-07-24 this had to run before any other prod contact, to catch a
+   naturally asleep free instance; the paid instance never idles down.)
 2. `smoke --prod` — the deployed-build smoke.
 3. **one** feature-specific, network-sensitive leg, written fresh in
    `tools/verify/scratch/` — the single thing about this feature that only
@@ -126,7 +128,7 @@ _2026-07-22_
 dependency), not in `$env:TEMP`. Only the everyday drivers are committed:
 `lib.mjs` (shared helpers), `up.mjs` (the stack launcher behind
 `pnpm verify:up`), `smoke.mjs` (the end-to-end activity smoke behind
-`pnpm verify:smoke`), and `coldwake.mjs` (the prod cold-start check). Everything
+`pnpm verify:smoke`), and `coldwake.mjs` (the deployed-build first-contact check). Everything
 else — per-feature gauntlets, occasional regression drivers — is written fresh
 in the gitignored `tools/verify/scratch/` when its trigger fires, imports
 `../lib.mjs`, and is never committed. The harness stays plain `.mjs` with no

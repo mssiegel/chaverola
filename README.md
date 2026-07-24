@@ -104,16 +104,14 @@ Two platforms, split by package:
   explicit Ignored Build Step skips pushes that touch neither `client/`,
   `shared/`, nor the root manifests). One env var: `VITE_API_URL` — the
   API base URL, baked in at build time.
-- **Server → Render** (Virginia/US-East, free tier), reached at
+- **Server → Render** (Virginia/US-East, paid instance), reached at
   `api.chaverola.com`. One required env var: `NODE_ENV=production`
   (Render injects `PORT` itself). Live since 2026-07-18; both the student
   join flow and the teacher create/host flow call it.
 
-Free-tier caveats worth knowing: the server spins down when idle — but a
-connected class's Socket.IO heartbeats count as traffic, so spin-down
-only happens when nobody is connected (verified empirically; a single
-hit wakes a sleeping instance in ~33 seconds, which the client's
-`/healthz` ping on page mount hides). Activities live **in memory
+The paid instance is required, not a nicety: Render blocks outbound SMTP
+on Free web services, so the transcript email cannot send from one. It
+also means the server does not spin down when idle. Activities live **in memory
 only** — every server deploy or restart wipes live classes, and since
 the live lobby that's visible: every connected student lands on an
 "activity ended" screen and the teacher's page falls back to not-found.

@@ -12,7 +12,6 @@ import { useLocaleNavigate } from "@/lib/locale";
 import { useStudentSession } from "@/lib/studentSession";
 import { useActivityLookup } from "@/lib/useActivityLookup";
 import { usePageTitle } from "@/lib/usePageTitle";
-import { useWarmUpServer } from "@/lib/useWarmUpServer";
 import { cn } from "@/lib/utils";
 import { DEMO_JOIN_CODE, DEMO_STUDENT_NAME } from "@/mockData";
 
@@ -63,15 +62,7 @@ export function JoinActivityPage() {
   const { setChatStudentName } = useOutletContext<StudentWorldOutletContext>();
   const { session, signIn, signOut, updateSession } = useStudentSession();
 
-  // Wake the free-tier server the moment a student arrives, so the code
-  // they're about to type resolves against a warm instance.
-  useWarmUpServer();
-
-  const {
-    lookup,
-    slow: slowLookup,
-    deliver: deliverLookup,
-  } = useActivityLookup(joinCodeParam);
+  const { lookup, deliver: deliverLookup } = useActivityLookup(joinCodeParam);
   const activity = lookup.state === "found" ? lookup.activity : undefined;
 
   const isSignedIn =
@@ -265,8 +256,6 @@ export function JoinActivityPage() {
     signIn({ name: name.trim(), joinCode: activity.joinCode });
   };
 
-  const showLoadingPatience = stage === "loading" && slowLookup;
-
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center gap-6">
       {/* From the name stage on, the world is honest about being the demo
@@ -361,7 +350,7 @@ export function JoinActivityPage() {
           </>
         )
       ) : stage === "loading" ? (
-        <LoadingCard showPatience={showLoadingPatience} />
+        <LoadingCard />
       ) : (
         <JoinGateCard
           stage={stage}

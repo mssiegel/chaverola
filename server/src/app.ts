@@ -89,8 +89,8 @@ export function buildApp(config: Config, logger?: Logger): express.Express {
   );
   app.use(pinoHttp({ logger, autoLogging: config.nodeEnv !== "test" }));
 
-  // Before the limiters: this is the warm-up ping every visitor fires and
-  // Render's health check — neither should burn limiter budget.
+  // Before the limiters: this is Render's health check and the verify
+  // harness's deploy probe — neither should burn limiter budget.
   app.get("/healthz", (_req, res) => {
     // `commit` comes from Render's injected env; JSON drops it locally.
     // `pid` + `timeScale` let the verify harness (and a human) identify a

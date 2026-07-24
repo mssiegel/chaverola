@@ -15,11 +15,12 @@ import { timing } from "./timing";
   so it does nothing. Ten minutes on, the disconnecting socket is long gone, so
   the scan needs no socket-id exclusion.
 
-  Best-effort by design: the server is a single free-tier instance that spins
-  down when idle, so anything on a longer timer would routinely be lost. Ten
-  minutes is short enough that the process is usually still alive. The send-once
-  guard in sendTranscriptEmail makes a later explicit End safe — at most one
-  email per activity.
+  Ten minutes is a product choice: long enough to absorb a bathroom break or a
+  wifi blip (either reconnects, and a present teacher cancels the send at fire
+  time), short enough to land the transcript near the lesson. The timer is
+  in-memory, so a restart or deploy inside the window still loses that send.
+  The send-once guard in sendTranscriptEmail makes a later explicit End safe —
+  at most one email per activity.
 */
 
 /** joinCode → the pending fallback timeout. At most one per activity (arm

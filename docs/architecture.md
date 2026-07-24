@@ -98,8 +98,7 @@ pieces those surfaces share.
   "Chaverola | " brand prefix itself — callers pass just the page name),
   `useHeroCtaPassed`, `useBackGuard`, `useLatestRef` (the
   ref-mirrors-latest-value idiom for timer callbacks — don't hand-roll
-  it), `useSecondCountdown`, `useWarmUpServer` (the fire-and-forget
-  `/healthz` ping that wakes the free-tier server), `useActivityLookup`,
+  it), `useSecondCountdown`, `useActivityLookup`,
   and the hooks inside `locale.ts` / `studentSession.ts`. The live
   lobby/host sockets are `pages/student/useLobbyPresence.ts` (student —
   stays mounted through the chat and ended stages) and
@@ -154,22 +153,13 @@ pieces those surfaces share.
   vars, `GMAIL_USER` / `GMAIL_APP_PASSWORD` — unset in dev, where the mailer
   logs instead of sending ([operations.md](operations.md) → Gmail app
   password).
-- **Free-tier consequences:** the instance spins down when idle, and the
-  spin-down rule is verified empirically (2026-07-19, the feature-2
-  Prompt 1 proof — results in
-  [the feature-2 plan](plans/feature-2-live-lobby.md)): the service
-  spins down ~15 minutes after the last inbound HTTP request _or_
-  inbound WebSocket message, per Render's 2026-02-24 changelog rule. A
-  connected Socket.IO client's heartbeat (a pong every ~25s) is an
-  inbound message, so **any connected class keeps the server awake** —
-  spin-down only happens when nobody is connected, which is exactly when
-  it's harmless. Render's own platform health checks
-  (`render-health-check: 1`) demonstrably do NOT count as traffic. Flip
-  side: a forgotten open tab keeps the instance up, bounded by the 12h
-  TTL sweep disconnecting everyone. A single `/healthz` hit wakes a
-  sleeping instance in ~33 seconds (boot to `listening` is ~11s of
-  that); the client's warm-up ping on page mount hides this cold start.
-  Every server deploy or restart wipes all live activities — and since
+- **Instance type:** the API runs on a **paid** Render instance, which is a
+  hard requirement, not a nicety — Render blocks outbound SMTP on Free web
+  services, so the transcript email cannot send from one (DECISIONS.md →
+  "The API runs on a paid Render instance"). It also means the instance
+  **does not spin down when idle**, so there is no ~1-minute wake to hide
+  and no cold-start copy anywhere in the client. What remains true:
+  every server deploy or restart wipes all live activities — and since
   feature 2 that's loud, not silent: every connected student is kicked
   to the "activity ended" screen and the teacher's page falls back to
   not-found — so once real classes use Chaverola (launch: end of August
@@ -197,8 +187,8 @@ trust proxy (3)          socket + Render internal + Cloudflare edge; the
 → helmet                 security headers
 → cors                   credentials: false, preflight cached 24h
 → pino-http              structured request logs
-→ GET /healthz           BEFORE the limiters — the warm-up ping and
-                         Render's health check never burn limiter budget
+→ GET /healthz           BEFORE the limiters — Render's health check and
+                         the deploy probe never burn limiter budget
 → rate limiters          POST and GET limiters, picked per method
 → express.json (16kb)
 → Cache-Control: no-store

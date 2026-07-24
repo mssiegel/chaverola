@@ -16,14 +16,6 @@ import { DEMO_JOIN_CODE, demoHostedActivity } from "@/mockData";
 import type { ActivitySettings, HostedActivity } from "@/types/activity";
 
 /**
- * The copy for a host-page load that has blown past the slow-hint mark —
- * the free-tier server takes ~30s to wake. Mirrors the join page's line.
- */
-const SLOW_HOST_LOOKUP_COPY =
-  "Chaverola is just waking up. The first load of the day takes about " +
-  "half a minute.";
-
-/**
  * `/activity/host/:hostKey` — the teacher's live activity page. The URL is
  * the capability: the create form lands here with the freshly minted key,
  * and the same link keeps working from any device (shareable with an
@@ -43,7 +35,7 @@ export function HostActivityPage() {
 
   // The demo never consults this: the hook settles `1234` (or any other
   // non-key-shaped param) as not-found without a network trip.
-  const { lookup, slow, retry } = useHostedActivityLookup(hostKey);
+  const { lookup, retry } = useHostedActivityLookup(hostKey);
 
   if (hostKey === DEMO_JOIN_CODE) {
     return (
@@ -64,11 +56,6 @@ export function HostActivityPage() {
         <p className="text-lg font-semibold text-foreground">
           Finding your activity…
         </p>
-        {slow && (
-          <p className="text-sm text-muted-foreground">
-            {SLOW_HOST_LOOKUP_COPY}
-          </p>
-        )}
       </div>
     );
   }

@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { useChatDemo } from "@/components/chat/useChatDemo";
 import { HERO_JOIN_CTA_ID } from "@/lib/useHeroCtaPassed";
 import { usePageTitle } from "@/lib/usePageTitle";
-import { useWarmUpServer } from "@/lib/useWarmUpServer";
 import { heroChatScenario } from "@/mockData";
 
 /**
@@ -34,9 +33,6 @@ import { heroChatScenario } from "@/mockData";
  */
 export function HomePage() {
   usePageTitle("A Classroom Activity That Students Love");
-  // A visitor here is minutes from creating or joining an activity — wake
-  // the free-tier server now so their first real call finds it up.
-  useWarmUpServer();
   const chat = useChatDemo(heroChatScenario);
 
   return (

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { ArrowRight, Loader2 } from "lucide-react";
 
 import { STUDENT_NAME_MAX_CHARS } from "@chaverola/shared";
@@ -10,13 +10,11 @@ import { useLocaleNavigate } from "@/lib/locale";
 import type { Activity } from "@/types/activity";
 import {
   primeActivityLookup,
-  SLOW_LOOKUP_HINT_MS,
   type ActivityLookup,
 } from "@/lib/useActivityLookup";
 import { DEMO_JOIN_CODE } from "@/mockData";
 
 import {
-  SLOW_LOOKUP_COPY,
   STUDENT_CARD_CLASS,
   UNREACHABLE_COPY,
   type CodeProblem,
@@ -26,7 +24,7 @@ import {
 /**
  * The one form serving both gate stages — code entry and name entry — on one
  * route; only the input and the button label change between them. Owns the
- * code-entry submit machinery (the state, the lookup, the slow-hint copy);
+ * code-entry submit machinery (the state and the lookup);
  * `name` / `removedByTeacher` arrive as props because socket and demo flows
  * write them. The name-stage submit's page effects (sign-in, latch clears)
  * are `onJoinActivity`; the same-URL resubmit hands its fetched activity back
@@ -79,10 +77,6 @@ export function JoinGateCard({
     submitProblem ?? (lookupProblemDismissed ? null : lookupProblem);
   // True while the code-entry submit's own lookup is in flight.
   const [lookingUpCode, setLookingUpCode] = useState(false);
-  // True once that submit lookup has blown past the slow-hint mark; the
-  // timer is scheduled by the submit handler itself.
-  const [submitSlow, setSubmitSlow] = useState(false);
-  const submitSlowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Autofocusing an input on a phone pops the keyboard over half the world,
   // so phones only get it when there's typing to do: never on the code input
@@ -95,8 +89,6 @@ export function JoinGateCard({
   const canJoin = name.trim().length > 0;
   const canSubmit =
     stage === "name" ? canJoin : isCodeComplete && !lookingUpCode;
-
-  const showSubmitPatience = lookingUpCode && submitSlow;
 
   // One form serves both gate stages; only the input and the button label
   // change between them.
@@ -115,16 +107,7 @@ export function JoinGateCard({
       return;
     }
     setLookingUpCode(true);
-    setSubmitSlow(false);
-    submitSlowTimerRef.current = setTimeout(
-      () => setSubmitSlow(true),
-      SLOW_LOOKUP_HINT_MS
-    );
     void getActivity(code).then((result) => {
-      if (submitSlowTimerRef.current !== null) {
-        clearTimeout(submitSlowTimerRef.current);
-        submitSlowTimerRef.current = null;
-      }
       setLookingUpCode(false);
       if (!result.ok) {
         setSubmitProblem(
@@ -255,11 +238,6 @@ export function JoinGateCard({
               </>
             )}
           </Button>
-          {showSubmitPatience && (
-            <p role="status" className="text-sm text-muted-foreground">
-              {SLOW_LOOKUP_COPY}
-            </p>
-          )}
         </form>
       </div>
     </div>
