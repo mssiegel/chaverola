@@ -72,11 +72,12 @@ pieces those surfaces share.
   the setup form's emoji slots) are shared by the student chatbox, the homepage
   hero chatbox, and the teacher chat cards
   ([client/src/components/Teacher/ChatCard/](../client/src/components/Teacher/ChatCard/)).
-  The picker's container varies by surface: the desktop composer and hero use a
-  `ui/popover`, the phone composer a docked in-flow panel (`emojiPanel="dock"`),
-  and the teacher's emoji slot a `ui/popover` on desktop / a `ui/dialog` bottom
-  sheet on a phone — see DECISIONS.md → "On a phone the emoji panel takes the
-  keyboard's place".
+  The picker's container varies by surface: the composer and hero use a
+  `ui/popover` on desktop and hide the emoji button entirely on touch
+  (`pointer-coarse:hidden`, since the on-screen keyboard has its own emoji
+  picker), and the teacher's emoji slot uses a `ui/popover` on desktop / a
+  `ui/dialog` bottom sheet on a phone — see DECISIONS.md → "On a phone, the
+  student's message box has no emoji button".
   Character display labels come from `characterLabel` / `peerListLabel`
   ([client/src/lib/characterLabel.ts](../client/src/lib/characterLabel.ts)).
   Every confirmation step renders through

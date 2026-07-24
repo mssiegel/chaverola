@@ -200,11 +200,6 @@ export function Chatbox({
           selfCharacterLabel={characterLabel(self)}
           disabled={isPaused}
           releaseKeyboardOnSend={releaseKeyboardOnSend}
-          // Every Chatbox caller is a full-screen student chat, so the feed
-          // always has height to give the dock. The homepage hero renders
-          // MessageComposer directly and stays on the popover — its card is a
-          // hard 380px, which a dock would leave with no feed at all.
-          emojiPanel="dock"
         />
       )}
 

@@ -1,8 +1,16 @@
 # Feature 21 — On a phone the emoji picker takes the keyboard's place
 
-**Status: complete** (2026-07-24). Verified on localhost at phone and desktop
-widths; a real-handset pass is pending — see
-[docs/pending-manual-tests.md](../pending-manual-tests.md).
+**Status: partially superseded** (2026-07-24, the same day it shipped). On a
+real handset the founder's call was that a phone needs no emoji button at all —
+the on-screen keyboard has a native emoji picker — so the **phone dock built
+here (slices 2–3) was removed** and the student composer now hides its emoji
+button on touch. See
+[chat-behavior.md → "On a phone, the student's message box has no emoji button"](../decisions/chat-behavior.md#on-a-phone-the-students-message-box-has-no-emoji-button).
+
+**What survives:** slice 1 (the picker-level fixes that made the desktop popover
+work well — `autoFocusSearch={false}`, the clamped popover, the
+`--epr-category-padding` fix) and slice 4 (the teacher's bottom sheet, untouched
+for now). The record below describes the dock as originally built.
 
 ## The problem
 

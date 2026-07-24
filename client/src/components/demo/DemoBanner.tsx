@@ -29,7 +29,7 @@ import { LocaleLink } from "@/components/layout/LocaleLink";
 export function DemoBanner({ onWorld = false }: { onWorld?: boolean }) {
   if (onWorld) {
     return (
-      <p className="sticky top-20 z-10 w-full rounded-2xl bg-brand-sun px-4 py-2.5 text-center text-sm font-semibold text-brand-grape-strong shadow-lg max-sm:group-has-[[data-emoji-panel]]:hidden max-sm:group-has-[textarea:focus]:hidden sm:text-base">
+      <p className="sticky top-20 z-10 w-full rounded-2xl bg-brand-sun px-4 py-2.5 text-center text-sm font-semibold text-brand-grape-strong shadow-lg max-sm:group-has-[textarea:focus]:hidden sm:text-base">
         This is the demo. The other students are pretend.
       </p>
     );

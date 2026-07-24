@@ -5,68 +5,41 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
-### On a phone the emoji panel takes the keyboard's place
+### On a phone, the student's message box has no emoji button
 
 _2026-07-24_
 
-**Decision:** On a full-screen student chat below `sm`, tapping the smile
-button no longer floats a picker over the chat card. It blurs the field and
-drops the emoji grid into the on-screen keyboard's rectangle — a plain block
-docked under the composer, full card width — and the smile turns into a
-keyboard button that hands the field back. It is the WhatsApp swap. Desktop and
-the homepage hero keep the floating popover (and its search field); only
-`Chatbox` callers, which are always full-screen chats, opt in via
-`emojiPanel="dock"`.
+**Decision:** On a touch device the student composer shows no emoji button at
+all — just the text field and send. The on-screen keyboard already carries a
+native emoji picker one tap away, so ours was a redundant second one that still
+looked wrong on a real handset. Desktop keeps the button and its popover: a
+physical keyboard has no emoji key, and the popover works well there.
 
-Choices inside it, each a founder call:
+- **Detected by pointer, not width.** The button carries `pointer-coarse:hidden`,
+  so it disappears wherever the primary input is a touch surface (phones and
+  tablets) and stays wherever it's a mouse or trackpad (a laptop, even in a
+  narrow window). That tracks the real question — does this device have a native
+  emoji keyboard — more faithfully than the `sm` width line the rest of the
+  world chrome keys off.
+- **The homepage hero loses it too.** The hero is the live product in miniature,
+  so a visitor typing into it on a phone gets the same thing a student does. One
+  rule on the shared `MessageComposer` covers both, with no opt-out flag.
 
-- **The dock is an in-flow child of the chat card, never `fixed` or
-  portalled.** The conversation feed is the frame's only grower (`h-0
-flex-auto`), so a `shrink-0` sibling makes the feed give up exactly the
-  panel's height and the page never grows. A portalled/fixed panel is what
-  overlaid and clipped the card before.
-- **Its height is a constant, `clamp(240px, 42dvh, 336px)` — not a measurement
-  of the real keyboard.** Android keyboards cluster at 42–46% of the viewport,
-  so when the keys slide out and the panel slides in the composer settles
-  within a few dozen pixels, during the keyboard's own animation. Pixel-exact
-  tracking of `visualViewport` is the known follow-up _if_ that settle ever
-  reads as a jump; it was cut from V1 because every hard bug in prototyping
-  lived in that machinery and the constant is imperceptibly close.
-- **The dock survives a send.** Firing off "😂", "😭", "🔥" as separate
-  messages shouldn't reopen it each time, and there is no keyboard to hand back
-  while the dock is standing in for one.
-- **No search field in the dock.** The search box is an `<input>`; tapping it
-  would summon the very keyboard the dock replaced, on top of the dock. Eight
-  category tabs are browsable without it. Desktop and the teacher's sheet keep
-  search, where there is no keyboard to protect.
-
-**Why:** Two founder screenshots (2026-07-23) on a real Android handset: the
-floating picker overlaid and clipped the purple card, and every emoji tap made
-the screen flicker. The flicker was a focus fight — the library's
-`autoFocusSearch` (on by default, never overridden) pulled the keyboard back
-over the picker, an `<input>` focus un-fired the phone's chrome-collapse rules,
-`interactive-widget=resizes-content` resized the card, Radix re-positioned the
-portalled popover a frame behind, and the composer's own refocus-per-insert
-replayed the whole loop twice per tap. Slice 1 killed the flicker at the focus
-level; the dock is what makes it read like WhatsApp. The honest caveat: WebKit
-ignores `interactive-widget` entirely, so on iOS the card never shrank for the
-keyboard and Safari pans the page instead — the swap there is a visible settle,
-not a pixel-frozen composer, until the `visualViewport` follow-up lands.
-
-**Phone dismissal contract** (the dock is not a Radix `DismissableLayer`, so
-this is wired by hand): it closes on the keyboard button, on tapping the field,
-on a tap anywhere outside the composer (including the conversation feed, which
-also brings the demo's steering panel back), on Escape, on the teacher's pause,
-and when the chat ends. It deliberately does **not** close on send.
+**Why:** This reverses the WhatsApp-style dock shipped the same morning (now in
+Superseded, below). On the handset the founder's call was that the whole
+affordance is unnecessary on mobile, not that it needed a better container — the
+native keyboard _is_ the emoji picker there. The dock and its parallel
+`[data-emoji-panel]` chrome-collapse hooks were removed. What survives from that
+work, because it fixed the desktop popover too, is the picker-level focus fix
+(`autoFocusSearch={false}`), the clamped popover height, and the
+`--epr-category-padding` right-edge fix. The teacher's character-emoji picker is
+untouched for now (its own mobile hide is the announced next step).
 
 _Implemented in
 [MessageComposer](../../client/src/components/chat/MessageComposer.tsx) (the
-dock, the toggle ordering, the caret ref, the dismissal listeners),
-[Chatbox](../../client/src/components/Student/Chatbox/index.tsx) (opts in),
-[EmojiPickerBody](../../client/src/components/chat/EmojiPickerBody.tsx) +
-[LazyEmojiPicker](../../client/src/components/chat/LazyEmojiPicker.tsx) (the
-`dock`/`box` variants and the shared config), and the `[data-emoji-panel]`
-chrome-collapse variants in
+`pointer-coarse:hidden` trigger, dock machinery removed),
+[Chatbox](../../client/src/components/Student/Chatbox/index.tsx) (drops the
+opt-in), and the reverted `[data-emoji-panel]` hooks in
 [StudentWorldLayout](../../client/src/components/layout/StudentWorldLayout.tsx),
 [ChatStage](../../client/src/components/Student/ChatStage.tsx), and
 [DemoBanner](../../client/src/components/demo/DemoBanner.tsx)._
@@ -140,14 +113,6 @@ on blur. It's one CSS `:has()` rule keyed off the composer's focus — the
 student world's only `<textarea>` — not React state, and it's scoped to phones
 so a desktop click into the input changes nothing. Extends
 [On phones the chat fills the screen and hugs the keyboard](#on-phones-the-chat-fills-the-screen-and-hugs-the-keyboard-desktop-keeps-the-fixed-card).
-
-**As of the emoji dock (2026-07-24) the signal is composer-focus _or_ an open
-dock.** The dock deliberately blurs the field to take the keyboard's place, so
-each of these rules gained a parallel `[data-emoji-panel]` variant beside its
-`textarea:focus` one — additive, so the focus case is untouched. Without it the
-chrome would spring back the instant the keyboard-to-dock swap begins, which is
-the one moment it has to stay put. See
-[On a phone the emoji panel takes the keyboard's place](#on-a-phone-the-emoji-panel-takes-the-keyboards-place).
 
 **And in the demo, sending a message hands the keyboard back.** The composer
 drops focus on send, so the steering panel this collapse just hid comes back
@@ -644,15 +609,10 @@ without reopening it each time. The teacher setup's emoji slot is the opposite
 on purpose: a character has exactly one emoji, so picking closes the surface
 immediately.
 
-**On the desktop popover**, focus never leaves the textarea, and Escape, an
-outside tap, and sending all close the picker. **On the phone dock** (see
-[On a phone the emoji panel takes the keyboard's place](#on-a-phone-the-emoji-panel-takes-the-keyboards-place))
-the contract differs because the field is deliberately blurred and the picker
-is not a dismissable layer: the dock's own wrapper cancels the emoji-button
-mousedown so focus is never stolen in the first place, multi-insert is free,
-send leaves the dock open, and the dismissal paths are the ones listed in that
-entry (keyboard button, tapping the field, an outside/feed tap, Escape, pause,
-chat end).
+Focus never leaves the textarea, and Escape, an outside tap, and sending all
+close the picker. On a phone there is no picker to dismiss — the emoji button is
+hidden on touch devices (see
+[On a phone, the student's message box has no emoji button](#on-a-phone-the-students-message-box-has-no-emoji-button)).
 
 **Why:** Kids chain emojis — close-on-pick would turn "😀😀😀" into three
 round trips. On the desktop popover the insert flow refocuses the textarea,
@@ -873,3 +833,25 @@ _Colors live in the `--char-*` tokens in [index.css](../../client/src/index.css)
 dark-mode variants); assignment is in
 [characterColor.ts](../../client/src/lib/characterColor.ts). Pass the viewer's own character
 first so it lands on green._
+
+## Superseded
+
+### On a phone the emoji panel takes the keyboard's place
+
+_2026-07-24, superseded the same day by
+[On a phone, the student's message box has no emoji button](#on-a-phone-the-students-message-box-has-no-emoji-button)._
+
+For part of a morning the student chat's phone emoji picker was rebuilt as a
+WhatsApp-style "dock": tapping the smile button blurred the field and dropped
+the emoji grid into the on-screen keyboard's rectangle as an in-flow block, and
+the smile became a keyboard button. It was reversed the same day — on a real
+handset the call was that a phone needs no emoji button at all, since the native
+keyboard has one. The dock, its `emojiPanel="dock"` opt-in, and the parallel
+`[data-emoji-panel]` chrome-collapse hooks were all removed.
+
+What survived the reversal, because it also fixed the desktop popover: the
+picker-level focus fix (`autoFocusSearch={false}` — the library default had been
+pulling the phone keyboard back over the picker, which was the flicker the
+founder saw), the clamped popover height, and the `--epr-category-padding`
+right-edge fix. Those live on in
+[The composer's emoji picker stays open across inserts](#the-composers-emoji-picker-stays-open-across-inserts).

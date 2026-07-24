@@ -95,7 +95,7 @@ export function ChatStage({
           browser has somewhere to pan a focused input to — which is how the
           demo's composer ended up off screen with the keyboard open. Dismiss
           the keyboard to steer the demo again. */}
-      <div className="w-full max-sm:group-has-[[data-emoji-panel]]:hidden max-sm:group-has-[textarea:focus]:hidden">
+      <div className="w-full max-sm:group-has-[textarea:focus]:hidden">
         {/* The join flow's extra triggers: end sources that exist only once a
             teacher and an activity clock are in the room. */}
         <ChatDemoControls

@@ -68,7 +68,7 @@ git: `git log -- DECISIONS.md`.
   - [One page serves both join routes; a wrong code never changes the URL](docs/decisions/student-join.md#one-page-serves-both-join-routes-a-wrong-code-never-changes-the-url)
   - [Student sign-in lives in the tab, and removal sends you to the name step](docs/decisions/student-join.md#student-sign-in-lives-in-the-tab-and-removal-sends-you-to-the-name-step)
 - [Chat behavior](docs/decisions/chat-behavior.md)
-  - [On a phone the emoji panel takes the keyboard's place](docs/decisions/chat-behavior.md#on-a-phone-the-emoji-panel-takes-the-keyboards-place)
+  - [On a phone, the student's message box has no emoji button](docs/decisions/chat-behavior.md#on-a-phone-the-students-message-box-has-no-emoji-button)
   - [Ending your own chat keeps your seat, and the ender gets a wrap-up screen](docs/decisions/chat-behavior.md#ending-your-own-chat-keeps-your-seat-and-the-ender-gets-a-wrap-up-screen)
   - [While a student types on a phone, the world's chrome gets out of the way](docs/decisions/chat-behavior.md#while-a-student-types-on-a-phone-the-worlds-chrome-gets-out-of-the-way)
   - [A student's own leave ends a 1:1 as "peer", and the survivor's screen names their character](docs/decisions/chat-behavior.md#a-students-own-leave-ends-a-11-as-peer-and-the-survivors-screen-names-their-character)
