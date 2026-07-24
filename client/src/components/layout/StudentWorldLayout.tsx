@@ -32,7 +32,11 @@ export interface StudentWorldOutletContext {
  * On phones, typing collapses the corner chrome: with a keyboard open there
  * are barely 300px of world left, and a quarter of it went to a name badge
  * and a language pill (see DECISIONS.md → "While a student types on a phone,
- * the world's chrome gets out of the way"). Both come back on blur.
+ * the world's chrome gets out of the way"). Both come back on blur — unless
+ * the emoji dock is standing in for the keyboard, which is what the second,
+ * parallel `[data-emoji-panel]` variant is for: the composer deliberately
+ * blurs its field to make room for the dock, and without that variant the
+ * chrome would spring back at exactly the moment the swap has to be invisible.
  */
 export function StudentWorldLayout() {
   // While a chat is on screen the brand pill disappears (one stray tap on it
@@ -53,7 +57,7 @@ export function StudentWorldLayout() {
           badge) starts, language pill ends. The bar itself must not block
           clicks on the world below it. On phones it stands down while the
           student types, handing its band to the chatbox. */}
-      <div className="pointer-events-none fixed inset-x-0 top-0 z-20 flex items-center justify-between gap-3 px-4 pt-4 max-sm:group-has-[textarea:focus]:hidden">
+      <div className="pointer-events-none fixed inset-x-0 top-0 z-20 flex items-center justify-between gap-3 px-4 pt-4 max-sm:group-has-[[data-emoji-panel]]:hidden max-sm:group-has-[textarea:focus]:hidden">
         {chatStudentName === null ? (
           <LocaleLink
             to="/"
@@ -71,7 +75,7 @@ export function StudentWorldLayout() {
 
       {/* pt-20 clears the corner bar; when that bar stands down for the
           keyboard the padding goes with it, or the chatbox would gain nothing. */}
-      <div className="relative z-10 flex flex-1 flex-col items-center gap-6 px-4 pt-20 pb-2 max-sm:group-has-[textarea:focus]:pt-2 sm:pb-8">
+      <div className="relative z-10 flex flex-1 flex-col items-center gap-6 px-4 pt-20 pb-2 max-sm:group-has-[[data-emoji-panel]]:pt-2 max-sm:group-has-[textarea:focus]:pt-2 sm:pb-8">
         <main className="flex w-full flex-1 flex-col items-center">
           <Outlet
             context={{ setChatStudentName } satisfies StudentWorldOutletContext}

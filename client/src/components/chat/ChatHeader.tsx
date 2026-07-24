@@ -46,7 +46,11 @@ export function ChatHeader({
   const roster = [self, ...peers];
 
   return (
-    <header className="flex items-center justify-between gap-3 bg-gradient-to-r from-brand-grape to-brand-grape-strong px-4 py-3 text-white">
+    // shrink-0 is load-bearing, not tidiness: the Conversation feed below is
+    // `h-0 flex-auto`, so its flex base is 0 and it absorbs NONE of an
+    // overflow. Without this the header is what gets crushed when the emoji
+    // dock opens.
+    <header className="flex shrink-0 items-center justify-between gap-3 bg-gradient-to-r from-brand-grape to-brand-grape-strong px-4 py-3 text-white">
       {/* Both lines wrap rather than truncate: names are teacher-authored, so
           a single long one can outgrow any width. */}
       <div className="min-w-0 leading-tight">

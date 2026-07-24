@@ -135,7 +135,10 @@ export function MessageComposer({
   };
 
   return (
-    <div className="border-t border-border bg-card/70 px-2 py-2 sm:px-4 sm:py-2.5">
+    // shrink-0 for the same reason the header carries it: the feed is
+    // `h-0 flex-auto`, so it absorbs none of an overflow and the composer
+    // would be the thing that gets crushed.
+    <div className="shrink-0 border-t border-border bg-card/70 px-2 py-2 sm:px-4 sm:py-2.5">
       <div className="relative">
         {showCounter && (
           <div
