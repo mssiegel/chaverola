@@ -30,7 +30,7 @@ export const common = {
   // diffed by eye. A pinned mirror, the same admission `share.cardAlt` above
   // makes about the same file, and SITE_ORIGIN makes about the same host.
   "shell.description":
-    "A free classroom activity where students play secret characters and chat with each other about the lesson. The teacher sees every chat live, by name.",
+    "A classroom roleplay activity where students chat in character about their lessons. Teachers follow every conversation live.",
 
   "nav.joinLong": "Join an Activity",
   "nav.joinShort": "Join Activity",

@@ -159,9 +159,8 @@ pieces those surfaces share.
 - **Mock data** lives only in
   [client/src/mockData/](../client/src/mockData/) (the one barrel file in
   the client). The demo join code `1234` always works, fully client
-  simulated. The homepage prose reads the hero cast's names from
-  `heroCopyNames` rather than spelling them out, so a recast can't leave
-  the page describing a chat that isn't on it.
+  simulated. Homepage chat headers read character and student names directly
+  from the locale's scenario; the surrounding copy does not name its cast.
 - **Strings** live in [client/src/i18n/](../client/src/i18n/):
   `locales/{en,he}/<ns>.ts` hold flat dotted keys, `ns/<ns>.ts` are the
   side-effect registrars a lazy page imports, and `i18next.d.ts` teaches

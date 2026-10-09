@@ -18,8 +18,8 @@ export function FounderNote() {
   const { t } = useTranslation("home");
 
   return (
-    <section className="mx-auto w-full max-w-6xl px-4 py-14 sm:py-20">
-      <h2 className="text-center text-3xl leading-[1.15] font-bold tracking-tight text-foreground sm:text-4xl rtl:tracking-normal">
+    <section className="mx-auto w-full max-w-6xl px-4 pt-6 pb-14 sm:pt-8 sm:pb-20">
+      <h2 className="text-center text-3xl leading-[1.15] font-normal tracking-tight text-foreground sm:text-4xl rtl:tracking-normal">
         {t("founder.heading")}
       </h2>
 

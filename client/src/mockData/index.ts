@@ -7,9 +7,8 @@ import {
   type ActivityChatScenarioKey,
 } from "./activityChatDemo";
 import { demoActivities, demoStudentNames } from "./activityDemo";
-import { heroChatScenarios, heroCopyNames } from "./heroChatDemo";
+import { heroChatScenarios } from "./heroChatDemo";
 import { hostDemoCasts, type HostDemoCast } from "./hostActivityDemo";
-import type { HeroCopyNames } from "./heroChatDemo";
 
 /*
   Barrel for mock/demo data. Per the project brief, the demo join code `1234`
@@ -28,7 +27,7 @@ import type { HeroCopyNames } from "./heroChatDemo";
 
 export { DEMO_JOIN_CODE } from "./activityDemo";
 export { demoHostedActivity } from "./hostActivityDemo";
-export type { ActivityChatScenarioKey, HeroCopyNames, HostDemoCast };
+export type { ActivityChatScenarioKey, HostDemoCast };
 export type { HostSeedChat } from "./hostActivityDemo";
 
 /** One language's whole demo: the activity, both sides' casts, the class. */
@@ -37,8 +36,6 @@ export interface DemoContent {
   activity: Activity;
   /** The name waiting in the demo's name field. */
   studentName: string;
-  /** The names the homepage prose interpolates. */
-  heroNames: HeroCopyNames;
   /** The homepage hero's live sample chat. */
   heroScenario: ChatScenario;
   /** The two matches the join flow's demo triggers can start. */
@@ -50,7 +47,6 @@ export interface DemoContent {
 const contentFor = (locale: Locale): DemoContent => ({
   activity: demoActivities[locale],
   studentName: demoStudentNames[locale],
-  heroNames: heroCopyNames[locale],
   heroScenario: heroChatScenarios[locale],
   chatScenarios: activityChatScenarios[locale],
   host: hostDemoCasts[locale],

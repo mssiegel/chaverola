@@ -197,7 +197,7 @@ Load-bearing — trip over them before you break one:
 - **`index.tsx` means folder-as-component** (`Student/Chatbox/`, `Teacher/ChatCard/`): one component whose private sub-parts share the folder. The only barrel file is `mockData/index.ts` — don't add new barrels.
 - **Directory casing:** the role-chrome roots `components/Student/` and `components/Teacher/` are PascalCase; every other directory is lowercase. New directories are lowercase. Don't case-rename the existing two (case-only renames misbehave in git on Windows).
 - **Routes are canonical** — don't invent new ones beyond the project brief.
-- **Accepted duplication** (deliberate — don't extract): the homepage sticky-note captions, the two numbered-step renderers, the page-section wrapper strings, the page-H1 strings, the ping/pulse "live" dots, and the seed-message id-stamping idiom in the two demo engines. Revisit any at a fourth occurrence.
+- **Accepted duplication** (deliberate — don't extract): the page-section wrapper strings, the page-H1 strings, the ping/pulse "live" dots, and the seed-message id-stamping idiom in the two demo engines. Revisit any at a fourth occurrence.
 - **Mobile-first:** design and verify every screen at phone width.
 
 ## Working Rules for AI Agents

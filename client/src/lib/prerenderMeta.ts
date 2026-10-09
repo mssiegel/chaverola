@@ -330,10 +330,8 @@ export function escapeHtml(value: string): string {
 
 /**
  * Element text from a catalog string that may carry `<Trans>` placeholders —
- * `hero.title` is "… <1>In character.</1>", where `<1>` is the highlighter mark
- * `HomePage` passes down. Strip those BEFORE escaping, or the `<h1>` a crawler
- * reads says "&lt;1&gt;In character.&lt;/1&gt;". Escaping second is what keeps
- * a real `<` in future copy safe.
+ * Strip numbered component placeholders BEFORE escaping so a crawler reads
+ * their text, not their markup. Escaping second keeps a real `<` in copy safe.
  */
 function plainText(value: string): string {
   return escapeHtml(value.replace(/<\/?\d+>/g, ""));
@@ -414,19 +412,14 @@ function homeNoscript(t: LooseT, common: TFunction, locale: Locale): string {
   return [
     `    <noscript>`,
     `      <h1>${text("hero.title")}</h1>`,
+    `      <p>${text("hero.intro")}</p>`,
     `      <p>${text("hero.pitch")}</p>`,
     `      <p>${text("hero.stepsLabel")}</p>`,
     `      <ol>`,
     `        <li>${text("hero.step1")}</li>`,
     `        <li>${text("hero.step2")}</li>`,
     `        <li>${text("hero.step3")}</li>`,
-    `      </ol>`,
-    `      <h2>${text("how.eyebrow")}</h2>`,
-    `      <ol>`,
-    `        <li>${text("how.step1.title")}</li>`,
-    `        <li>${text("how.step2.title")}</li>`,
-    `        <li>${text("how.step3.title")}</li>`,
-    `        <li>${text("how.step4.title")}</li>`,
+    `        <li>${text("hero.step4")}</li>`,
     `      </ol>`,
     // The page's own two CTAs, and the only crawlable path from here into the
     // rest of the app — every other link on the homepage is a router click.

@@ -21,16 +21,9 @@ export const common: HebrewOf<CommonCatalog> = {
   "share.cardAlt":
     "הלוגו של חברולה, בועת דיבור לבנה עם פרצוף מחייך, על רקע סגול.",
 
-  // A localization of the fallback sentence, not a translation of it: the
-  // phrases are the ones the Hebrew homepage already ships ("פעילות כיתתית
-  // חינם" is its meta.title, "השם האמיתי של כל תלמיד" its meta.description).
-  // Third person, like the English, because this serves student URLs too — so
-  // the homepage's "אתה רואה" can't be reused here. "גלוי למורה" puts the
-  // teacher in the dative and sidesteps the verb agreement entirely; see
-  // DECISIONS.md → "Hebrew talks about the teacher without guessing their
-  // gender".
+  // Third person because the fallback also serves student session URLs.
   "shell.description":
-    "פעילות כיתתית חינם: כל תלמיד מקבל דמות סודית, ובתוכה מדבר על החומר עם מישהו מהכיתה. כל צ׳אט גלוי למורה בשידור חי, עם השם האמיתי של כל תלמיד.",
+    "פעילות כיתתית שבה תלמידים מדברים מתוך דמות על החומר שהם לומדים. כל שיחה גלויה למורה בשידור חי.",
 
   "nav.joinLong": "להצטרף לפעילות",
   "nav.joinShort": "להצטרף",

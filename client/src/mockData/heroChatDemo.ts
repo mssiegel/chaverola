@@ -35,46 +35,7 @@ import type { ChatScenario, Participant } from "@/types/chat";
   tight. See DECISIONS.md → "Demo students have short names, and the teacher
   is never one of them".
 
-  The homepage copy names these characters, and it reads them from
-  `heroCopyNames` below rather than repeating them — so a recast can't leave
-  the page describing a chat that isn't on it. Copy changes still go through
-  the humanizer pass (see AGENTS.md).
 */
-
-/**
- * The names the homepage prose interpolates. Emoji-free and short, because the
- * copy wants "Cleopatra" where the roster carries "Cleopatra 👑" — hence a
- * record of its own rather than reaching into the participants below.
- */
-export interface HeroCopyNames {
-  /** The character the visitor plays. */
-  self: string;
-  /** The partner's full character name. */
-  peer: string;
-  /** The partner, as prose refers to them in passing. */
-  peerShort: string;
-  /** The demo student whose seat the visitor is borrowing. */
-  seat: string;
-}
-
-export const heroCopyNames: Record<Locale, HeroCopyNames> = {
-  en: {
-    self: "Cleopatra",
-    peer: "Brutus",
-    // One-word names already: the short form and the full one are the same
-    // string in both languages, and the two slots stay separate anyway
-    // because a future cast may need them apart.
-    peerShort: "Brutus",
-    seat: "Dana K",
-  },
-  he: {
-    self: "גולדה",
-    peer: "בן־גוריון",
-    peerShort: "בן־גוריון",
-    // Female on purpose — `home:teacherView.note` says "עם השם שלה".
-    seat: "דנה",
-  },
-};
 
 const cleopatra: Participant = {
   id: "self-cleopatra",

@@ -1,120 +1,65 @@
 import type { Catalog } from "../../types";
 
-/**
- * The marketing homepage. Registered from `i18n/ns/home.ts`, so it rides that
- * page's chunk.
- *
- * The demo cast's names arrive as interpolations (`{{self, bidi}}`, `{{peer, bidi}}`,
- * `{{seat, bidi}}`, `{{studentName, bidi}}`) from `mockData` — the copy must never spell
- * them out, or a recast leaves the page describing a chat that isn't on it.
- */
+/** Marketing copy registered with the homepage's lazy chunk. */
 export const home = {
-  // Written for a search result, not for the page — the words a teacher
-  // actually types ("classroom roleplay chat activity", "free") come first,
-  // and the two facts that remove hesitation close the description.
-  "meta.title": "Free Classroom Roleplay Chat Activity",
+  // Search copy describes the classroom activity rather than leading on price.
+  "meta.title": "Classroom Roleplay Chat Activities",
   "meta.description":
-    "Every student gets a secret character and a classmate to chat with. You watch every chat live with real names on it. It's free, and nobody needs an account.",
+    "Get your class excited to learn through roleplay. Chaverola gets students talking, collaborating, and thinking about what they're learning.",
 
-  "hero.eyebrow": "A classroom activity for teachers",
-  // <1> is the highlighter mark. Word order differs by language, which is why
-  // this is one <Trans> and not two keys.
-  "hero.title": "Get your whole class talking. <1>In character.</1>",
+  "hero.intro":
+    "A classroom activity that gets students talking, collaborating, and thinking about what they're learning.",
+  "hero.title": "Get your class excited to learn",
   "hero.pitch":
-    "You pick the topic and hand out secret characters. Students chat with each other about your lesson, and behind every character is a real classmate. Nobody knows who's who until you reveal it at the end.",
-  "hero.chatCaption":
-    "This is the student side, live. Go ahead, type as {{self, bidi}}.",
-  "hero.chatNote":
-    "🤫 In a real round, {{self, bidi}} and {{peerShort, bidi}} are both your students. Only you know who's playing who, until the reveal at the end.",
-  /** The hero chatbox's own header suffix — the rest of that header is
-   *  `chat`, but this half-sentence exists only on this page. */
+    "You pick a topic and assign characters. Students explore your lesson through conversation, without knowing who's playing whom.",
+  "hero.chatCaption": "Example of the student's side:",
   "hero.chatPeerSuffix": " · played by a classmate",
   "hero.stepsLabel": "Setup takes about a minute:",
   "hero.step1": "Create an activity and pick your characters.",
-  "hero.step2": "Put the join code on the board.",
-  "hero.step3": "Students chat. You watch, then reveal who was who.",
+  "hero.step2":
+    "Put the join code on the board. Students join from their phones or laptops.",
+  "hero.step3":
+    "Watch every chat live, with students' real names beside their characters.",
+  "hero.step4": "Reveal who was who, then get the class transcripts by email.",
 
   "cta.host": "Host an Activity",
 
   "teacherView.eyebrow": "The teacher's view",
-  "teacherView.heading": "Students see characters. You see who's who.",
-  "teacherView.body":
-    "At the top of this page, someone plays {{self, bidi}} and someone plays {{peer, bidi}}. As the teacher, you see that same chat with each student's real name next to their character.",
-  "teacherView.bullet1":
-    "Students only see each other's characters. Nobody is anonymous to you, so if anyone gets out of line, you'll know exactly who.",
-  "teacherView.bullet2":
-    "Every chat in your activity gets its own live card, so you can watch the whole room at once.",
-  "teacherView.bullet3":
-    "When the activity wraps up, Chaverola can email you the full transcript of every chat.",
-  "teacherView.caption":
-    "This is the teacher side, live. Same chat, now with names.",
-  "teacherView.note":
-    "🕵️ Try it: say something as {{self, bidi}} up top, then check back here. In this demo you're borrowing {{seat, bidi}}'s seat, so the message shows up with her name on it.",
+  "teacherView.caption": "Example of the teacher's side:",
 
-  "demo.eyebrow": "See it in action",
-  "demo.heading": "Poke around a live class.",
-  "demo.body":
-    "Both sides of Chaverola, running on pretend students. Click around all you like: you don't need to sign up, and you can't break anything.",
-  "demo.teacherTitle": "The teacher view",
-  "demo.teacherBody":
-    "A class in the middle of an activity. Students trickle in and wait to be paired, and every chat gets its own live card. You run the room.",
-  "demo.teacherCta": "Open the teacher demo",
-  "demo.studentTitle": "The student side",
-  "demo.studentBody":
-    "You join the demo class as a student named {{studentName, bidi}} and get matched into a character chat. It's the same trip your students will take.",
-  "demo.studentCta": "Try the student side",
-
-  "how.eyebrow": "How it works",
-  "how.heading": "Live before you've finished taking attendance.",
-  "how.step1.title": "Create the activity",
-  "how.step1.body":
-    "Set one up for whatever your class is studying, like a history unit or the solar system. It takes about a minute.",
-  "how.step2.title": "Choose the characters",
-  "how.step2.body":
-    "Decide who your students get to be. Characters from the book you're reading, or a certain queen and a very nervous senator.",
-  "how.step3.title": "Share the 4-digit code",
-  "how.step3.body":
-    "Put it on the board. Students tap Join on any device and type it in.",
-  "how.step4.title": "Students join instantly",
-  "how.step4.body":
-    "Each student gets a secret character and a classmate to talk to. You watch the whole room from your dashboard, then reveal who was who.",
-  "how.fact1": "Free plan for every teacher",
-  "how.fact2": "No student accounts",
-  "how.fact3": "Works on anything with a browser",
+  "demo.heading": "Try the demo",
+  "demo.body": "Explore as a teacher or student, with simulated classmates.",
+  "demo.teacherTitle": "Teacher view",
+  "demo.teacherBody": "Pair students and watch their chats.",
+  "demo.teacherCta": "Try as a teacher",
+  "demo.studentTitle": "Student view",
+  "demo.studentBody": "Get a secret character and chat with a classmate.",
+  "demo.studentCta": "Try as a student",
 
   "plans.eyebrow": "Plans",
-  "plans.heading": "The free plan is the whole thing.",
-  "plans.body":
-    "Everything on this page is free for every teacher: the characters, the live dashboard, the reveal at the end. The second plan is for teachers and schools who want us working alongside them.",
   "plans.free.name": "Free",
-  "plans.free.tagline":
-    "Everything Chaverola does today, for any teacher who wants it.",
-  "plans.free.bullet1": "Create activities and hand out secret characters",
+  "plans.free.tagline": "Everything you need to run a classroom activity.",
+  "plans.free.bullet1": "Create activities and assign characters",
   "plans.free.bullet2":
-    "Students chat in character from any browser, with no accounts and nothing to install",
-  "plans.free.bullet3":
-    "A live teacher dashboard where you watch every student chat",
-  "plans.free.bullet4":
-    "The name reveal at the end of each chat, when students find out who was who",
-  "plans.free.bullet5": "Transcripts emailed to you when class wraps up",
-  "plans.complete.sticker": "With the Chaverola team",
+    "Students join from phones or laptops, with no accounts or downloads",
+  "plans.free.bullet3": "See how students participate in every chat",
+  "plans.free.bullet4": "Reveal who played each character",
+  "plans.free.bullet5": "Review student chats with transcripts emailed to you",
   "plans.complete.name": "Complete Implementation",
   "plans.complete.tagline":
-    "For teachers and schools that want help making Chaverola part of how they teach.",
-  "plans.complete.bullet1":
-    "Training from our team on fitting activities into your curriculum",
+    "More tools for your classroom, with help from our team.",
+  "plans.complete.bullet1": "Training to fit activities into your curriculum",
   // <1> wraps the logo and the product name so they can't break across lines.
   "plans.complete.bullet2":
-    "Connections to <1>Google Classroom</1> and the other tools your school already uses",
+    "Connect with <1>Google Classroom</1> and your school's tools",
   "plans.complete.bullet3":
-    "A teacher account, so your characters are saved and ready for the next activity",
+    "Save your characters and activity settings to reuse again later",
   "plans.complete.bullet4":
-    "Mid-activity tasks: write them ahead of time, then push each one into your students' chats when the room is ready for it",
-  "plans.complete.price": "Priced per teacher or school.",
+    "Keep discussions focused with questions and instructions sent during the activity",
   "plans.complete.cta": "Write to Moshe",
-  "plans.dialog.title": "Let's figure out what fits",
+  "plans.dialog.title": "More tools and support for your classroom",
   "plans.dialog.body":
-    "Whether you're one teacher or a whole school, Complete Implementation is shaped around you, and so is the price. Write to Moshe with a little about what you're planning, and we'll take it from there.",
+    "Get help fitting activities into your curriculum, save time with reusable settings, and guide student chats with prepared questions. Tell Moshe what your classroom or school needs, and he'll help you explore the options.",
   "plans.dialog.emailCta": "Email Moshe",
   "plans.dialog.copyLabel": "Or copy the address:",
   "plans.mailto.subject": "Chaverola Complete Implementation",
@@ -124,11 +69,11 @@ export const home = {
   "founder.p1":
     "I'm Moshe, and I volunteer in the English department at a high school in Beit Shemesh, Israel.",
   "founder.p2":
-    "I've always loved multiplayer games like Warcraft and Brawl Stars. People in them are curious and fully awake in a way you don't often see in a classroom, and that kept nagging at me. Could a lesson feel that alive?",
+    "I've always loved multiplayer games like Warcraft and Brawl Stars. They get people involved, and I wondered how to bring that same excitement into my classroom.",
   "founder.p3":
-    "So I built the kind of game I would have loved in high school. Each student steps into a character and talks with classmates about whatever the class is studying. My hope is that it becomes the lesson they retell at dinner.",
+    "That's why I built Chaverola for my students. So they could take on characters and talk with classmates about what they're learning. My students loved it and kept asking to play again. They got more involved and learned more.",
   "founder.p4":
-    "The name comes from two Hebrew words: Chaver, which means friend, and Olah, which means rising up. Friends raise each other up. That's what I wanted this to be, so I put it right in the name.",
+    "The name combines two Hebrew words: Chaver, meaning friend, and Olah, meaning rising up. Friends helping each other grow. That's what Chaverola brings to the classroom.",
   "founder.p5":
     "If you have questions, ideas, or just want to say hi, I'd love to hear from you.",
   "founder.signoff": "Sincerely,",

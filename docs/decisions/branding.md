@@ -5,6 +5,25 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
+### English homepage search copy leads with the activity rather than its price
+
+_2026-10-09_
+
+**Decision:** The English homepage title is "Classroom Roleplay Chat Activities
+| Chaverola". Its description emphasizes excitement about learning, student
+conversation, collaboration, and thinking about the material through roleplay.
+Neither the homepage metadata nor the English
+fallback description leads with or mentions "free". The same homepage copy
+feeds its Open Graph tags. Hebrew metadata and other pages keep their copy.
+
+**Why:** Product-owner feedback: leading with "free" makes the product feel
+cheap in search results. The activity itself should be the reason to click.
+This overrides the English homepage's price emphasis in
+[The meta title is written for a search result, not for the page, and the demo carries its own](#the-meta-title-is-written-for-a-search-result-not-for-the-page-and-the-demo-carries-its-own).
+The page-name-first title format and factual pricing data still stand.
+
+_Implemented in the English home catalog and [index.html](../../client/index.html)._
+
 ### There is a Hebrew fallback shell too, and an unprefixed URL is still English
 
 _2026-07-27_

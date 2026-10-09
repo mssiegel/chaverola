@@ -1,5 +1,4 @@
-import type { ReactNode } from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { GraduationCap, MessageCircle } from "lucide-react";
 
 // Side-effect import: registers the `home` namespace for both locales into
@@ -13,12 +12,7 @@ import "@/i18n/ns/chat";
 import { DemoSection } from "@/components/home/DemoSection";
 import { FounderNote } from "@/components/home/FounderNote";
 import { HeroChatbox } from "@/components/home/HeroChatbox";
-import { HowItWorksSection } from "@/components/home/HowItWorksSection";
 import { PlansSection } from "@/components/home/PlansSection";
-import {
-  HighlightMark,
-  SectionEyebrow,
-} from "@/components/home/SectionHeading";
 import { TeacherViewSection } from "@/components/home/TeacherViewSection";
 import { LocaleLink } from "@/components/layout/LocaleLink";
 import { Button } from "@/components/ui/button";
@@ -29,12 +23,12 @@ import { usePageMeta } from "@/lib/usePageMeta";
 
 /**
  * The homepage: hero (student-side live chat), the teacher's view of that
- * same chat, the demo doorways, how hosting works, the two plans, and the
+ * same chat, the demo doorways, the two plans, and the
  * founder's note. The pitch to a
  * teacher in one glance: a classroom activity where students chat with each
  * other in character (a real classmate behind every character), quick to set
  * up, with the who's-who mystery — and live chatboxes to prove it. Styling
- * stays deliberately plain (highlighter mark, numbered lists), and the copy
+ * stays deliberately plain (solid headlines, numbered lists), and the copy
  * never mentions AI — see DECISIONS.md → "The hero looks hand-made and never
  * mentions AI".
  *
@@ -47,33 +41,21 @@ export function HomePage() {
   // navbar-grade strings this page reuses (the Join CTA).
   const { t } = useTranslation(["home", "common"]);
   usePageMeta(t("meta.title"), t("meta.description"));
-  const { heroNames, heroScenario } = useDemoContent();
+  const { heroScenario } = useDemoContent();
   const chat = useChatDemo(heroScenario);
 
   return (
     <div className="flex flex-1 flex-col">
-      {/* Three grid items so the phone order can differ from desktop's: on
-          phones it reads pitch → CTAs → live chat → setup steps (the chat is
-          the proof, so it comes before the fold if possible); on lg the chat
-          spans both rows of the right column and the pitch + steps stack in
-          the left one, hugging each other via self-end/self-start. See
-          DECISIONS.md → "On phones the live chat comes before the setup
-          steps". */}
       <section className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-10 px-4 pt-6 pb-6 sm:pt-14 lg:grid-cols-2 lg:gap-x-14 lg:gap-y-6 lg:pt-16 lg:pb-12">
         {/* Pitch */}
-        <div className="flex animate-in flex-col items-start gap-5 duration-700 fade-in slide-in-from-bottom-4 motion-reduce:animate-none sm:gap-6 lg:self-end">
-          <SectionEyebrow>{t("hero.eyebrow")}</SectionEyebrow>
-
-          <h1 className="text-4xl leading-[1.12] font-bold tracking-tight text-balance text-foreground sm:text-5xl xl:text-6xl rtl:tracking-normal">
-            {/* One <Trans>, not two keys: which half of this sentence the
-                highlighter lands on is a word-order decision, and Hebrew
-                makes it differently. */}
-            <Trans
-              t={t}
-              i18nKey="hero.title"
-              components={{ 1: <HighlightMark /> }}
-            />
+        <div className="flex animate-in flex-col items-start gap-5 duration-700 fade-in slide-in-from-bottom-4 motion-reduce:animate-none sm:gap-6">
+          <h1 className="text-4xl leading-[1.12] font-normal tracking-tight text-balance text-foreground sm:text-5xl xl:text-6xl rtl:tracking-normal">
+            {t("hero.title")}
           </h1>
+
+          <p className="max-w-lg text-lg text-pretty text-muted-foreground">
+            {t("hero.intro")}
+          </p>
 
           <p className="max-w-lg text-lg text-pretty text-muted-foreground">
             {t("hero.pitch")}
@@ -101,31 +83,12 @@ export function HomePage() {
           </div>
         </div>
 
-        {/* Live sample chat. The cast's names come from the demo content, so
-            this copy can't drift from the chat rendered beside it. */}
-        <div className="flex animate-in flex-col gap-3 duration-700 fade-in slide-in-from-bottom-6 motion-reduce:animate-none lg:col-start-2 lg:row-span-2 lg:row-start-1">
+        {/* The real student chatbox, driven by the locale's demo scenario. */}
+        <div className="flex animate-in flex-col gap-3 duration-700 fade-in slide-in-from-bottom-6 motion-reduce:animate-none">
           <p className="text-center text-sm font-semibold text-brand-grape">
-            {t("hero.chatCaption", { self: heroNames.self })}
+            {t("hero.chatCaption")}
           </p>
           <HeroChatbox chat={chat} />
-          <div className="mx-auto max-w-[92%] -rotate-1 rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-muted-foreground shadow-md">
-            {t("hero.chatNote", {
-              self: heroNames.self,
-              peerShort: heroNames.peerShort,
-            })}
-          </div>
-        </div>
-
-        {/* Setup steps */}
-        <div className="animate-in space-y-2.5 duration-700 fade-in slide-in-from-bottom-4 motion-reduce:animate-none lg:col-start-1 lg:self-start">
-          <p className="text-sm font-semibold text-foreground/80">
-            {t("hero.stepsLabel")}
-          </p>
-          <ol className="space-y-2 text-[15px] text-foreground/90">
-            <HowStep n={1}>{t("hero.step1")}</HowStep>
-            <HowStep n={2}>{t("hero.step2")}</HowStep>
-            <HowStep n={3}>{t("hero.step3")}</HowStep>
-          </ol>
         </div>
       </section>
 
@@ -136,25 +99,9 @@ export function HomePage() {
 
       <DemoSection />
 
-      <HowItWorksSection />
-
       <PlansSection />
 
       <FounderNote />
     </div>
-  );
-}
-
-function HowStep({ n, children }: { n: number; children: ReactNode }) {
-  return (
-    <li className="flex gap-2.5">
-      {/* dir="ltr" on the marker: "1." is a digit followed by a neutral, which
-          an RTL line reorders into ".1". Same fix in HowItWorksSection's
-          numbered list. */}
-      <span dir="ltr" className="w-5 shrink-0 font-bold text-brand-grape">
-        {n}.
-      </span>
-      <span>{children}</span>
-    </li>
   );
 }

@@ -2,10 +2,7 @@ import type { ReactNode } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { GraduationCap, Mail } from "lucide-react";
 
-import {
-  SectionEyebrow,
-  SectionHeading,
-} from "@/components/home/SectionHeading";
+import { SectionEyebrow } from "@/components/home/SectionHeading";
 import { LocaleLink } from "@/components/layout/LocaleLink";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,14 +36,8 @@ export function PlansSection() {
   const { t } = useTranslation("home");
 
   return (
-    <section className="mx-auto w-full max-w-6xl px-4 py-14 sm:py-20">
-      <div className="flex flex-col items-start gap-5 sm:gap-6">
-        <SectionEyebrow>{t("plans.eyebrow")}</SectionEyebrow>
-        <SectionHeading>{t("plans.heading")}</SectionHeading>
-        <p className="max-w-2xl text-lg text-pretty text-muted-foreground">
-          {t("plans.body")}
-        </p>
-      </div>
+    <section className="mx-auto w-full max-w-6xl px-4 py-6 sm:py-8">
+      <SectionEyebrow>{t("plans.eyebrow")}</SectionEyebrow>
 
       <div className="mx-auto mt-8 grid w-full max-w-md gap-6 sm:mt-10 lg:max-w-4xl lg:grid-cols-2 lg:gap-8">
         <PlanCard
@@ -73,7 +64,6 @@ export function PlansSection() {
 
         <PlanCard
           highlighted
-          sticker={t("plans.complete.sticker")}
           name={t("plans.complete.name")}
           tagline={t("plans.complete.tagline")}
           bullets={[
@@ -97,14 +87,7 @@ export function PlansSection() {
             t("plans.complete.bullet3"),
             t("plans.complete.bullet4"),
           ]}
-          footer={
-            <>
-              <p className="text-sm text-muted-foreground">
-                {t("plans.complete.price")}
-              </p>
-              <CompleteContactDialog />
-            </>
-          }
+          footer={<CompleteContactDialog />}
         />
       </div>
     </section>
@@ -116,14 +99,12 @@ function PlanCard({
   tagline,
   bullets,
   footer,
-  sticker,
   highlighted = false,
 }: {
   name: string;
   tagline: string;
   bullets: ReactNode[];
   footer: ReactNode;
-  sticker?: string;
   highlighted?: boolean;
 }) {
   return (
@@ -135,13 +116,8 @@ function PlanCard({
           : "border-border shadow-md"
       )}
     >
-      {sticker && (
-        <span className="w-fit -rotate-1 rounded-md bg-brand-grape-soft px-2.5 py-1 text-xs font-bold text-brand-grape">
-          {sticker}
-        </span>
-      )}
       <div className="space-y-1.5">
-        <h3 className="text-2xl font-bold text-foreground">{name}</h3>
+        <h3 className="text-2xl font-normal text-foreground">{name}</h3>
         <p className="text-[15px] text-pretty text-muted-foreground">
           {tagline}
         </p>
@@ -212,7 +188,9 @@ function CompleteContactDialog() {
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t("plans.dialog.title")}</DialogTitle>
+          <DialogTitle className="pe-6 leading-snug">
+            {t("plans.dialog.title")}
+          </DialogTitle>
           <DialogDescription>{t("plans.dialog.body")}</DialogDescription>
         </DialogHeader>
         <Button asChild variant="secondary">

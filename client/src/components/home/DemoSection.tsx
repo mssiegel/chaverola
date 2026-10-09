@@ -1,13 +1,9 @@
 import { useTranslation } from "react-i18next";
 import { Gamepad2, Presentation } from "lucide-react";
 
-import {
-  SectionEyebrow,
-  SectionHeading,
-} from "@/components/home/SectionHeading";
+import { SectionHeading } from "@/components/home/SectionHeading";
 import { LocaleLink } from "@/components/layout/LocaleLink";
 import { Button } from "@/components/ui/button";
-import { useDemoContent } from "@/lib/demoContent";
 import { DEMO_JOIN_CODE } from "@/mockData";
 
 /**
@@ -23,19 +19,17 @@ import { DEMO_JOIN_CODE } from "@/mockData";
  */
 export function DemoSection() {
   const { t } = useTranslation("home");
-  const { studentName } = useDemoContent();
 
   return (
-    <section className="mx-auto w-full max-w-6xl px-4 py-14 sm:py-16">
-      <div className="flex flex-col items-start gap-5 sm:gap-6">
-        <SectionEyebrow>{t("demo.eyebrow")}</SectionEyebrow>
-        <SectionHeading>{t("demo.heading")}</SectionHeading>
+    <section className="mx-auto w-full max-w-6xl px-4 pt-14 pb-6 sm:pt-16 sm:pb-8">
+      <div className="flex flex-col items-start gap-2">
+        <SectionHeading weight="normal">{t("demo.heading")}</SectionHeading>
         <p className="max-w-2xl text-lg text-pretty text-muted-foreground">
           {t("demo.body")}
         </p>
       </div>
 
-      <div className="mt-8 grid gap-8 sm:mt-10 sm:grid-cols-2 sm:gap-12">
+      <div className="mt-6 grid gap-8 sm:grid-cols-2 sm:gap-12">
         <div className="flex flex-col items-start gap-3">
           <h3 className="text-lg font-semibold text-foreground">
             {t("demo.teacherTitle")}
@@ -56,9 +50,7 @@ export function DemoSection() {
             {t("demo.studentTitle")}
           </h3>
           <p className="text-[15px] text-pretty text-muted-foreground">
-            {/* Read from the fixture, never spelled out — the demo's prefilled
-                name and this sentence have to agree. */}
-            {t("demo.studentBody", { studentName })}
+            {t("demo.studentBody")}
           </p>
           <Button asChild variant="secondary">
             <LocaleLink to={`/activity/join/${DEMO_JOIN_CODE}`}>

@@ -5,6 +5,95 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
+### Plan names and the founder heading use regular weight in both languages
+
+_2026-10-09_
+
+**Decision:** The Free and Complete Implementation plan names, and the founder
+note heading, use regular font weight in English and Hebrew.
+
+**Why:** Product-owner request to reduce the amount of bold text on the homepage.
+
+### Hebrew shares the finished homepage layout and uses natural Hebrew copy
+
+_2026-10-09_
+
+**Decision:** The approved English homepage structure and styling also apply
+to Hebrew: the plain hero, four teacher steps, concise demos, plan cards and
+contact dialog, founder note, and tighter section spacing. Hebrew follows the
+same benefits while using conversational masculine second person. The Hebrew
+demo keeps its own cast and dialogue. Homepage metadata follows the same
+benefits-first direction, without leading on price.
+
+**Why:** Product-owner approval after the English copy and layout review.
+Both languages now use the same components without temporary locale branches.
+This extends the English-only decisions below to Hebrew, including
+[English uses a plain hero and puts setup in the teacher view](#english-uses-a-plain-hero-and-puts-setup-in-the-teacher-view),
+[English explains the activity once and names devices in the join step](#english-explains-the-activity-once-and-names-devices-in-the-join-step),
+and the [homepage metadata decision](branding.md#english-homepage-search-copy-leads-with-the-activity-rather-than-its-price).
+Their earlier instructions to preserve the old Hebrew homepage no longer apply.
+
+_Implemented in the home components and [Hebrew home catalog](../../client/src/i18n/locales/he/home.ts)._
+
+### English explains the activity once and names devices in the join step
+
+_2026-10-09_
+
+**Decision:** The English homepage goes from Teacher's View to the mock-class
+demos, then Plans. Teacher's View carries the setup and activity sequence, so
+English has no separate How it works section. The join-code step says students
+join from their phones or laptops. The demos have no separate browser note.
+The English Plans section opens with its label followed directly by the two
+plan cards, without an introductory heading or paragraph.
+Their copy connects tools to benefits: seeing student participation, reviewing
+chats with transcripts emailed to the teacher, reusing characters and activity
+settings, and keeping discussions focused. Complete Implementation explicitly
+offers more classroom tools with help from the team.
+The English demos use one regular-weight heading, "Try the demo", with no
+eyebrow label above it. One short introduction identifies the simulated
+classmates. The two choices are "Teacher view" and "Student view", each with a
+one-sentence description and a "Try as a teacher/student" button.
+Hebrew keeps its existing sections.
+
+**Why:** Product-owner feedback: the second explanation repeats Teacher's
+View and makes the page longer. Cost and accounts are already covered by the
+plans; phones and laptops are concrete examples that belong in the
+step explaining how students join.
+This overrides the English placement in
+[The how-it-works footer answers cost, accounts, and devices](#the-how-it-works-footer-answers-cost-accounts-and-devices).
+
+_Implemented in [HomePage](../../client/src/pages/HomePage.tsx) and
+[DemoSection](../../client/src/components/home/DemoSection.tsx)._
+
+### English uses a plain hero and puts setup in the teacher view
+
+_2026-10-09_
+
+**Decision:** The English hero reads "Get your class excited to learn"
+without a highlighter and uses regular font weight. Its first paragraph focuses
+on students talking, collaborating, and thinking about what they learn.
+The second explains choosing a topic, assigning characters, and exploring the
+lesson without knowing who's playing whom. Both paragraphs use regular weight;
+the hero carries no accounts or pricing line.
+The setup list sits in Teacher's View in place of its
+headline and introductory paragraph. Its four numbered steps cover creating the
+activity, sharing the code, watching chats with real names, and revealing names
+and receiving transcripts. There is no separate benefits list in English.
+Both previews use short example captions
+and have no sticky-note callouts.
+
+**Why:** Product-owner feedback: the highlight and demo explanations feel
+artificial and clutter the page. Moving setup leaves more room for the hero
+pitch. Hebrew keeps its current copy and layout until separately approved.
+This overrides the English parts of
+[The highlighter mark appears once on the homepage, under "In character"](#the-highlighter-mark-appears-once-on-the-homepage-under-in-character),
+[On phones the live chat comes before the setup steps](#on-phones-the-live-chat-comes-before-the-setup-steps),
+and [The teacher section stays light, and never points at "this card"](#the-teacher-section-stays-light-and-never-points-at-this-card).
+Those entries still govern Hebrew.
+
+_Implemented in [HomePage](../../client/src/pages/HomePage.tsx) and
+[TeacherViewSection](../../client/src/components/home/TeacherViewSection.tsx)._
+
 ### The hero demo is cast from the lesson, and it shares the demo activity's world
 
 _2026-07-28_
