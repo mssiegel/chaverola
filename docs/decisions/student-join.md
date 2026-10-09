@@ -5,6 +5,17 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
+### The removal screen has no names-stay-secret box
+
+_2026-10-09_
+
+**Decision:** A student removed mid-chat sees the removal explanation and
+Join again button, without the dashed names-stay-secret box. This applies in
+English and Hebrew. Removal still never reveals classmates' names.
+
+**Why:** Product-owner feedback: the names message adds no useful information
+at this point and distracts from what happened and how to rejoin.
+
 ### A mid-chat removal ends like a chat, then lands on the name step
 
 _2026-07-26_

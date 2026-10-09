@@ -172,9 +172,10 @@ export function ChatEndedSection({
           <p className="text-sm text-muted-foreground">{copy.body}</p>
         </div>
 
-        {chatGoesOnWithoutYou ? (
+        {/* Removal needs only its explanation and Join again, with no names box. */}
+        {removed ? null : chatGoesOnWithoutYou ? (
           <SecretBox>{t("ended.secretLeft")}</SecretBox>
-        ) : revealNames && !removed ? (
+        ) : revealNames ? (
           <div className="w-full rounded-xl border border-border bg-card p-3 text-start shadow-sm">
             <SectionLabel className="mb-2 text-center">
               {t("ended.revealTitle")}

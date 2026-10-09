@@ -47,6 +47,7 @@ git: `git log -- DECISIONS.md`.
 ## Index
 
 - [Student join flow & lobby](docs/decisions/student-join.md)
+  - [The removal screen has no names-stay-secret box](docs/decisions/student-join.md#the-removal-screen-has-no-names-stay-secret-box)
   - [A mid-chat removal ends like a chat, then lands on the name step](docs/decisions/student-join.md#a-mid-chat-removal-ends-like-a-chat-then-lands-on-the-name-step)
   - [The lobby says so when no teacher device is connected](docs/decisions/student-join.md#the-lobby-says-so-when-no-teacher-device-is-connected)
   - [The lobby has a leave door and acknowledges a long wait](docs/decisions/student-join.md#the-lobby-has-a-leave-door-and-acknowledges-a-long-wait)
