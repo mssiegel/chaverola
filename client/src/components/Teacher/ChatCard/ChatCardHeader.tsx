@@ -10,6 +10,8 @@ interface ChatCardHeaderProps {
   /** Distinct color (CSS var) per character id in this chat. */
   characterColors: Map<string, string>;
   isEnded: boolean;
+  showStatusBadge: boolean;
+  showDisabledControls: boolean;
   /** The activity-wide pause: the badge freezes. Ended wins. */
   isPaused?: boolean;
   /** Participants no longer in the room (removed mid-chat) render muted. */
@@ -30,6 +32,8 @@ export function ChatCardHeader({
   participants,
   characterColors,
   isEnded,
+  showStatusBadge,
+  showDisabledControls,
   isPaused = false,
   inactiveParticipantIds,
   reconnectingParticipantIds,
@@ -81,41 +85,50 @@ export function ChatCardHeader({
                   {t("lostConnection")}
                 </span>
               )}
-              {!isEnded && !inactive && onRemoveParticipant && (
-                <button
-                  type="button"
-                  onClick={() => onRemoveParticipant(participant)}
-                  aria-label={t("card.remove", {
-                    name: participant.realName,
-                  })}
-                  className="grid size-6 shrink-0 place-items-center rounded-full text-muted-foreground/70 transition-colors hover:bg-destructive/10 hover:text-destructive"
-                >
-                  <X className="size-3.5" />
-                </button>
-              )}
+              {!isEnded &&
+                !inactive &&
+                (onRemoveParticipant || showDisabledControls) && (
+                  <button
+                    type="button"
+                    disabled={showDisabledControls}
+                    onClick={
+                      showDisabledControls
+                        ? undefined
+                        : () => onRemoveParticipant?.(participant)
+                    }
+                    aria-label={t("card.remove", {
+                      name: participant.realName,
+                    })}
+                    className="grid size-6 shrink-0 place-items-center rounded-full text-muted-foreground/70 transition-colors hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                )}
             </li>
           );
         })}
       </ul>
 
-      <div className="flex shrink-0 flex-col items-end gap-1">
-        {isEnded ? (
-          <span className="flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-xs font-semibold text-muted-foreground shadow-sm">
-            <CheckCircle2 className="size-3.5" />
-            {t("card.ended")}
-          </span>
-        ) : isPaused ? (
-          <span className="flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 shadow-sm">
-            <Pause className="size-3.5" />
-            {t("card.paused")}
-          </span>
-        ) : (
-          <span className="flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-xs font-semibold text-foreground shadow-sm">
-            <LiveDot />
-            {t("card.live")}
-          </span>
-        )}
-      </div>
+      {showStatusBadge && (
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          {isEnded ? (
+            <span className="flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-xs font-semibold text-muted-foreground shadow-sm">
+              <CheckCircle2 className="size-3.5" />
+              {t("card.ended")}
+            </span>
+          ) : isPaused ? (
+            <span className="flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 shadow-sm">
+              <Pause className="size-3.5" />
+              {t("card.paused")}
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-xs font-semibold text-foreground shadow-sm">
+              <LiveDot />
+              {t("card.live")}
+            </span>
+          )}
+        </div>
+      )}
     </header>
   );
 }

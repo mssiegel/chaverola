@@ -15,7 +15,7 @@ export const home: HebrewOf<HomeCatalog> = {
   "hero.title": "תן לכיתה סיבה להתלהב מהלמידה",
   "hero.pitch":
     "אתה בוחר נושא ומחלק דמויות. התלמידים מעמיקים בחומר דרך שיחה, בלי לדעת מי מגלם את מי.",
-  "hero.chatCaption": "דוגמה למסך של התלמיד:",
+  "hero.chatCaption": "תצוגת צ׳אט לדוגמה לתלמיד",
   "hero.chatPeerSuffix": " · מגולם בידי תלמיד מהכיתה",
   "hero.stepsLabel": "ההקמה לוקחת בערך דקה:",
   "hero.step1": "צור פעילות ובחר דמויות.",
@@ -28,7 +28,7 @@ export const home: HebrewOf<HomeCatalog> = {
   "cta.host": "להקים פעילות",
 
   "teacherView.eyebrow": "המסך של המורה",
-  "teacherView.caption": "דוגמה למסך של המורה:",
+  "teacherView.caption": "תצוגת צ׳אט לדוגמה למורה",
 
   "demo.heading": "נסה את הדמו",
   "demo.body": "התנסה כמורה או כתלמיד, עם תלמידים מדומים.",

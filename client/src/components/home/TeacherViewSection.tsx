@@ -19,9 +19,8 @@ interface TeacherViewSectionProps {
  * contrast is the whole pitch. Anything the visitor types up top lands in
  * this card too. Cleopatra's student is "Dana K", never "You": the teacher
  * assigns chats and is not a player (see DECISIONS.md → "Demo students have
- * short names, and the teacher is never one of them"). No `onEndChat` is
- * passed, so the card hides its End chat button — a landing page shouldn't
- * offer a destructive-looking control.
+ * short names, and the teacher is never one of them"). Management controls
+ * are visible but disabled here; Full chat still expands the conversation.
  */
 export function TeacherViewSection({
   participants,
@@ -42,18 +41,20 @@ export function TeacherViewSection({
         </div>
 
         {/* The real monitoring card, live */}
-        <div className="flex flex-col gap-3">
-          <p className="text-center text-sm font-semibold text-brand-grape">
-            {t("teacherView.caption")}
-          </p>
+        <figure className="flex flex-col gap-3">
           <div className="mx-auto w-full max-w-md">
             <ChatCard
               participants={participants}
               messages={messages}
               isEnded={false}
+              showStatusBadge={false}
+              showDisabledControls
             />
           </div>
-        </div>
+          <figcaption className="text-center text-sm font-normal text-muted-foreground">
+            {t("teacherView.caption")}
+          </figcaption>
+        </figure>
       </div>
     </section>
   );

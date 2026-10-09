@@ -84,12 +84,12 @@ export function HomePage() {
         </div>
 
         {/* The real student chatbox, driven by the locale's demo scenario. */}
-        <div className="flex animate-in flex-col gap-3 duration-700 fade-in slide-in-from-bottom-6 motion-reduce:animate-none">
-          <p className="text-center text-sm font-semibold text-brand-grape">
-            {t("hero.chatCaption")}
-          </p>
+        <figure className="flex animate-in flex-col gap-3 duration-700 fade-in slide-in-from-bottom-6 motion-reduce:animate-none">
           <HeroChatbox chat={chat} />
-        </div>
+          <figcaption className="text-center text-sm font-normal text-muted-foreground">
+            {t("hero.chatCaption")}
+          </figcaption>
+        </figure>
       </section>
 
       <TeacherViewSection

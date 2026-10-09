@@ -5,6 +5,40 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
+### The teacher preview shows disabled management controls
+
+_2026-10-09_
+
+**Decision:** The homepage teacher chat preview shows a disabled End chat
+button beside Full chat and disabled X controls beside active participants.
+Full chat remains interactive. This applies in English and Hebrew; activity
+dashboards retain their working controls.
+
+**Why:** Product-owner request to show that teachers can end chats and remove
+students, without unexpectedly changing the homepage's sample conversation.
+The controls use their usual positions, with muted disabled styling.
+
+### Chat previews have short captions below the boxes
+
+_2026-10-09_
+
+**Decision:** Both homepage chat boxes have centered, regular-weight, muted
+captions below them: "Student chat preview" and "Teacher chat preview", with
+equivalent Hebrew wording. Each chat and its caption form a figure.
+
+**Why:** The captions identify whose view is shown and describe a single chat.
+The word "demo" stays with the links to the full demo experiences.
+
+### The homepage teacher preview has no Live badge
+
+_2026-10-09_
+
+**Decision:** The homepage teacher chat preview hides its status badge in both
+languages. Activity dashboards keep their Live, Paused, and Ended badges.
+
+**Why:** The homepage uses a mock conversation, and a Live badge could make a
+visitor think they are watching an actual class.
+
 ### Plan names and the founder heading use regular weight in both languages
 
 _2026-10-09_

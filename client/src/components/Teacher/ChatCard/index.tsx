@@ -25,9 +25,13 @@ export interface ChatCardProps {
   messages: ChatMessage[];
   /** Completed chats render the muted variant with no End chat button. */
   isEnded: boolean;
+  /** Hide the status badge in the homepage's mock chat preview. */
+  showStatusBadge?: boolean;
+  /** Show unavailable management controls in the homepage preview. */
+  showDisabledControls?: boolean;
   /** The activity-wide pause: badge and clock freeze (never per chat). */
   isPaused?: boolean;
-  /** Omit to hide the End chat button (e.g. the homepage preview card). */
+  /** Omit to hide End chat unless disabled preview controls are requested. */
   onEndChat?: () => void;
   /** Shown in the conversation area while there are no messages — a real
    *  empty state, since a live card is silent until its first message and
@@ -60,6 +64,8 @@ export function ChatCard({
   participants,
   messages,
   isEnded,
+  showStatusBadge = true,
+  showDisabledControls = false,
   isPaused = false,
   onEndChat,
   emptyHint,
@@ -124,6 +130,8 @@ export function ChatCard({
         participants={participants}
         characterColors={characterColors}
         isEnded={isEnded}
+        showStatusBadge={showStatusBadge}
+        showDisabledControls={showDisabledControls}
         isPaused={isPaused}
         inactiveParticipantIds={inactiveParticipantIds}
         reconnectingParticipantIds={reconnectingParticipantIds}
@@ -181,12 +189,15 @@ export function ChatCard({
           {expanded ? t("card.minimize") : t("card.fullChat")}
         </Button>
 
-        {!isEnded && onEndChat && (
+        {!isEnded && (onEndChat || showDisabledControls) && (
           <Button
             variant="outline"
             size="sm"
             className="flex-1 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-            onClick={() => setConfirmOpen(true)}
+            disabled={showDisabledControls}
+            onClick={
+              showDisabledControls ? undefined : () => setConfirmOpen(true)
+            }
           >
             {/* flip-rtl: a door-and-arrow glyph reads as "out this way". */}
             <LogOut className="flip-rtl" />

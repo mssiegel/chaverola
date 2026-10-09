@@ -12,7 +12,7 @@ export const home = {
   "hero.title": "Get your class excited to learn",
   "hero.pitch":
     "You pick a topic and assign characters. Students explore your lesson through conversation, without knowing who's playing whom.",
-  "hero.chatCaption": "Example of the student's side:",
+  "hero.chatCaption": "Student chat preview",
   "hero.chatPeerSuffix": " · played by a classmate",
   "hero.stepsLabel": "Setup takes about a minute:",
   "hero.step1": "Create an activity and pick your characters.",
@@ -25,7 +25,7 @@ export const home = {
   "cta.host": "Host an Activity",
 
   "teacherView.eyebrow": "The teacher's view",
-  "teacherView.caption": "Example of the teacher's side:",
+  "teacherView.caption": "Teacher chat preview",
 
   "demo.heading": "Try the demo",
   "demo.body": "Explore as a teacher or student, with simulated classmates.",
