@@ -1,6 +1,6 @@
 # iPhone chat clipping and keyboard sizing
 
-State: **Viewport and Send-button focus confirmed on a real iPhone; Return-key fix awaits device confirmation.**
+State: **Viewport and Send-button focus confirmed; Return still fails on the real iPhone, awaiting its event trace.**
 
 ## Report — 2026-10-19
 
@@ -134,3 +134,28 @@ InputEvents; they do not replace the final real-iPhone keyboard check.
 References: [React's beforeinput limitation](https://react.dev/reference/react-dom/components/common#props),
 [Input Events](https://www.w3.org/TR/input-events-2/), and
 [enterkeyhint](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/enterkeyhint).
+
+## Return retest failed: capture the actual Safari events — 2026-10-19
+
+The founder retested `48404d8`: Return still inserted a newline on the iPhone,
+using Safari and Apple's keyboard. Android continued to send. The synthetic
+beforeinput checks proved only that the two supplied event formats were
+handled, not that the iPhone emitted either format with the assumed flags.
+No iOS version or native event sequence is known yet.
+
+An opt-in `?input-debug=1` recorder observes the actual chat composer. It
+records native key, beforeinput, input, legacy textInput, and composition
+events before/after app handling. The report has event types, flags,
+newline classification, length/counts, and browser version; it excludes
+typed characters, names, messages, and activity URLs. It stays in memory
+and is copied only by the tester. Normal links do not load the recorder.
+This deployment deliberately changes no send behavior. The next fix will
+use the physical-device trace rather than another assumed event format.
+
+The recorder's local browser checks passed **26/26** across Chromium and
+desktop WebKit, in both locales: it preserved an unhandled newline edit,
+captured raw input formats/flags and post-edit state, excluded typed text
+and character keycodes, uploaded no report, and copied the displayed JSON.
+Ordinary URLs showed no report control and fetched no recorder chunk.
+
+The diagnostic steps live in [operations.md](../operations.md#keyboard-event-diagnostics-on-a-real-device).

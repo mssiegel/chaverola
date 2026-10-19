@@ -72,6 +72,26 @@ whose tip touches `client/`, `shared/`, or a root manifest takes over normally.
 (Used 2026-07-26, when feature 20's docs-only tip commit stranded feature 19's
 client changes.)
 
+## Keyboard event diagnostics on a real device
+
+Append `?input-debug=1` to a student join URL to capture keyboard-event
+metadata. For an independent demo, use
+`https://chaverola.com/activity/join/1234?input-debug=1`. The query opt-in
+loads a separate diagnostic chunk; ordinary URLs do not load it.
+
+1. Join and wait for a chat. Type a short word, then press Return once.
+2. Dismiss the keyboard and tap **Keyboard report** in the corner bar.
+3. Tap **Copy report** and paste the JSON into the debugging conversation.
+   If clipboard access fails, press and hold the report to select/copy it.
+
+The last 80 records include key classifications, input types, composition
+and cancelability flags, newline counts, focus state, and the browser's
+user-agent string. Capture/bubble entries distinguish browser input from
+app cancellation. Typed characters/data, names, messages and activity URLs
+are excluded; printable keys and character keycodes are redacted. The
+report stays in page memory and is not uploaded or stored. Closing the
+page clears it. The report itself does not change keyboard handling.
+
 ## Reading production logs
 
 - **Vercel (client):** the Vercel CLI is installed and linked to the

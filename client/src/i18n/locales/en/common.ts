@@ -42,6 +42,16 @@ export const common = {
   "dialog.close": "Close",
   "dialog.dismiss": "Dismiss",
 
+  // Opt-in keyboard diagnostics, only at ?input-debug=1.
+  "debug.input.button": "Keyboard report",
+  "debug.input.title": "Keyboard events",
+  "debug.input.instructions":
+    "Type a short word, press Return once, then copy this report.",
+  "debug.input.copy": "Copy report",
+  "debug.input.copied": "Copied",
+  "debug.input.copyFallback":
+    "Press and hold the report to select and copy it.",
+
   // The teacher's monitoring chat card. Here rather than in `teacher` because
   // the homepage renders the real card too (TeacherViewSection's live
   // preview), and a page-scoped namespace would make one of the two pay for

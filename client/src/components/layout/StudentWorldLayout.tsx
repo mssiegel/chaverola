@@ -1,4 +1,4 @@
-import { Suspense, useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Outlet } from "react-router-dom";
 
@@ -9,6 +9,10 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
 import { LocaleLink } from "./LocaleLink";
 import { PageSpinner } from "./PageSpinner";
 import { useStudentChatViewport } from "./useStudentChatViewport";
+
+const InputDiagnostics = lazy(() =>
+  import("./InputDiagnostics").then((m) => ({ default: m.InputDiagnostics }))
+);
 
 /**
  * What the layout hands its pages through the router Outlet. The chat stage
@@ -54,6 +58,8 @@ export function StudentWorldLayout() {
   // switcher.
   const [localeLocked, setLocaleLocked] = useState(false);
   const worldRef = useStudentChatViewport(chatStudentName !== null);
+  const inputDebug =
+    new URLSearchParams(window.location.search).get("input-debug") === "1";
   return (
     // `group` shares the viewport boundary and composer-focus state with the
     // chat. Name any unrelated groups below (`group/thing`) to avoid collisions.
@@ -108,6 +114,11 @@ export function StudentWorldLayout() {
             `ms-auto` keeps it pinned end even with no start chrome. */}
         {chatStudentName === null && !localeLocked && (
           <LanguageSwitcher className="pointer-events-auto ms-auto shrink-0 rounded-full bg-white/90 text-foreground shadow-md backdrop-blur-sm hover:bg-white hover:text-foreground" />
+        )}
+        {inputDebug && chatStudentName !== null && (
+          <Suspense fallback={null}>
+            <InputDiagnostics />
+          </Suspense>
         )}
       </div>
 
