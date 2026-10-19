@@ -5,6 +5,23 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
+### The pause notice focuses on sending
+
+_2026-10-19_
+
+**Decision:** The teacher's paused-state notice says students can read their
+chat but cannot send new messages until the teacher resumes. It omits the
+ability to draft messages.
+
+**Why:** Founder wording and rationale: the teacher needs to know what the
+pause controls. Whether students can draft is irrelevant to that decision
+and distracts from the sending restriction. The English and Hebrew notices
+follow the same focus.
+
+_Implemented in the `chats.pausedNotice` entries in the
+[English](../../client/src/i18n/locales/en/teacher.ts) and
+[Hebrew](../../client/src/i18n/locales/he/teacher.ts) catalogs._
+
 ### A chat seats as many students as the palette has colors
 
 _2026-08-10_

@@ -129,7 +129,7 @@ export const teacher = {
   "problem.email":
     "That email doesn't look right. Fix it, or clear the field if you don't want the chats emailed.",
   "problem.characterInUse":
-    "Your class already has this character, so it needs a name. To drop a character, use the remove button on rows 3 and 4.",
+    "This character needs a name. Characters after the first two can be removed with the × button.",
 
   // ---------------------------------------------------------------------
   // /activity/host/:hostKey — the live dashboard
@@ -272,7 +272,7 @@ export const teacher = {
   "chats.pauseAll": "Pause all chats",
   "chats.endAll": "End all chats",
   "chats.pausedNotice":
-    "Chats are paused. Students can read their chat but can't type until you resume.",
+    "Chats are paused. Students can read their chat but can't send new messages until you resume.",
   "chats.emptyHint": "No messages yet. They'll show up here as students type.",
 
   // Completed chats
@@ -286,8 +286,7 @@ export const teacher = {
 
   // The live settings panel
   "liveSettings.title": "Edit activity settings",
-  "liveSettings.hint.set":
-    "Everything from setup, still editable while the activity runs",
+  "liveSettings.hint.set": "Update your activity while it runs",
   "liveSettings.hint.noEmail":
     "Add your email and we'll send you every chat when the activity wraps up",
   "liveSettings.body":

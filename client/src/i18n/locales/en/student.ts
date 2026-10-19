@@ -75,7 +75,7 @@ export const student = {
   "lobby.waitingStill":
     "Still finding you a partner. Hang tight, your chat opens right here.",
   "lobby.waitingLong":
-    "Longer wait than usual, but you're still in line. Your chat opens as soon as someone's free.",
+    "You're still in line. Your chat will open here when you're matched.",
   "lobby.paused":
     "Your teacher hit pause for a moment. When things start back up, your chat opens right here.",
   // "Can't reach" rather than "your teacher stepped away": all the server

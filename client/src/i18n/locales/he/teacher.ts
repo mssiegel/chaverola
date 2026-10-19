@@ -117,7 +117,7 @@ export const teacher: HebrewOf<TeacherCatalog> = {
   "problem.email":
     "המייל הזה לא נראה תקין. תתקן אותו, או תנקה את השדה אם אתה לא רוצה לקבל את השיחות.",
   "problem.characterInUse":
-    "לכיתה שלך כבר יש את הדמות הזאת, אז היא חייבת שם. כדי להוריד דמות, תשתמש בכפתור ההסרה בשורות 3 ו־4.",
+    "הדמות הזאת צריכה שם. אפשר להסיר דמויות אחרי שתי הראשונות בעזרת כפתור ה־×.",
 
   // ---------------------------------------------------------------------
   // /activity/host/:hostKey — the live dashboard
@@ -254,7 +254,7 @@ export const teacher: HebrewOf<TeacherCatalog> = {
   "chats.pauseAll": "להשהות את כל השיחות",
   "chats.endAll": "לסיים את כל השיחות",
   "chats.pausedNotice":
-    "השיחות מושהות. התלמידים יכולים לקרוא את השיחה שלהם אבל לא לכתוב, עד שתחדש.",
+    "השיחות מושהות. התלמידים יכולים לקרוא את השיחה שלהם, אבל לא לשלוח הודעות חדשות עד שתחדש.",
   "chats.emptyHint": "עוד אין הודעות. הן יופיעו כאן ככל שהתלמידים כותבים.",
 
   "completed.title": "שיחות שהסתיימו",
@@ -266,8 +266,7 @@ export const teacher: HebrewOf<TeacherCatalog> = {
   "completed.emptyHint": "השיחה הזאת נגמרה לפני שמישהו הספיק לכתוב.",
 
   "liveSettings.title": "עריכת הגדרות הפעילות",
-  "liveSettings.hint.set":
-    "כל מה שהגדרת בהקמה, עדיין פתוח לעריכה בזמן שהפעילות רצה",
+  "liveSettings.hint.set": "עדכן את הפעילות בזמן שהיא רצה",
   "liveSettings.hint.noEmail":
     "תוסיף את המייל שלך ונשלח לך את כל השיחות כשהפעילות נגמרת",
   "liveSettings.body":

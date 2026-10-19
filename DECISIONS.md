@@ -129,6 +129,7 @@ git: `git log -- DECISIONS.md`.
     - [Character rows lead with the emoji avatar](docs/decisions/teacher-setup.md#character-rows-lead-with-the-emoji-avatar)
     - [Settings ship on, and a toggle's sub-control disables instead of hiding](docs/decisions/teacher-setup.md#settings-ship-on-and-a-toggles-sub-control-disables-instead-of-hiding)
 - [Teacher live activity page](docs/decisions/teacher-live.md)
+  - [The pause notice focuses on sending](docs/decisions/teacher-live.md#the-pause-notice-focuses-on-sending)
   - [A chat seats as many students as the palette has colors](docs/decisions/teacher-live.md#a-chat-seats-as-many-students-as-the-palette-has-colors)
   - [The transcript email is written in the activity's language, and lays itself out right to left without CSS](docs/decisions/teacher-live.md#the-transcript-email-is-written-in-the-activitys-language-and-lays-itself-out-right-to-left-without-css)
   - [Seat events stop re-shipping ended transcripts; full snapshots heal](docs/decisions/teacher-live.md#seat-events-stop-re-shipping-ended-transcripts-full-snapshots-heal)
