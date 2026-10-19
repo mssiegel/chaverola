@@ -124,6 +124,8 @@ pieces those surfaces share.
   and `AppLayout` watches that element to swap the mobile navbar mode.
 - **Hook inventory.** A hook lives next to the components it drives
   (`components/chat/useChatDemo.ts`,
+  `components/layout/useStudentChatViewport.ts` — the phone chat's visible
+  viewport boundary, released outside chat or above the phone breakpoint — and
   `components/Teacher/HostActivity/useHostActivityDemo.ts` — whose pure
   simulation rules live beside it in `hostWorld.ts`); generic
   cross-cutting hooks live in `lib/`: `usePageMeta` (sets `<title>` and

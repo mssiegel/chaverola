@@ -73,6 +73,7 @@ git: `git log -- DECISIONS.md`.
   - [One page serves both join routes; a wrong code never changes the URL](docs/decisions/student-join.md#one-page-serves-both-join-routes-a-wrong-code-never-changes-the-url)
   - [Student sign-in lives in the tab, and removal sends you to the name step](docs/decisions/student-join.md#student-sign-in-lives-in-the-tab-and-removal-sends-you-to-the-name-step)
 - [Chat behavior](docs/decisions/chat-behavior.md)
+  - [On phones the chat follows the visible viewport, including Safari's keyboard](docs/decisions/chat-behavior.md#on-phones-the-chat-follows-the-visible-viewport-including-safaris-keyboard)
   - [A pause locks the composer without stealing focus or the keyboard](docs/decisions/chat-behavior.md#a-pause-locks-the-composer-without-stealing-focus-or-the-keyboard)
   - [The feed follows the newest line only from the bottom, except your own send](docs/decisions/chat-behavior.md#the-feed-follows-the-newest-line-only-from-the-bottom-except-your-own-send)
   - [Your own drop shows in the chat, without a countdown](docs/decisions/chat-behavior.md#your-own-drop-shows-in-the-chat-without-a-countdown)

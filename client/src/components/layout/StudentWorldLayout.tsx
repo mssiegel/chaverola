@@ -8,6 +8,7 @@ import { DriftingDoodles } from "@/components/decor/DriftingDoodles";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { LocaleLink } from "./LocaleLink";
 import { PageSpinner } from "./PageSpinner";
+import { useStudentChatViewport } from "./useStudentChatViewport";
 
 /**
  * What the layout hands its pages through the router Outlet. The chat stage
@@ -33,9 +34,9 @@ export interface StudentWorldOutletContext {
  * purple world with slowly drifting doodles, a floating language pill, and
  * the Chaverola pill (the one link home) above the routed content. The
  * backdrop is `fixed` so lobby scrolling slides the content OVER the world
- * rather than dragging the world along. On Android the keyboard resizes the
- * viewport itself (`interactive-widget` in index.html), so the world — and
- * the chat card filling it — shrinks to what's visible above the keys.
+ * rather than dragging the world along. Phone chats follow the visual
+ * viewport: Safari pans/shrinks that rectangle above its keyboard even when
+ * the layout viewport and dvh stay unchanged.
  *
  * On phones, typing collapses the corner chrome: with a keyboard open there
  * are barely 300px of world left, and a quarter of it went to a name badge
@@ -52,12 +53,14 @@ export function StudentWorldLayout() {
   // false so the code gate — which anyone may land on cold — always has its
   // switcher.
   const [localeLocked, setLocaleLocked] = useState(false);
+  const worldRef = useStudentChatViewport(chatStudentName !== null);
   return (
-    // `group` exists for one reason: the `group-has-[textarea:focus]` rules
-    // below, which fire while the chat composer — the student world's only
-    // textarea — has focus. Nothing else in client/src uses `group-*`; if you
-    // add one down here, give it a name (`group/thing`) so it can't collide.
-    <div className="group relative flex min-h-dvh flex-col">
+    // `group` shares the viewport boundary and composer-focus state with the
+    // chat. Name any unrelated groups below (`group/thing`) to avoid collisions.
+    <div
+      ref={worldRef}
+      className="group relative flex min-h-dvh flex-col data-[chat-viewport]:fixed data-[chat-viewport]:inset-x-0 data-[chat-viewport]:top-[var(--student-viewport-top)] data-[chat-viewport]:h-[var(--student-viewport-height)] data-[chat-viewport]:min-h-0 data-[chat-viewport]:overflow-hidden"
+    >
       <div aria-hidden className="student-world-bg fixed inset-0">
         <DriftingDoodles />
       </div>
@@ -76,7 +79,7 @@ export function StudentWorldLayout() {
           `ps-[…inset-left]` would put the left notch's inset on the right
           edge. These two are the one deliberate exception to the logical-
           property sweep; leave them physical. */}
-      <div className="pointer-events-none fixed inset-x-0 top-0 z-20 flex items-center justify-between gap-3 pt-[max(1rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))] max-sm:group-has-[textarea:focus]:hidden">
+      <div className="pointer-events-none fixed inset-x-0 top-0 z-20 flex items-center justify-between gap-3 pt-[max(1rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))] group-data-[chat-viewport]:absolute max-sm:group-has-[textarea:focus]:hidden">
         {chatStudentName === null ? (
           <LocaleLink
             to="/"
@@ -119,14 +122,17 @@ export function StudentWorldLayout() {
 
           The bottom pad is the one this whole change is for: it's what holds
           the composer's send button out of the home-indicator strip. The chat
-          card's -mx-2 stretch is horizontal only, so it can't bypass this. */}
-      <div className="relative z-10 flex flex-1 flex-col items-center gap-6 px-4 pt-[max(5rem,calc(4rem+env(safe-area-inset-top)))] pb-[max(0.5rem,env(safe-area-inset-bottom))] max-sm:group-has-[textarea:focus]:pt-[max(0.5rem,env(safe-area-inset-top))] sm:pb-[max(2rem,env(safe-area-inset-bottom))]">
+          card's -mx-2 stretch is horizontal only, so it can't bypass this.
+          While typing the keyboard replaces the home-indicator edge; do not
+          carry a stale safe-area bottom inset into the space above the keys.
+          Demo controls and long ended cards scroll INSIDE the phone viewport. */}
+      <div className="relative z-10 flex flex-1 flex-col items-center gap-6 px-4 pt-[max(5rem,calc(4rem+env(safe-area-inset-top)))] pb-[max(0.5rem,env(safe-area-inset-bottom))] group-data-[chat-viewport]:min-h-0 group-data-[chat-viewport]:overflow-y-auto group-data-[chat-viewport]:overscroll-y-contain max-sm:group-has-[textarea:focus]:pt-[max(0.5rem,env(safe-area-inset-top))] max-sm:group-has-[textarea:focus]:pb-2 sm:pb-[max(2rem,env(safe-area-inset-bottom))]">
         {/* Around the Outlet, never in place of it — the Outlet is what hands
             the page its context. The world and its doodles stay up while the
             join chunk arrives, which is the whole point of splitting inside
             the layout rather than above it. White, not grape: the spinner's
             usual colour vanishes against the purple. */}
-        <main className="flex w-full flex-1 flex-col items-center">
+        <main className="flex min-h-0 w-full flex-1 flex-col items-center">
           <Suspense fallback={<PageSpinner className="text-white" />}>
             <Outlet
               context={

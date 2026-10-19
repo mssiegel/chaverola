@@ -30,6 +30,39 @@ the next reader has the conversation you had.
 
 ---
 
+## iPhone chat viewport — confirm the clipping fix on a real device
+
+_Asked 2026-10-19; blocked because the borrowed iPhone had been returned
+before the founder could check scroll/reload behavior or try a fix._
+
+**Steps** (3 minutes, after the viewport fix is deployed, or on its dev build):
+
+1. Use Safari on an iPhone and note its model and iOS version. Create a real
+   activity on a laptop, join from the iPhone and another student device,
+   and pair them. Leave the iPhone's keyboard closed.
+2. The student's name badge and the whole chat must be visible immediately,
+   without scrolling or pinching. Reload the seated chat and check again.
+3. Focus the composer, type a draft, and send/receive several messages.
+   The header, conversation, and input must fit above the keyboard. Only
+   the conversation area should shrink; nothing should slide off the top,
+   sit under the keys, or acquire a large blank gap above the keys.
+4. Dismiss/reopen the keyboard twice. The name badge must return on blur,
+   and the chat must fit on every cycle. Also check the student demo at
+   `/activity/join/1234`: sending returns its controls, which remain reachable
+   by scrolling.
+
+**If it fails:** record which transition fails and whether scrolling to the
+top, reloading, or pinching out changes it. The visual-viewport measurements
+or Safari's keyboard animation still need a real-device adjustment. The
+original failure is recorded in the
+[iPhone viewport plan](plans/iphone-chat-viewport.md), not counted as a pass
+of the separate pause or safe-area tests below.
+
+**Coverage in the meantime:** local Chromium and desktop WebKit checks
+exercise a shorter, panned visual viewport while leaving layout height
+unchanged, alongside Android-style layout resizing. Neither is a real iPhone
+keyboard or a nonzero safe-area inset. See the plan for the final pass record.
+
 ## Hebrew prompt 5 — the transcript email in a real Outlook
 
 _Asked 2026-07-27. The Gmail half ran the same day and is not pending: a real
@@ -170,12 +203,10 @@ button; production chaverola.com, or the phone pointed at a dev server):
 isn't reaching the device or the world column's
 `pb-[max(0.5rem,env(safe-area-inset-bottom))]` isn't resolving. Those two are
 one mechanism, and `cover` without the pad is worse than neither, so a failure
-here is the whole change not landing. Step 3 is the one assumption this change
-makes on faith: that iOS reports `env(safe-area-inset-bottom)` as 0 while the
-keyboard is up, so the pad vanishes exactly when the indicator does. A gap
-means that's wrong, and the pad needs scoping to the layout's existing
-`max-sm:group-has-[textarea:focus]` collapse — the hook is already there, it
-just isn't used for this. Step 5 means the corner bar's left/right insets
+here is the whole change not landing. Step 3 now checks the visual-viewport
+fix above too: focused bottom padding is explicitly 8px, without depending
+on iOS reporting a zero home-indicator inset. A remaining gap points at the
+viewport measurement or keyboard transition. Step 5 means the corner bar's left/right insets
 aren't landing; note the deliberate limit, that the content column below keeps
 plain `px-4`, so a card edge a few pixels into the notch strip is expected
 there rather than a bug. Step 7 means `cover` un-letterboxed the teacher routes

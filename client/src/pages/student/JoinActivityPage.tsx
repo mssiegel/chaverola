@@ -390,7 +390,7 @@ export function JoinActivityPage() {
   // below. See DECISIONS.md → "The brand home link disappears mid-chat and
   // while hosting" and "Mid-chat, the student's name is a corner badge".
   const chatStudentName = activity && session && match ? session.name : null;
-  useEffect(() => {
+  useLayoutEffect(() => {
     setChatStudentName(chatStudentName);
     return () => setChatStudentName(null);
   }, [chatStudentName, setChatStudentName]);
@@ -487,7 +487,7 @@ export function JoinActivityPage() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center gap-6">
+    <div className="mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col items-center gap-6">
       {/* From the name stage on, the world is honest about being the demo
           (the code screen resolves no activity, so it can't know yet). */}
       {activity?.joinCode === DEMO_JOIN_CODE && <DemoBanner onWorld />}

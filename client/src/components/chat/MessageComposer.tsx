@@ -272,7 +272,8 @@ export function MessageComposer({
                     ? t("composer.talkAs", { name: selfCharacterLabel })
                     : t("composer.placeholder")
               }
-              className="max-h-16 flex-1 resize-none border-0 bg-transparent py-1.5 text-[15px] leading-6 text-foreground outline-none placeholder:text-muted-foreground"
+              // Keep phone input text at 16px so Safari needn't zoom on focus.
+              className="max-h-16 flex-1 resize-none border-0 bg-transparent py-1.5 text-base leading-6 text-foreground outline-none placeholder:text-muted-foreground sm:text-[15px]"
             />
 
             <button

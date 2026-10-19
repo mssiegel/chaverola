@@ -5,6 +5,41 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
+### On phones the chat follows the visible viewport, including Safari's keyboard
+
+_2026-10-19_
+
+**Decision:** A phone chat fills the space the browser actually shows, with
+its header and composer inside that space when the keyboard opens. The
+conversation shrinks between them. Before typing, the student's name badge
+shares the chat's viewport boundary; during typing the existing chrome
+collapse still applies. Demo controls scroll inside the world when visible,
+and desktop keeps its centered `min(70dvh,620px)` card. Pinch zoom remains a
+reader action rather than triggering a smaller chat layout. Phone composer
+text is at least 16px so focusing it need not trigger Safari zoom.
+
+**Why:** The founder's borrowed-iPhone run showed the top and name clipped
+before typing, then an oversized chat above the keyboard. Android's resizing
+setting did not cover the iPhone. This takes the follow-up anticipated by
+[the original phone sizing decision](#on-phones-the-chat-fills-the-screen-and-hugs-the-keyboard-desktop-keeps-the-fixed-card)
+and supersedes that decision's reliance on Safari's default pan-to-input.
+It also replaces the fixed-overlay rejection in
+[the chrome-collapse decision](#while-a-student-types-on-a-phone-the-worlds-chrome-gets-out-of-the-way);
+that decision's focus and demo-control behavior still applies.
+A fixed overlay sized only with `dvh` would preserve that failure; the
+boundary now follows both the visible height and its top offset. The body
+is not globally locked, and the demo retains access to its controls.
+
+The device was returned before diagnosis could be confirmed. The report,
+local checks, and the remaining device uncertainty are recorded in
+[the iPhone viewport plan](../plans/iphone-chat-viewport.md).
+
+_Implemented in
+[useStudentChatViewport](../../client/src/components/layout/useStudentChatViewport.ts),
+[StudentWorldLayout](../../client/src/components/layout/StudentWorldLayout.tsx),
+[ChatStageFrame](../../client/src/components/Student/ChatStageFrame.tsx), and
+[MessageComposer](../../client/src/components/chat/MessageComposer.tsx)._
+
 ### A pause locks the composer without stealing focus or the keyboard
 
 _2026-07-26_
@@ -396,40 +431,6 @@ projects studentId → characterId), and
 [useActiveMatch](../../client/src/pages/student/join/useActiveMatch.ts) /
 [LiveChatStage](../../client/src/components/Student/LiveChatStage.tsx) (the
 plumbing into the existing 🎭 branch)._
-
-### On phones the chat fills the screen and hugs the keyboard; desktop keeps the fixed card
-
-_2026-07-23_
-
-**Decision:** Below the `sm` breakpoint the student chat card stretches to
-fill the world — top chrome to screen bottom, ~8px from every edge, with a
-tighter composer bar — instead of the desktop's centered `min(70dvh,620px)`
-card, which stays as-is on `sm+`. The keyboard is handled by layout, not
-script: `interactive-widget=resizes-content` in the viewport meta makes the
-Android keyboard shrink the viewport (so the composer lands on the keys),
-and iOS relies on Safari's default pan-to-input — good enough once the
-composer is the last thing in the document. No `visualViewport` JS and no
-body overflow lock for V1; the hook is the known follow-up only if a real
-iPhone still shows a gap. The feed re-pins to the newest line whenever its
-own size changes, so the keyboard opening never strands new messages below
-the fold.
-
-**Why:** On phones the floating-card look put the input mid-screen with a
-purple void between it and the keyboard — the browser was panning the page
-and exposing the empty 30% below the card (founder screenshot, 2026-07-23).
-Students chat on small screens; every row of pixels should be conversation,
-which is also why the margins shrank. A keyboard-watching script that
-stretches the card only while typing was rejected as moving parts for the
-same result; a body overflow lock was rejected because the demo stage must
-scroll to its controls.
-
-_Implemented in [ChatStage](../../client/src/components/Student/ChatStage.tsx),
-[LiveChatStage](../../client/src/components/Student/LiveChatStage.tsx),
-[Chatbox](../../client/src/components/Student/Chatbox/index.tsx),
-[StudentWorldLayout](../../client/src/components/layout/StudentWorldLayout.tsx),
-[MessageComposer](../../client/src/components/chat/MessageComposer.tsx),
-[Conversation](../../client/src/components/chat/Conversation.tsx), and
-[index.html](../../client/index.html)._
 
 ### A timed-out student returns to their ended chat, never silently to the lobby
 
@@ -1073,6 +1074,41 @@ character first so it lands on green; the teacher's grid passes the roster first
 (`rosterCharacterColors`) so colors hold steady across cards._
 
 ## Superseded
+
+### On phones the chat fills the screen and hugs the keyboard; desktop keeps the fixed card
+
+_2026-07-23 · Superseded by
+[On phones the chat follows the visible viewport, including Safari's keyboard](#on-phones-the-chat-follows-the-visible-viewport-including-safaris-keyboard)._
+
+**Decision:** Below the `sm` breakpoint the student chat card stretches to
+fill the world — top chrome to screen bottom, ~8px from every edge, with a
+tighter composer bar — instead of the desktop's centered `min(70dvh,620px)`
+card, which stays as-is on `sm+`. The keyboard is handled by layout, not
+script: `interactive-widget=resizes-content` in the viewport meta makes the
+Android keyboard shrink the viewport (so the composer lands on the keys),
+and iOS relies on Safari's default pan-to-input — good enough once the
+composer is the last thing in the document. No `visualViewport` JS and no
+body overflow lock for V1; the hook is the known follow-up only if a real
+iPhone still shows a gap. The feed re-pins to the newest line whenever its
+own size changes, so the keyboard opening never strands new messages below
+the fold.
+
+**Why:** On phones the floating-card look put the input mid-screen with a
+purple void between it and the keyboard — the browser was panning the page
+and exposing the empty 30% below the card (founder screenshot, 2026-07-23).
+Students chat on small screens; every row of pixels should be conversation,
+which is also why the margins shrank. A keyboard-watching script that
+stretches the card only while typing was rejected as moving parts for the
+same result; a body overflow lock was rejected because the demo stage must
+scroll to its controls.
+
+_Implemented in [ChatStage](../../client/src/components/Student/ChatStage.tsx),
+[LiveChatStage](../../client/src/components/Student/LiveChatStage.tsx),
+[Chatbox](../../client/src/components/Student/Chatbox/index.tsx),
+[StudentWorldLayout](../../client/src/components/layout/StudentWorldLayout.tsx),
+[MessageComposer](../../client/src/components/chat/MessageComposer.tsx),
+[Conversation](../../client/src/components/chat/Conversation.tsx), and
+[index.html](../../client/index.html)._
 
 ### On a phone the emoji panel takes the keyboard's place
 
