@@ -1,6 +1,6 @@
 # iPhone chat clipping and keyboard sizing
 
-State: **Viewport and Send-button focus confirmed; Return still fails on the real iPhone, awaiting its event trace.**
+State: **Return and focus retention confirmed in a teacher-created activity on a physical iPhone. Keyboard-opening transition follow-up awaits a physical-iPhone retest. The earlier newline failure was on BrowserStack.**
 
 ## Report — 2026-10-19
 
@@ -159,3 +159,68 @@ and character keycodes, uploaded no report, and copied the displayed JSON.
 Ordinary URLs showed no report control and fetched no recorder chunk.
 
 The diagnostic steps live in [operations.md](../operations.md#keyboard-event-diagnostics-on-a-real-device).
+
+## Physical iPhone versus BrowserStack clarification — 2026-10-19
+
+The founder clarified that the preceding Return failure and screenshot were
+from a BrowserStack iPhone session. The screenshot showed only Enter's keyup
+with `shift: true`; it did not establish the earlier keydown/beforeinput
+sequence or its cause. Treat the earlier references to that retest as a
+BrowserStack result, not a direct physical-handset result.
+
+On a physical iPhone, the founder then confirmed that keyboard Return sent
+the message, but the input lost focus. A follow-up established that this run
+used the diagnostic demo, code `1234`. Its `ChatStage` explicitly passes
+`releaseKeyboardOnSend` so a phone send dismisses the keyboard and restores
+access to demo controls. `LiveChatStage` does not pass that flag; live sends
+keep focus synchronously. No focus implementation change is needed for the
+reported demo behavior. The intent remains recorded in
+[chat-behavior.md](../decisions/chat-behavior.md#return-sends-from-both-physical-and-software-keyboards).
+
+The attached `input-trace-v1` report contains 80 records of text editing,
+with no Enter or line-break event. It cannot identify the successful Return
+path or measure focus after sending. The physical-device Return success is
+the founder's observed result. At that point the combined Return/focus
+interaction in a teacher-created activity had not yet been reported.
+
+## Live Return confirmed; keyboard-opening transition — 2026-10-19
+
+The founder then tested a teacher-created activity on a physical iPhone and
+confirmed that Return sent and the message input retained focus. That closes
+the live Return/focus retest. The remaining report is visual: focusing the
+previously unfocused composer in iPhone Safari briefly moves the entire
+chat offscreen, leaving blank space, before the chat fits above the keyboard.
+Android shrinks the chat directly.
+
+The viewport hook previously waited for resize/scroll notifications and
+then deferred measurement to another animation frame. A new scratch driver
+advances visual-viewport measurements between frames without notifications;
+the old hook failed all six opening/closing/immediate-update checks in
+desktop WebKit across English and Hebrew. This demonstrates a notification
+gap in our handling, not a reproduction of Safari's native keyboard animation.
+
+The follow-up samples the available viewport measurements before each paint
+for one second after composer focus or blur. Delivered viewport and window
+resize/scroll events update the boundary immediately. Unchanged measurements
+do not rewrite styles, and the frame loop stops after the transition or on
+cleanup. Phone scope, pinch-zoom behavior, and normal join/lobby scrolling
+remain as before. Focus, taps, selection and keyboard gestures are not
+intercepted, and no keyboard height is guessed.
+
+Safari's delayed viewport notifications are a plausible contributor, not a
+confirmed device-specific cause. The
+[WebKit report on delayed visual-viewport scroll events](https://bugs.webkit.org/show_bug.cgi?id=218465)
+documents related timing behavior. Sampling cannot recover measurements
+the browser itself has not yet exposed; the physical-iPhone opening/dismissal
+transition still needs a retest after deployment.
+
+**Local verification:** `iphone-keyboard-transition.mjs` passed **24/24**
+across Chromium and desktop WebKit in English/Hebrew: every simulated opening
+and closing frame followed metrics without viewport events, delivered events
+updated synchronously, pinch zoom retained its layout, polling stopped after
+the bounded transition, and desktop released the phone boundary.
+`iphone-viewport.mjs` passed **44/44**, covering live send/focus, pause/draft,
+viewport pan/resize, Android-style layout resize, desktop/portrait, return to
+lobby, and demo controls in both locales. Typecheck and lint pass, with the
+existing presence-hook cleanup warning. These simulated transitions still
+require the physical-iPhone check described above.
