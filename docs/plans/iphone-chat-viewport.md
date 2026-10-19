@@ -1,6 +1,6 @@
 # iPhone chat clipping and keyboard sizing
 
-State: **Implemented; real-iPhone confirmation pending.**
+State: **Viewport confirmed on a real iPhone; Send-focus fix awaits device confirmation.**
 
 ## Report — 2026-10-19
 
@@ -57,9 +57,43 @@ flows use the same layout and frame.
 - Inspected rendered phone chat screenshots with/without the simulated
   keyboard.
 
-The real-device retest is in [pending-manual-tests.md](../pending-manual-tests.md).
+## Real-iPhone result and Send-button follow-up — 2026-10-19
+
+After deployment of `fee785c`, the founder tested the chat on a real iPhone
+and confirmed the viewport experience was good. The remaining issue was
+specific to sending: Android returned straight to the message field, but
+the iPhone required another tap into it. Device/browser versions and the
+individual reload, demo, and safe-area subchecks were not reported. The
+viewport report is recorded as confirmed; the separate pause and safe-area
+tests remain pending.
+
+The Send button previously allowed focus transfer on an unlocked press and
+deferred textarea refocus to `requestAnimationFrame`. The follow-up cancels
+mousedown's focus transfer for mouse and touch compatibility events, while
+keeping sending on the normal click. Refocus now runs synchronously in the send handler with
+`preventScroll`. The phone demo still deliberately blurs on a successful
+send to return its steering controls; live chats retain focus.
+
+The earlier regression drivers sent live messages with Enter. They did not
+exercise the Send-button tap that the founder found. Follow-up verification
+must use actual taps/clicks and check for blur throughout the gesture, plus
+immediate focus inside click and keyboard handlers. Desktop WebKit still
+cannot certify a physical iPhone keyboard; the final device check is sending
+two messages in succession without touching the field between them.
+
+**Follow-up local verification:** `iphone-send-focus.mjs --chromium` and
+`--webkit` each passed **11/11**. Actual touch taps delivered messages with
+zero textarea blur events; focus ran synchronously inside click, using
+`preventScroll`; a second message was typed without refocusing the field.
+Paused taps preserved draft/focus, mouse clicks sent normally, an abandoned
+press did not send, and both Enter and Space activated the Send button.
+Phone demos still released focus after sending, while desktop demos kept it.
+Typecheck, production build, and lint pass (the existing presence-hook warning remains).
+
 Desktop WebKit is useful for layout verification but does not provide an
 iPhone keyboard, Safari's browser bars, or real notch/home-indicator insets.
 
 References: [WebKit's interactive-widget implementation issue](https://bugs.webkit.org/show_bug.cgi?id=259770)
 and [the VisualViewport API](https://developer.mozilla.org/en-US/docs/Web/API/VisualViewport).
+The focus follow-up also follows
+[WebKit's user-gesture requirement for opening the software keyboard](https://bugs.webkit.org/show_bug.cgi?id=195884).

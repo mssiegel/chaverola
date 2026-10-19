@@ -5,6 +5,32 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
+### Sending in a live chat keeps composer focus within the tap
+
+_2026-10-19_
+
+**Decision:** Pressing Send keeps focus on the live chat's message field
+through the press and clears its draft for the next message. Touch and
+mouse presses do not transfer focus to Send; successful send refocuses the
+field synchronously, without scrolling the page. Keyboard activation remains
+available. A paused send still refuses without disturbing the draft or focus.
+The phone demo retains its deliberate blur-on-send so its controls return.
+
+**Why:** After confirming the viewport fix on a real iPhone, the founder
+found that each Send tap still required another tap into the message field.
+The previous code permitted focus transfer and restored focus on the next
+animation frame, outside the immediate user gesture iOS relies on for its
+keyboard. Preventing the transfer and restoring focus inside the handler
+preserves the existing keep-typing intent across platforms. Sending stays
+on click rather than the press so an abandoned press cannot send a draft.
+
+The earlier Enter-based checks did not cover this tap path. The report and
+follow-up verification live in the
+[iPhone viewport plan](../plans/iphone-chat-viewport.md).
+
+_Implemented in
+[MessageComposer](../../client/src/components/chat/MessageComposer.tsx)._
+
 ### On phones the chat follows the visible viewport, including Safari's keyboard
 
 _2026-10-19_

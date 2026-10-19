@@ -154,9 +154,10 @@ export function MessageComposer({
     // 640px)`, so this is the same line the chrome-collapse rules draw, read
     // the way JoinGateCard already reads it. At send time, so rotating works.
     const release = releaseKeyboardOnSend && isPhoneWidth();
-    requestAnimationFrame(() =>
-      release ? textareaRef.current?.blur() : textareaRef.current?.focus()
-    );
+    // Focus must stay inside the tap/keypress handler. iOS can refuse to
+    // reopen its keyboard when focus is deferred to requestAnimationFrame.
+    if (release) textareaRef.current?.blur();
+    else textareaRef.current?.focus({ preventScroll: true });
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -279,14 +280,11 @@ export function MessageComposer({
             <button
               type="button"
               onClick={handleSend}
-              // A tap on a live button takes focus off the textarea, and a
-              // locked one has nothing to hand it back — that blur closes the
-              // keyboard as surely as disabling the field would. Same
-              // preventDefault the emoji button uses, for the same reason.
-              // Unlocked, handleSend's own refocus covers it.
-              onMouseDown={(event) => {
-                if (locked) event.preventDefault();
-              }}
+              // Keep the caret through mouse presses and touch's compatibility
+              // mousedown, including while paused. Do not cancel pointerdown:
+              // WebKit can suppress the touch-generated click along with it.
+              // handleSend also focuses synchronously inside the click.
+              onMouseDown={(event) => event.preventDefault()}
               // aria-disabled rather than disabled for the lock: it dims and
               // announces the same way without putting a disabled control
               // beside a field the pause is trying not to disturb. handleSend
