@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffectEvent, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { EmojiClickData } from "emoji-picker-react";
 import { SendHorizontal, Smile } from "lucide-react";
@@ -92,6 +92,7 @@ export function MessageComposer({
   const [value, setValue] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const shiftEnterRef = useRef(false);
 
   const count = charCount(value);
   const showCounter = count > COUNTER_VISIBLE_AT;
@@ -161,11 +162,39 @@ export function MessageComposer({
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    shiftEnterRef.current = event.key === "Enter" && event.shiftKey;
+    // Enter may be confirming an IME candidate, not sending the draft.
+    if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229)
+      return;
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       handleSend();
     }
   };
+
+  const sendFromBeforeInput = useEffectEvent(handleSend);
+
+  useLayoutEffect(() => {
+    const field = textareaRef.current;
+    if (!field) return;
+    // Software keyboards can request a line break without an Enter keydown.
+    // React's onBeforeInput still polyfills other events, so listen to the
+    // native event to read inputType and cancel the break before insertion.
+    const handleBeforeInput = (event: InputEvent) => {
+      if (
+        event.inputType !== "insertLineBreak" &&
+        event.inputType !== "insertParagraph"
+      )
+        return;
+      const shiftEnter = shiftEnterRef.current;
+      shiftEnterRef.current = false;
+      if (shiftEnter || event.isComposing || !event.cancelable) return;
+      event.preventDefault();
+      sendFromBeforeInput();
+    };
+    field.addEventListener("beforeinput", handleBeforeInput);
+    return () => field.removeEventListener("beforeinput", handleBeforeInput);
+  }, []);
 
   return (
     // shrink-0 for the same reason the header carries it: the feed is
@@ -256,9 +285,16 @@ export function MessageComposer({
             <textarea
               ref={textareaRef}
               rows={1}
+              enterKeyHint="send"
               value={value}
               onChange={handleChange}
               onKeyDown={handleKeyDown}
+              onKeyUp={() => {
+                shiftEnterRef.current = false;
+              }}
+              onBlur={() => {
+                shiftEnterRef.current = false;
+              }}
               // Warm the picker's chunk while the student is still typing, so
               // the first tap on the smile button opens a populated grid.
               onFocus={prefetchEmojiPicker}

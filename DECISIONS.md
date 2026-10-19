@@ -73,6 +73,7 @@ git: `git log -- DECISIONS.md`.
   - [One page serves both join routes; a wrong code never changes the URL](docs/decisions/student-join.md#one-page-serves-both-join-routes-a-wrong-code-never-changes-the-url)
   - [Student sign-in lives in the tab, and removal sends you to the name step](docs/decisions/student-join.md#student-sign-in-lives-in-the-tab-and-removal-sends-you-to-the-name-step)
 - [Chat behavior](docs/decisions/chat-behavior.md)
+  - [Return sends from both physical and software keyboards](docs/decisions/chat-behavior.md#return-sends-from-both-physical-and-software-keyboards)
   - [Sending in a live chat keeps composer focus within the tap](docs/decisions/chat-behavior.md#sending-in-a-live-chat-keeps-composer-focus-within-the-tap)
   - [On phones the chat follows the visible viewport, including Safari's keyboard](docs/decisions/chat-behavior.md#on-phones-the-chat-follows-the-visible-viewport-including-safaris-keyboard)
   - [A pause locks the composer without stealing focus or the keyboard](docs/decisions/chat-behavior.md#a-pause-locks-the-composer-without-stealing-focus-or-the-keyboard)

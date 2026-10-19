@@ -1,6 +1,6 @@
 # iPhone chat clipping and keyboard sizing
 
-State: **Viewport confirmed on a real iPhone; Send-focus fix awaits device confirmation.**
+State: **Viewport and Send-button focus confirmed on a real iPhone; Return-key fix awaits device confirmation.**
 
 ## Report — 2026-10-19
 
@@ -97,3 +97,40 @@ References: [WebKit's interactive-widget implementation issue](https://bugs.webk
 and [the VisualViewport API](https://developer.mozilla.org/en-US/docs/Web/API/VisualViewport).
 The focus follow-up also follows
 [WebKit's user-gesture requirement for opening the software keyboard](https://bugs.webkit.org/show_bug.cgi?id=195884).
+
+## Real-iPhone Send result and Return-key follow-up — 2026-10-19
+
+After deployment of `b0d95fb`, the founder confirmed on a real iPhone that
+sending kept the message field focused. The remaining report: its keyboard
+Return inserted a newline, while Android and desktop Enter sent the message.
+The iPhone's exact keyboard/event sequence was not captured.
+
+The follow-up retains the hardware keydown path and adds a native
+`beforeinput` listener for cancelable `insertLineBreak` / `insertParagraph`
+requests outside composition. Both paths cancel the default insertion and
+use the existing synchronous send handler. The native listener is registered
+in a layout effect; its Effect Event reads the latest committed draft and
+pause state without replacing the listener. Shift+Enter
+still inserts a newline, pasted newlines remain text, and Enter during IME
+composition does not send. `enterKeyHint="send"` asks the software keyboard
+to label the action; the hint is not the send implementation.
+
+Verification must separately exercise native beforeinput with no keydown
+and actual browser Enter/Shift+Enter. Dispatching an input event in desktop
+WebKit tests the fallback handler; it is not a physical iPhone Return press.
+The device retest is to type a message, press the iPhone's Return/Send key,
+and type the next message without touching the field again.
+
+**Return follow-up verification:** `iphone-return.mjs` passed **32/32**
+across Chromium and desktop WebKit: both native input types without keydown
+sent once and canceled newline insertion; hardware Enter still sent once;
+the next draft accepted typing without refocusing; Shift+Enter inserted a
+newline; paste/composition were left alone; empty and paused Return inserted
+no newline; resume sent the saved draft; phone demo Return sent and returned
+its controls. Typecheck, production build, and lint pass, with only the
+existing presence-hook lint warning. The native fallback checks dispatch
+InputEvents; they do not replace the final real-iPhone keyboard check.
+
+References: [React's beforeinput limitation](https://react.dev/reference/react-dom/components/common#props),
+[Input Events](https://www.w3.org/TR/input-events-2/), and
+[enterkeyhint](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/enterkeyhint).

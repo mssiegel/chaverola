@@ -5,6 +5,29 @@ area. Entries are newest-first; add new ones at the top, and add a matching line
 to the index in the same change. Replaced decisions move to Superseded at the
 bottom of this file.
 
+### Return sends from both physical and software keyboards
+
+_2026-10-19_
+
+**Decision:** Unmodified Enter/Return sends a chat message on every device.
+The software keyboard gets a Send-key hint, and native line-break/paragraph
+input requests use the same send handler as hardware Enter. The request is
+canceled before a newline is inserted, including for an empty or paused
+draft. Shift+Enter remains the explicit newline shortcut. IME composition
+and pasted multiline text are not send actions. Live sending keeps focus;
+the phone demo retains its existing release-on-send behavior.
+
+**Why:** The founder confirmed the Send-button focus fix on a real iPhone,
+then found its keyboard Return inserted a newline even though Android and
+desktop Enter sent. The old handler relied only on `keydown`. Listening to
+native `beforeinput` covers the software-keyboard edit path too; React's
+synthetic `onBeforeInput` still polyfills other events and is not the native
+inputType contract. Canceling the hardware key's default also prevents its
+normal beforeinput, so the two paths do not send the same message twice.
+
+_Implemented in
+[MessageComposer](../../client/src/components/chat/MessageComposer.tsx)._
+
 ### Sending in a live chat keeps composer focus within the tap
 
 _2026-10-19_
