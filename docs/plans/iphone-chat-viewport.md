@@ -1,6 +1,6 @@
 # iPhone chat clipping and keyboard sizing
 
-State: **Return and focus retention confirmed in a teacher-created activity on a physical iPhone. Keyboard-opening transition follow-up awaits a physical-iPhone retest. The earlier newline failure was on BrowserStack.**
+State: **Return and focus retention confirmed in a teacher-created activity on a physical iPhone. The keyboard-opening blank flash persists; fixing it is deferred at the founder's request. The earlier newline failure was on BrowserStack.**
 
 ## Report — 2026-10-19
 
@@ -158,7 +158,7 @@ captured raw input formats/flags and post-edit state, excluded typed text
 and character keycodes, uploaded no report, and copied the displayed JSON.
 Ordinary URLs showed no report control and fetched no recorder chunk.
 
-The diagnostic steps live in [operations.md](../operations.md#keyboard-event-diagnostics-on-a-real-device).
+The temporary recorder was subsequently removed in the cleanup described below.
 
 ## Physical iPhone versus BrowserStack clarification — 2026-10-19
 
@@ -224,3 +224,54 @@ viewport pan/resize, Android-style layout resize, desktop/portrait, return to
 lobby, and demo controls in both locales. Typecheck and lint pass, with the
 existing presence-hook cleanup warning. These simulated transitions still
 require the physical-iPhone check described above.
+
+## TODO — iPhone Safari blank scroll when opening the keyboard
+
+_Deferred at the founder's request, 2026-10-19._
+
+- [ ] Fix the brief blank-screen scroll when an unfocused chat composer gains
+      focus in iPhone Safari.
+
+**Reproduce:** On a physical iPhone in Safari, join a teacher-created activity
+and enter a chat. With the keyboard dismissed, tap the message input. The
+whole chat briefly scrolls upward/out of view, exposing a blank page, before
+settling at the correct height above the keyboard. Dismiss and refocus to
+repeat. Android reduces the chat height without this flash.
+
+**Expected:** The chat stays visible throughout keyboard opening and shrinks
+to the available height. Preserve the already confirmed Return-to-send and
+input focus retention after sending.
+
+**Known result:** The founder retested deployed commit `950837d` on a physical
+iPhone and confirmed the blank flash still happens. Sampling viewport
+measurements during the transition did not resolve it, despite passing the
+simulated browser checks above. The native focus-scroll cause remains
+unconfirmed. No further fix was implemented after this failed retest.
+
+**When resumed:** Capture the actual Safari keyboard-opening transition and
+its scroll/viewport timing, then verify the fix on a physical iPhone. Desktop
+WebKit and simulated viewport changes alone have not reproduced this flash.
+
+## Cleanup after deferral — 2026-10-19
+
+At the founder's request, remove the temporary keyboard-event recorder,
+its query-controlled UI, composer marker, English/Hebrew strings, and
+operations instructions. Diagnostic links no longer activate a recorder.
+The earlier reports and verification above remain a historical record.
+
+Restore `useStudentChatViewport` to the event-driven implementation from
+`fee785c`: one scheduled measurement per resize/scroll update, without the
+unsuccessful focus/blur frame polling added by `950837d`. Preserve the original
+viewport sizing fix and the working send-focus and Return fixes from
+`b0d95fb` and `48404d8`. The blank-scroll TODO above remains deferred.
+
+This is a forward cleanup commit; the previously pushed commits and their
+diagnostic history are retained.
+
+**Cleanup verification:** The client source exactly matches `48404d8`,
+retaining all three confirmed fixes. Typecheck, production build, and lint
+pass (the existing presence-hook warning remains). The viewport driver passes
+**44/44** across Chromium/WebKit and both locales; the WebKit Send-tap driver
+passes **11/11**, including consecutive sends without blur, paused drafting,
+and the distinct phone/desktop demo behavior. No recorder references remain
+in client source or the operations runbook.

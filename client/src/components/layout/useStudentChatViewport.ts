@@ -15,7 +15,6 @@ export function useStudentChatViewport(chatVisible: boolean) {
     const phone = window.matchMedia("(width < 640px)");
     const viewport = window.visualViewport;
     let frame = 0;
-    let trackUntil = 0;
 
     const clear = () => {
       delete world.dataset.chatViewport;
@@ -32,60 +31,34 @@ export function useStudentChatViewport(chatVisible: boolean) {
       // layout so zooming can magnify/pan it instead of reflowing the chat.
       if (viewport && Math.abs(viewport.scale - 1) > 0.01) return;
 
-      const height = `${viewport?.height ?? window.innerHeight}px`;
-      const top = `${viewport?.offsetTop ?? 0}px`;
-      // Focus tracking samples each paint; unchanged measurements must not
-      // invalidate the chat's layout again.
-      if (world.style.getPropertyValue("--student-viewport-height") !== height)
-        world.style.setProperty("--student-viewport-height", height);
-      if (world.style.getPropertyValue("--student-viewport-top") !== top)
-        world.style.setProperty("--student-viewport-top", top);
-      if (!world.hasAttribute("data-chat-viewport"))
-        world.dataset.chatViewport = "";
+      world.style.setProperty(
+        "--student-viewport-height",
+        `${viewport?.height ?? window.innerHeight}px`
+      );
+      world.style.setProperty(
+        "--student-viewport-top",
+        `${viewport?.offsetTop ?? 0}px`
+      );
+      world.dataset.chatViewport = "";
     };
 
-    const trackFrame = () => {
-      frame = 0;
-      measure();
-      if (phone.matches && performance.now() < trackUntil)
-        frame = requestAnimationFrame(trackFrame);
-    };
-
-    const trackKeyboard = (event: FocusEvent) => {
-      if (
-        !phone.matches ||
-        !(event.target instanceof HTMLTextAreaElement) ||
-        !event.target.hasAttribute("data-chat-composer")
-      )
-        return;
-      // Safari can delay viewport events during keyboard animation. Sample
-      // available metrics before each paint on both focus and blur, with a
-      // bounded tail for the animation; never poll throughout a conversation.
-      trackUntil = performance.now() + 1000;
-      measure();
-      if (!frame) frame = requestAnimationFrame(trackFrame);
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(measure);
     };
 
     measure();
-    // Apply delivered metrics in this event, without adding another frame
-    // of lag to Safari's own viewport notifications.
-    viewport?.addEventListener("resize", measure);
-    viewport?.addEventListener("scroll", measure);
-    window.addEventListener("resize", measure);
-    window.addEventListener("scroll", measure);
-    phone.addEventListener("change", measure);
-    world.addEventListener("focusin", trackKeyboard);
-    world.addEventListener("focusout", trackKeyboard);
+    viewport?.addEventListener("resize", schedule);
+    viewport?.addEventListener("scroll", schedule);
+    window.addEventListener("resize", schedule);
+    phone.addEventListener("change", schedule);
 
     return () => {
       cancelAnimationFrame(frame);
-      viewport?.removeEventListener("resize", measure);
-      viewport?.removeEventListener("scroll", measure);
-      window.removeEventListener("resize", measure);
-      window.removeEventListener("scroll", measure);
-      phone.removeEventListener("change", measure);
-      world.removeEventListener("focusin", trackKeyboard);
-      world.removeEventListener("focusout", trackKeyboard);
+      viewport?.removeEventListener("resize", schedule);
+      viewport?.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+      phone.removeEventListener("change", schedule);
       clear();
     };
   }, [chatVisible]);

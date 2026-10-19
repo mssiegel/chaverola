@@ -283,7 +283,6 @@ export function MessageComposer({
             </Popover>
 
             <textarea
-              data-chat-composer=""
               ref={textareaRef}
               rows={1}
               enterKeyHint="send"

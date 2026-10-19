@@ -35,14 +35,6 @@ export const common: HebrewOf<CommonCatalog> = {
   "dialog.close": "סגירה",
   "dialog.dismiss": "סגירה",
 
-  "debug.input.button": "דוח מקלדת",
-  "debug.input.title": "אירועי מקלדת",
-  "debug.input.instructions":
-    "הקלד מילה קצרה, לחץ פעם אחת על Return ואז העתק את הדוח.",
-  "debug.input.copy": "העתק דוח",
-  "debug.input.copied": "הועתק",
-  "debug.input.copyFallback": "לחץ לחיצה ארוכה על הדוח כדי לבחור ולהעתיק אותו.",
-
   // "בתפקיד" is the playbill connective, the same one the transcript email
   // uses. "בתור" was rejected: תור also means queue, and the pairing rail
   // already owns that word.
