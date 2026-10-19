@@ -306,7 +306,7 @@ export const teacher = {
     "They'll be signed out and sent back to the join screen, and their partner's chat ends. Nobody is told it was a removal.",
   "confirm.pause.title": "Pause all chats?",
   "confirm.pause.body":
-    "Students keep their chat on screen but can't send anything until you resume. Chat clocks stop too, so nobody loses time.",
+    "Students keep their chat on screen but can't send anything until you resume.",
   "confirm.pause.confirm": "Pause chats",
   "confirm.endActivity.title": "End the activity for everyone?",
   "confirm.endActivity.consequences":
